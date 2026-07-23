@@ -1,0 +1,2 @@
+CREATE POLICY "Admins read all profiles" ON public.profiles FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins read all user_status" ON public.user_status FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));

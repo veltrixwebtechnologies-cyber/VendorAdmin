@@ -1,0 +1,1 @@
+CREATE POLICY "Admin deletes products" ON public.products FOR DELETE USING (public.has_role(auth.uid(),'admin'));
