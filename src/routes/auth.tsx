@@ -170,7 +170,7 @@ function SignUpForm() {
     e.preventDefault();
     if (code.trim() !== otp) return toast.error("Incorrect verification code");
     setBusy(true);
-    const { data, error } = await supabase.auth.signUp({
+    const signup = supabase.auth.signUp({
       email,
       password,
       options: {
@@ -178,6 +178,12 @@ function SignUpForm() {
         data: { display_name: displayName || email.split("@")[0] },
       },
     });
+    const { data, error } = await Promise.race([
+      signup,
+      new Promise<{ data: { session: null }; error: Error }>((resolve) =>
+        setTimeout(() => resolve({ data: { session: null }, error: new Error("Signup timed out. Check the deployed Supabase environment variables.") }), 10000),
+      ),
+    ]);
     if (error) {
       setBusy(false);
       const msg = /weak|pwned|breach/i.test(error.message)
@@ -185,18 +191,14 @@ function SignUpForm() {
         : error.message;
       return toast.error(msg);
     }
-    // Supabase may return a session immediately when email confirmation is disabled.
-    // When confirmation is enabled, sign in explicitly after the local verification step.
+    // Supabase returns a session immediately when email confirmation is disabled.
+    // When confirmation is enabled, do not make a second blocking login request.
     if (!data.session) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        setBusy(false);
-        return toast.error(
-          /confirm/i.test(signInError.message)
-            ? "Account created. Confirm your email in Supabase, then sign in."
-            : signInError.message,
-        );
-      }
+      setBusy(false);
+      setOtp(null);
+      setCode("");
+      setPassword("");
+      return toast.success("Account created. Confirm your email, then sign in.");
     }
     setBusy(false);
     setOtp(null);
