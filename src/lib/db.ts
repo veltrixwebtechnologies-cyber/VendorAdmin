@@ -2,6 +2,7 @@
  * Central Supabase data layer for Seller Hub.
  * All CRUD hooks + mutations live here, backed by RLS.
  * ============================================================ */
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -260,7 +261,7 @@ function rowToOrder(r: any, items: any[]): Order {
     subtotal: Number(r.subtotal),
     shipping: Number(r.shipping_fee),
     total: Number(r.total),
-    paymentMode: Number(r.shipping_fee) > 0 ? "COD" : "Prepaid",
+    paymentMode: r.payment_method === "cod" ? "COD" : "Prepaid",
     awb: r.awb_number ?? undefined,
     courier: r.courier ?? undefined,
     createdAt: r.placed_at,
@@ -447,26 +448,54 @@ export function useClaimFirstAdmin() {
 
 export function useMyOrders() {
   const { user } = useAuth();
-  return useQuery({
+  const qc = useQueryClient();
+  const query = useQuery({
     queryKey: ["my-orders", user?.id],
     enabled: !!user,
     queryFn: async () => {
+      const { data: seller, error: sellerError } = await supabase
+        .from("sellers")
+        .select("id")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (sellerError) throw sellerError;
+      if (!seller) return [];
+
       const { data, error } = await supabase
         .from("orders")
         .select("*, order_items(*)")
-        .eq("user_id", user!.id)
+        .eq("seller_id", seller.id)
         .order("placed_at", { ascending: false });
       if (error) throw error;
       return (data ?? []).map((r: any) => rowToOrder(r, r.order_items));
     },
+    refetchInterval: 5_000,
   });
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`seller-orders-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, () => {
+        void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [qc, user]);
+
+  return query;
 }
 
 const ORDER_FLOW: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup", "out_for_delivery", "delivered"];
 
 export function useAdvanceOrder() {
   const qc = useQueryClient();
-  const { user } = useAuth();
   return useMutation({
     mutationFn: async (v: { id: string }) => {
       const { data: cur, error: gErr } = await supabase.from("orders").select("*").eq("id", v.id).single();
@@ -480,17 +509,14 @@ export function useAdvanceOrder() {
         patch.courier = ["BlueDart", "Delhivery", "Ekart", "XpressBees"][Math.floor(Math.random() * 4)];
       }
       if (next === "delivered") patch.delivered_at = new Date().toISOString();
-      const { error } = await supabase.from("orders").update(patch).eq("id", v.id);
+      const { data: updated, error } = await supabase
+        .from("orders")
+        .update(patch)
+        .eq("id", v.id)
+        .select("id, status")
+        .single();
       if (error) throw error;
-      if (user) {
-        await supabase.from("notifications").insert({
-          user_id: user.id,
-          title: `Order ${cur.order_number} → ${next}`,
-          body: next === "out_for_delivery" ? `Out for delivery via ${patch.courier} (${patch.awb_number}).` : `Order marked as ${next}.`,
-          kind: "order",
-          link: "/seller/orders",
-        });
-      }
+      if (!updated) throw new Error("Order status was not updated");
       return next;
     },
     onSuccess: () => {
@@ -502,20 +528,16 @@ export function useAdvanceOrder() {
 
 export function useCancelOrder() {
   const qc = useQueryClient();
-  const { user } = useAuth();
   return useMutation({
     mutationFn: async (v: { id: string; reason: string }) => {
-      const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", v.id);
+      const { data: updated, error } = await supabase
+        .from("orders")
+        .update({ status: "cancelled" })
+        .eq("id", v.id)
+        .select("id, status")
+        .single();
       if (error) throw error;
-      if (user) {
-        await supabase.from("notifications").insert({
-          user_id: user.id,
-          title: "Order cancelled",
-          body: v.reason,
-          kind: "order",
-          link: "/seller/orders",
-        });
-      }
+      if (!updated) throw new Error("Order was not cancelled");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-orders"] });

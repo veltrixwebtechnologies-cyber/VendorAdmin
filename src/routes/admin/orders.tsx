@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,14 +17,31 @@ export const Route = createFileRoute("/admin/orders")({
 type Row = { id: string; buyer_name: string | null; total: number; status: string; created_at: string; seller_id: string; user_id: string; subtotal: number; shipping_fee: number };
 
 function useAllOrders() {
-  return useQuery<Row[]>({
+  const qc = useQueryClient();
+  const query = useQuery<Row[]>({
     queryKey: ["admin","orders"],
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("orders").select("id, buyer_name, total, subtotal, shipping_fee, status, created_at, seller_id, user_id").order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
+    refetchInterval: 5_000,
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-orders")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        void qc.invalidateQueries({ queryKey: ["admin", "orders"] });
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [qc]);
+
+  return query;
 }
 
 function AdminOrders() {
@@ -32,8 +49,14 @@ function AdminOrders() {
   const qc = useQueryClient();
   const upd = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await (supabase as any).from("orders").update({ status }).eq("id", id);
+      const { data, error } = await (supabase as any)
+        .from("orders")
+        .update({ status })
+        .eq("id", id)
+        .select("id, status")
+        .single();
       if (error) throw error;
+      if (!data) throw new Error("Order status was not updated");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin","orders"] }),
   });

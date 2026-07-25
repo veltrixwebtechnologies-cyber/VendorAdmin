@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronRight, Loader2, MapPin, Package, Phone, ShoppingBag, Truck, XCircle } from "lucide-react";
+import { ChevronRight, Loader2, MapPin, Package, Phone, Play, ShoppingBag, Truck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -132,9 +132,31 @@ function OrdersPage() {
 
 function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: () => void }) {
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [isDemoProgressing, setIsDemoProgressing] = useState(false);
   const advance = useAdvanceOrder();
   const cancel = useCancelOrder();
   const nextStatus = order ? nextStep(order.status) : null;
+
+  const completeDemoFlow = async () => {
+    if (!order || isDemoProgressing) return;
+    const currentIndex = FLOW.indexOf(order.status);
+    if (currentIndex < 0 || currentIndex >= FLOW.length - 1) return;
+
+    setIsDemoProgressing(true);
+    try {
+      for (let index = currentIndex; index < FLOW.length - 1; index += 1) {
+        await advance.mutateAsync({ id: order.id });
+        if (index < FLOW.length - 2) {
+          await new Promise((resolve) => window.setTimeout(resolve, 5_000));
+        }
+      }
+      toast.success("Demo order delivered");
+    } catch (error: any) {
+      toast.error(error?.message ?? "Could not complete the demo flow");
+    } finally {
+      setIsDemoProgressing(false);
+    }
+  };
 
   return (
     <Sheet open={!!order} onOpenChange={(o) => !o && onClose()}>
@@ -200,12 +222,18 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                         try { const next = await advance.mutateAsync({ id: order.id }); toast.success(`Marked as ${next}`); }
                         catch (e: any) { toast.error(e?.message ?? "Failed"); }
                       }}
-                      disabled={advance.isPending}
+                      disabled={advance.isPending || isDemoProgressing}
                     >
                       <Package className="h-4 w-4" /> Mark as {nextStatus}
                     </Button>
                   )}
-                  <Button variant="outline" onClick={() => setCancelOpen(true)}>
+                  {nextStatus && (
+                    <Button variant="outline" onClick={() => void completeDemoFlow()} disabled={isDemoProgressing || advance.isPending}>
+                      {isDemoProgressing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                      {isDemoProgressing ? "Running demo flow" : "Complete demo flow"}
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => setCancelOpen(true)} disabled={isDemoProgressing}>
                     <XCircle className="h-4 w-4" /> Cancel order
                   </Button>
                 </div>
