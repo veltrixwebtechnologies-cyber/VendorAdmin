@@ -6,7 +6,7 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-  IF NOT public.has_role(auth.uid(), 'admin') AND (
+  IF NOT private.has_role(auth.uid(), 'admin'::public.app_role) AND (
     NEW.status IS DISTINCT FROM OLD.status OR
     NEW.reviewed_by IS DISTINCT FROM OLD.reviewed_by OR
     NEW.reviewed_at IS DISTINCT FROM OLD.reviewed_at OR
@@ -62,7 +62,7 @@ USING (
 DROP POLICY IF EXISTS "Admins read all product images" ON storage.objects;
 CREATE POLICY "Admins read all product images"
 ON storage.objects FOR SELECT TO authenticated
-USING (bucket_id = 'product-images' AND public.has_role(auth.uid(), 'admin'));
+USING (bucket_id = 'product-images' AND private.has_role(auth.uid(), 'admin'::public.app_role));
 
 DROP POLICY IF EXISTS "Sellers read own docs" ON storage.objects;
 CREATE POLICY "Sellers read own docs"
@@ -72,7 +72,7 @@ USING (bucket_id = 'seller-docs' AND auth.uid()::text = (storage.foldername(name
 DROP POLICY IF EXISTS "Admins read all seller docs" ON storage.objects;
 CREATE POLICY "Admins read all seller docs"
 ON storage.objects FOR SELECT TO authenticated
-USING (bucket_id = 'seller-docs' AND public.has_role(auth.uid(), 'admin'));
+USING (bucket_id = 'seller-docs' AND private.has_role(auth.uid(), 'admin'::public.app_role));
 
 DROP POLICY IF EXISTS "Sellers update own docs" ON storage.objects;
 CREATE POLICY "Sellers update own docs"
