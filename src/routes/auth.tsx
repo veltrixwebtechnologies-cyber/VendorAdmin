@@ -159,27 +159,33 @@ function SignUpForm() {
 
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
+    if (!email.trim()) return toast.error("Enter your email address");
     if (password.length < 8) return toast.error("Password must be at least 8 characters");
-    const generated = String(Math.floor(100000 + Math.random() * 900000));
-    setOtp(generated);
-    toast.success(`Verification code sent to ${email}`);
-    toast.info(`Simulated OTP: ${generated}`, { duration: 15000 });
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        shouldCreateUser: true,
+        data: { display_name: displayName || email.trim().split("@")[0] },
+      },
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    setOtp("sent");
+    toast.success(`Verification code sent to ${email.trim()}`);
   }
 
   async function verifyAndCreate(e: React.FormEvent) {
     e.preventDefault();
     if (code.trim() !== otp) return toast.error("Incorrect verification code");
     setBusy(true);
-    const signup = supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/seller`,
-        data: { display_name: displayName || email.split("@")[0] },
-      },
+    const verification = supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: "email",
     });
     const { data, error } = await Promise.race([
-      signup,
+      verification,
       new Promise<{ data: { session: null }; error: Error }>((resolve) =>
         setTimeout(() => resolve({ data: { session: null }, error: new Error("Signup timed out. Check the deployed Supabase environment variables.") }), 10000),
       ),
@@ -191,14 +197,18 @@ function SignUpForm() {
         : error.message;
       return toast.error(msg);
     }
-    // Supabase returns a session immediately when email confirmation is disabled.
-    // When confirmation is enabled, do not make a second blocking login request.
     if (!data.session) {
       setBusy(false);
-      setOtp(null);
-      setCode("");
-      setPassword("");
-      return toast.success("Account created. Confirm your email, then sign in.");
+      return toast.error("Verification completed, but no Supabase session was created.");
+    }
+
+    const { error: passwordError } = await supabase.auth.updateUser({
+      password,
+      data: { display_name: displayName || email.trim().split("@")[0] },
+    });
+    if (passwordError) {
+      setBusy(false);
+      return toast.error(passwordError.message);
     }
     setBusy(false);
     setOtp(null);
@@ -211,8 +221,7 @@ function SignUpForm() {
     return (
       <form onSubmit={verifyAndCreate} className="space-y-4 animate-fade-in">
         <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 text-xs">
-          We sent a 6-digit code to <span className="font-medium">{email}</span>. For this demo the
-          code is shown on screen: <span className="font-mono font-semibold">{otp}</span>
+          We sent a 6-digit verification code to <span className="font-medium">{email}</span>. Check your inbox or spam folder.
         </div>
         <div>
           <Label htmlFor="otp">Verification code</Label>
@@ -239,9 +248,16 @@ function SignUpForm() {
           type="button"
           className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
           onClick={() => {
-            const g = String(Math.floor(100000 + Math.random() * 900000));
-            setOtp(g);
-            toast.info(`New code: ${g}`, { duration: 15000 });
+            void supabase.auth.signInWithOtp({
+              email: email.trim(),
+              options: {
+                shouldCreateUser: true,
+                data: { display_name: displayName || email.trim().split("@")[0] },
+              },
+            }).then(({ error }) => {
+              if (error) toast.error(error.message);
+              else toast.success("A new verification code was sent.");
+            });
           }}
         >
           Resend code
