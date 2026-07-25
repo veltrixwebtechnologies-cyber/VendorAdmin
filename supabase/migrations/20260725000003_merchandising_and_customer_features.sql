@@ -55,7 +55,7 @@ CREATE POLICY "Public records product engagement" ON public.product_views FOR IN
   WITH CHECK (user_id IS NULL OR user_id = auth.uid());
 DROP POLICY IF EXISTS "Users read own product engagement" ON public.product_views;
 CREATE POLICY "Users read own product engagement" ON public.product_views FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR public.has_role(auth.uid(), 'admin'));
+  USING (user_id = auth.uid() OR private.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE TABLE IF NOT EXISTS public.featured_brands (
   brand_id uuid PRIMARY KEY REFERENCES public.brands(id) ON DELETE CASCADE,
@@ -67,7 +67,7 @@ GRANT SELECT ON public.featured_brands TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.featured_brands TO authenticated;
 CREATE POLICY "Anyone views featured brands" ON public.featured_brands FOR SELECT USING (true);
 CREATE POLICY "Admins manage featured brands" ON public.featured_brands FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (private.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (private.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE TABLE IF NOT EXISTS public.gift_collections (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -89,12 +89,12 @@ ALTER TABLE public.gift_collections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.gift_collection_products ENABLE ROW LEVEL SECURITY;
 GRANT SELECT ON public.gift_collections, public.gift_collection_products TO anon, authenticated;
 GRANT ALL ON public.gift_collections, public.gift_collection_products TO authenticated;
-CREATE POLICY "Anyone views active gift collections" ON public.gift_collections FOR SELECT USING (is_active OR public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Anyone views active gift collections" ON public.gift_collections FOR SELECT USING (is_active OR private.has_role(auth.uid(), 'admin'::public.app_role));
 CREATE POLICY "Anyone views gift collection products" ON public.gift_collection_products FOR SELECT USING (true);
 CREATE POLICY "Admins manage gift collections" ON public.gift_collections FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (private.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (private.has_role(auth.uid(), 'admin'::public.app_role));
 CREATE POLICY "Admins manage gift collection products" ON public.gift_collection_products FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (private.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (private.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE TABLE IF NOT EXISTS public.seasonal_collections (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -121,13 +121,13 @@ GRANT ALL ON public.seasonal_collections, public.seasonal_collection_products TO
 DROP POLICY IF EXISTS "Anyone views active seasonal collections" ON public.seasonal_collections;
 CREATE POLICY "Anyone views active seasonal collections" ON public.seasonal_collections FOR SELECT USING (
   (is_active AND (starts_at IS NULL OR starts_at <= now()) AND (ends_at IS NULL OR ends_at > now()))
-  OR public.has_role(auth.uid(), 'admin')
+  OR private.has_role(auth.uid(), 'admin'::public.app_role)
 );
 CREATE POLICY "Anyone views seasonal collection products" ON public.seasonal_collection_products FOR SELECT USING (true);
 CREATE POLICY "Admins manage seasonal collections" ON public.seasonal_collections FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (private.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (private.has_role(auth.uid(), 'admin'::public.app_role));
 CREATE POLICY "Admins manage seasonal collection products" ON public.seasonal_collection_products FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (private.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (private.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE TABLE IF NOT EXISTS public.flash_sales (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -152,13 +152,13 @@ GRANT SELECT ON public.flash_sales, public.flash_sale_products TO anon, authenti
 GRANT ALL ON public.flash_sales, public.flash_sale_products TO authenticated;
 DROP POLICY IF EXISTS "Anyone views active flash sales" ON public.flash_sales;
 CREATE POLICY "Anyone views active flash sales" ON public.flash_sales FOR SELECT USING (
-  (is_active AND starts_at <= now() AND ends_at > now()) OR public.has_role(auth.uid(), 'admin')
+  (is_active AND starts_at <= now() AND ends_at > now()) OR private.has_role(auth.uid(), 'admin'::public.app_role)
 );
 CREATE POLICY "Anyone views flash sale products" ON public.flash_sale_products FOR SELECT USING (true);
 CREATE POLICY "Admins manage flash sales" ON public.flash_sales FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (private.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (private.has_role(auth.uid(), 'admin'::public.app_role));
 CREATE POLICY "Admins manage flash sale products" ON public.flash_sale_products FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (private.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (private.has_role(auth.uid(), 'admin'::public.app_role));
 
 ALTER TABLE public.coupons
   ADD COLUMN IF NOT EXISTS vendor_id uuid REFERENCES public.sellers(id) ON DELETE CASCADE,
@@ -168,7 +168,7 @@ ALTER TABLE public.coupons
 DROP POLICY IF EXISTS "Anyone views active coupons" ON public.coupons;
 CREATE POLICY "Anyone views active coupons" ON public.coupons FOR SELECT USING (
   (is_active AND (starts_at IS NULL OR starts_at <= now()) AND (expires_at IS NULL OR expires_at > now()))
-  OR public.has_role(auth.uid(), 'admin')
+  OR private.has_role(auth.uid(), 'admin'::public.app_role)
 );
 CREATE TABLE IF NOT EXISTS public.coupon_usages (
   coupon_id uuid NOT NULL REFERENCES public.coupons(id) ON DELETE CASCADE,
@@ -182,7 +182,7 @@ GRANT SELECT, INSERT ON public.coupon_usages TO authenticated;
 CREATE POLICY "Users read own coupon usage" ON public.coupon_usages FOR SELECT TO authenticated USING (user_id = auth.uid());
 CREATE POLICY "Users create own coupon usage" ON public.coupon_usages FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
 CREATE POLICY "Admins manage coupon usage" ON public.coupon_usages FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  USING (private.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (private.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE TABLE IF NOT EXISTS public.product_comparisons (
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
