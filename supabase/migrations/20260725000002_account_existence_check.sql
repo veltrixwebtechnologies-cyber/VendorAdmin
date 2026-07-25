@@ -15,6 +15,11 @@ AS $$
     FROM public.profiles
     WHERE (p_email IS NOT NULL AND lower(email) = lower(trim(p_email)))
        OR (p_phone IS NOT NULL AND phone = trim(p_phone))
+  ) OR EXISTS (
+    SELECT 1
+    FROM auth.users
+    WHERE (p_email IS NOT NULL AND lower(email) = lower(trim(p_email)))
+       OR (p_phone IS NOT NULL AND phone = trim(p_phone))
   );
 $$;
 

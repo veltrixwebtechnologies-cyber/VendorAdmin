@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Users, Store, Package, FolderTree, ShoppingCart,
   CreditCard, Wallet, Boxes, Star, Ticket, Image as ImageIcon,
   BarChart3, LifeBuoy, Bell, Settings,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -28,6 +29,7 @@ const NAV = [
   ]},
   { group: "Growth", items: [
     { title: "Coupons & Promotions", url: "/admin/coupons", icon: Ticket },
+    { title: "Merchandising", url: "/admin/merchandising", icon: Sparkles },
     { title: "Banner Management", url: "/admin/banners", icon: ImageIcon },
     { title: "Reports", url: "/admin/reports", icon: BarChart3 },
   ]},

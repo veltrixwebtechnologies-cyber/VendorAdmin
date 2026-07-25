@@ -49,6 +49,8 @@ export interface PlatformSettings {
   return_policy: string | null; privacy_policy: string | null;
   terms_conditions: string | null; payment_gateway: string; updated_at: string;
 }
+export interface FlashSale { id: string; title: string; discount_type: "percent" | "flat"; discount_value: number; starts_at: string; ends_at: string; is_active: boolean; }
+export interface Collection { id: string; name: string; slug: string; description: string | null; image_url: string | null; starts_at?: string | null; ends_at?: string | null; is_active: boolean; display_order: number; }
 
 /* ---------- Generic helpers ---------- */
 function useList<T>(table: string, order = "created_at", ascending = false) {
@@ -128,6 +130,50 @@ export function useDeleteCoupon() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["coupons"] }),
+  });
+}
+
+export const useFlashSales = () => useList<FlashSale>("flash_sales");
+export function useUpsertFlashSale() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sale: Partial<FlashSale> & { title: string; starts_at: string; ends_at: string }) => {
+      const { data, error } = await (supabase as any).from("flash_sales").upsert(sale).select().single();
+      if (error) throw error; return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["flash_sales"] }),
+  });
+}
+export const useGiftCollections = () => useList<Collection>("gift_collections");
+export const useSeasonalCollections = () => useList<Collection>("seasonal_collections");
+export function useUpsertCollection(table: "gift_collections" | "seasonal_collections") {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (collection: Partial<Collection> & { name: string; slug: string }) => {
+      const { data, error } = await (supabase as any).from(table).upsert(collection).select().single();
+      if (error) throw error; return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [table] }),
+  });
+}
+export function useFeatureBrand() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ brand_id, display_order }: { brand_id: string; display_order: number }) => {
+      const { error } = await (supabase as any).from("featured_brands").upsert({ brand_id, display_order });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["featured_brands"] }),
+  });
+}
+export function useSetProductClearance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, clearance }: { id: string; clearance: boolean }) => {
+      const { error } = await (supabase as any).from("products").update({ clearance }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
   });
 }
 
