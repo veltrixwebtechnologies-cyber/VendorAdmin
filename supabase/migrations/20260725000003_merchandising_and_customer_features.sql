@@ -233,7 +233,8 @@ CREATE TRIGGER reviews_verified_purchase_trigger
   BEFORE INSERT OR UPDATE OF user_id, product_id ON public.reviews
   FOR EACH ROW EXECUTE FUNCTION public.mark_verified_review();
 
-CREATE OR REPLACE VIEW public.public_merchandising_products AS
+DROP VIEW IF EXISTS public.public_merchandising_products;
+CREATE VIEW public.public_merchandising_products AS
 SELECT
   p.id, p.seller_id, p.name, p.sku, p.brand, p.brand_id, p.category, p.description,
   p.mrp, p.selling_price, p.stock, p.image_url, p.images, p.created_at,

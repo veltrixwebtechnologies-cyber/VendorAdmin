@@ -25,7 +25,8 @@ TO authenticated
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
 
-CREATE OR REPLACE VIEW public.public_merchandising_products AS
+DROP VIEW IF EXISTS public.public_merchandising_products;
+CREATE VIEW public.public_merchandising_products AS
 SELECT
   p.id,
   p.seller_id,
