@@ -1,5 +1,6 @@
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
+import { m } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
@@ -44,9 +45,14 @@ const ChartContainer = React.forwardRef<
 
   return (
     <ChartContext.Provider value={{ config }}>
-      <div
+      <m.div
         data-chart={chartId}
         ref={ref}
+        initial={{ opacity: 0, scaleY: 0.94 }}
+        whileInView={{ opacity: 1, scaleY: 1 }}
+        viewport={{ once: true, amount: 0.15 }}
+        transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+        style={{ transformOrigin: "bottom" }}
         className={cn(
           "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-none [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-surface]:outline-none",
           className,
@@ -55,7 +61,7 @@ const ChartContainer = React.forwardRef<
       >
         <ChartStyle id={chartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
-      </div>
+      </m.div>
     </ChartContext.Provider>
   );
 });

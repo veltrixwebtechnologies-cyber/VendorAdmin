@@ -40,30 +40,87 @@ function AdminLoginPage() {
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) {
-      setBusy(false);
-      return toast.error(error.message);
-    }
-    const uid = data.user?.id;
-    // Verify admin role before granting access
-    const [{ data: roleRow }, { data: anyAdmin }] = await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", uid!).eq("role", "admin").maybeSingle(),
-      supabase.rpc("has_any_admin"),
-    ]);
-    setBusy(false);
-    if (roleRow) {
-      toast.success("Signed in as admin");
-      return;
-    }
-    // Not an admin. Allow only if no admin exists yet (first-time claim).
-    if (!anyAdmin) {
+    try {
+      const { data, error } = await Promise.race([
+        supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: pass,
+        }),
+        new Promise<{
+          data: { user: null; session: null };
+          error: Error;
+        }>((resolve) =>
+          window.setTimeout(
+            () =>
+              resolve({
+                data: { user: null, session: null },
+                error: new Error("Admin sign in timed out. Check your connection and try again."),
+              }),
+            8_000,
+          ),
+        ),
+      ]);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      const uid = data.user?.id;
+      if (!uid || !data.session) {
+        toast.error("Supabase did not create an admin session.");
+        return;
+      }
+
+      const roleResult = await Promise.race([
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", uid)
+          .eq("role", "admin")
+          .maybeSingle(),
+        new Promise<{ data: null; error: Error }>((resolve) =>
+          window.setTimeout(
+            () =>
+              resolve({
+                data: null,
+                error: new Error("Admin role verification timed out. Please try again."),
+              }),
+            8_000,
+          ),
+        ),
+      ]);
+
+      if (roleResult.error) {
+        console.error("[auth] admin role verification failed", roleResult.error);
+        toast.error(roleResult.error.message);
+        return;
+      }
+      if (roleResult.data) {
+        await isAdminQ.refetch();
+        toast.success("Signed in as admin");
+        await navigate({ to: "/admin", replace: true });
+        return;
+      }
+
+      const { data: anyAdmin, error: adminCheckError } = await supabase.rpc("has_any_admin");
+      if (adminCheckError) {
+        console.error("[auth] admin availability check failed", adminCheckError);
+      }
+      if (adminCheckError || anyAdmin !== false) {
+        await supabase.auth.signOut();
+        toast.error("This account does not have admin access.");
+        return;
+      }
+
       toast.message("Sign-in successful — claim admin to continue.");
-      return;
+    } catch (error) {
+      console.error("[auth] admin sign in failed", error);
+      toast.error(error instanceof Error ? error.message : "Admin sign in failed. Please try again.");
+    } finally {
+      setBusy(false);
     }
-    await supabase.auth.signOut();
-    toast.error("This account does not have admin access.");
   }
 
   async function onClaim() {
@@ -126,8 +183,22 @@ function AdminLoginPage() {
                 </Button>
               </div>
             ) : (
-              <div className="text-xs text-muted-foreground">
-                This account does not have admin access. Ask an existing admin to grant you the admin role.
+              <div className="space-y-3">
+                <div className="text-xs text-muted-foreground">
+                  This account does not have admin access. Ask an existing admin to grant you the admin role.
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    setEmail("");
+                    setPass("");
+                  }}
+                >
+                  Sign out and use another account
+                </Button>
               </div>
             )}
           </div>

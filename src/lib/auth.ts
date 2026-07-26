@@ -1,4 +1,3 @@
-import "@/lib/session-scope";
 import { useSyncExternalStore } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,13 +30,25 @@ function ensureInit() {
     setState({ session, user: session?.user ?? null, loading: false });
   });
 
-  supabase.auth.getSession().then(({ data }) => {
-    setState({
-      session: data.session,
-      user: data.session?.user ?? null,
-      loading: false,
+  void Promise.race([
+    supabase.auth.getSession(),
+    new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 5_000)),
+  ])
+    .then((result) => {
+      if (!result) {
+        setState({ session: null, user: null, loading: false });
+        return;
+      }
+      setState({
+        session: result.data.session,
+        user: result.data.session?.user ?? null,
+        loading: false,
+      });
+    })
+    .catch((error) => {
+      console.error("[auth] session initialization failed", error);
+      setState({ session: null, user: null, loading: false });
     });
-  });
 }
 
 function subscribe(cb: () => void) {

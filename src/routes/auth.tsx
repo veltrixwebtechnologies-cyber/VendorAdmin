@@ -110,14 +110,52 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
+  const { redirect } = useSearch({ from: "/auth" });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Signed in");
+    try {
+      const signIn = supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      const { data, error } = await Promise.race([
+        signIn,
+        new Promise<{
+          data: { user: null; session: null };
+          error: Error;
+        }>((resolve) =>
+          window.setTimeout(
+            () =>
+              resolve({
+                data: { user: null, session: null },
+                error: new Error("Sign in timed out. Check your connection and try again."),
+              }),
+            8_000,
+          ),
+        ),
+      ]);
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      if (!data.session) {
+        toast.error("Supabase did not create a session. Please try again.");
+        return;
+      }
+
+      toast.success("Signed in");
+      await navigate({ to: (redirect as any) || "/seller", replace: true });
+    } catch (error) {
+      console.error("[auth] seller sign in failed", error);
+      toast.error(error instanceof Error ? error.message : "Sign in failed. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

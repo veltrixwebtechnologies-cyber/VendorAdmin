@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { AlertTriangle, Box, CheckCircle2, Circle, Clock, Loader2, Package, Play, RefreshCw, ShoppingBag, Store } from "lucide-react";
+import { AlertTriangle, Box, CheckCircle2, Circle, Clock, Package, Play, RefreshCw, ShoppingBag, Store } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listProducts, type ProductDto } from "@/lib/products.functions";
 import { useAuth } from "@/lib/auth";
+import { AnimatedNumber } from "@/components/motion/presets";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/seller/")({
   head: () => ({
@@ -31,7 +33,15 @@ function SellerDashboard() {
   const seller = sellerQ.data;
 
   if (sellerQ.isLoading || !seller) {
-    return <div className="grid min-h-[40vh] place-items-center"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
+    return (
+      <div className="mx-auto grid max-w-5xl gap-4">
+        <Skeleton className="h-8 w-56" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-24" />)}
+        </div>
+        <Skeleton className="h-36" />
+      </div>
+    );
   }
 
   return (
@@ -95,7 +105,7 @@ function ApprovedStats() {
     { to: "/seller/orders", label: "New orders", value: stats.newOrders, hint: `${stats.inProgress} in progress`, icon: ShoppingBag, tone: stats.newOrders > 0 ? "primary" : "muted" },
     { to: "/seller/products", label: "Active products", value: stats.active, hint: `${products.length} total`, icon: Package, tone: "muted" },
     { to: "/seller/inventory", label: "Low / out of stock", value: stats.lowStock + stats.outOfStock, hint: `${stats.outOfStock} out of stock`, icon: Box, tone: stats.outOfStock > 0 ? "destructive" : "muted" },
-    { to: "/seller/settlements", label: "Delivered revenue", value: `₹${Math.round(stats.revenue).toLocaleString("en-IN")}`, hint: "Payouts calculated weekly", icon: CheckCircle2, tone: "muted" },
+    { to: "/seller/settlements", label: "Delivered revenue", value: stats.revenue, currency: true, hint: "Payouts calculated weekly", icon: CheckCircle2, tone: "muted" },
   ] as const;
 
   return (
@@ -109,7 +119,14 @@ function ApprovedStats() {
                 <CardContent className="flex items-start justify-between py-4">
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">{t.label}</div>
-                    <div className={"mt-1 text-2xl font-bold " + (t.tone === "destructive" ? "text-destructive" : t.tone === "primary" ? "text-primary" : "")}>{t.value}</div>
+                    <div className={"mt-1 text-2xl font-bold " + (t.tone === "destructive" ? "text-destructive" : t.tone === "primary" ? "text-primary" : "")}>
+                      <AnimatedNumber
+                        value={t.value}
+                        format={"currency" in t && t.currency
+                          ? (value) => `₹${Math.round(value).toLocaleString("en-IN")}`
+                          : undefined}
+                      />
+                    </div>
                     <div className="text-xs text-muted-foreground">{t.hint}</div>
                   </div>
                   <div className={"grid h-9 w-9 place-items-center rounded-lg " + (t.tone === "destructive" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary")}>

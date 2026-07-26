@@ -11,6 +11,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { useAdminOverview } from "@/lib/admin-db";
+import { AnimatedNumber, Reveal } from "@/components/motion/presets";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: "Dashboard — Admin" }, { name: "robots", content: "noindex" }] }),
@@ -19,7 +20,21 @@ export const Route = createFileRoute("/admin/")({
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
-function Kpi({ icon: Icon, label, value, sub, tone = "default" }: any) {
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  tone = "default",
+  currency = false,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: number;
+  sub?: string;
+  tone?: "default" | "warn" | "danger";
+  currency?: boolean;
+}) {
   const toneCls = tone === "warn" ? "bg-accent/20 text-accent-foreground"
     : tone === "danger" ? "bg-destructive/15 text-destructive"
     : "bg-primary/10 text-primary";
@@ -31,7 +46,12 @@ function Kpi({ icon: Icon, label, value, sub, tone = "default" }: any) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-[11px] font-medium text-muted-foreground sm:text-xs">{label}</div>
-          <div className="mt-0.5 truncate text-lg font-black tracking-tight sm:text-2xl">{value}</div>
+          <div className="mt-0.5 truncate text-lg font-black tracking-tight sm:text-2xl">
+            <AnimatedNumber
+              value={value}
+              format={currency ? (number) => fmt(Math.round(number)) : undefined}
+            />
+          </div>
           {sub && <div className="mt-0.5 truncate text-[10px] text-muted-foreground sm:text-[11px]">{sub}</div>}
         </div>
       </CardContent>
@@ -137,18 +157,18 @@ function AdminDashboard() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 stagger">
-        <Kpi icon={Users} label="Total Users" value={data.totalUsers.toLocaleString("en-IN")} />
+        <Kpi icon={Users} label="Total Users" value={data.totalUsers} />
         <Kpi icon={Store} label="Total Vendors" value={stats.totalVendors} sub={`${stats.activeVendors} active`} />
         <Kpi icon={Clock} label="Pending Vendors" value={stats.pendingVendors} tone="warn" />
         <Kpi icon={Package} label="Total Products" value={stats.totalProducts} />
         <Kpi icon={AlertTriangle} label="Pending Products" value={stats.pendingProducts} tone="warn" />
         <Kpi icon={ShoppingCart} label="Total Orders" value={stats.totalOrders} sub={`${data.todayOrders} today`} />
-        <Kpi icon={IndianRupee} label="Monthly Revenue" value={fmt(stats.monthlyRevenue)} />
-        <Kpi icon={TrendingUp} label="Platform Revenue" value={fmt(stats.platformRevenue)} sub="8% commission" />
+        <Kpi icon={IndianRupee} label="Monthly Revenue" value={stats.monthlyRevenue} currency />
+        <Kpi icon={TrendingUp} label="Platform Revenue" value={stats.platformRevenue} sub="8% commission" currency />
       </div>
 
       {/* Charts */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <Reveal className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle className="text-base">Revenue overview</CardTitle></CardHeader>
           <CardContent className="h-72">
@@ -233,7 +253,7 @@ function AdminDashboard() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </Reveal>
 
       {/* Widgets */}
       <div className="grid gap-4 lg:grid-cols-3">

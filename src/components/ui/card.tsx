@@ -1,12 +1,20 @@
 import * as React from "react";
+import { m } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div
+    <m.div
       ref={ref}
-      className={cn("rounded-xl border bg-card text-card-foreground shadow", className)}
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.08 }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+      className={cn(
+        "rounded-xl border bg-card text-card-foreground shadow transition-shadow duration-300 hover:shadow-md",
+        className,
+      )}
       {...props}
     />
   ),

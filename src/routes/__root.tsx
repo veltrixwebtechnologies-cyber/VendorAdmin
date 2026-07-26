@@ -9,11 +9,13 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from "motion/react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { seedIfEmpty } from "@/lib/seller-store";
+import { pageVariants } from "@/components/motion/presets";
 
 function NotFoundComponent() {
   return (
@@ -134,11 +136,22 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div key={pathname} className="animate-fade-in">
-        <Outlet />
-      </div>
-      <Toaster richColors position="top-right" />
+      <LazyMotion features={domAnimation}>
+        <MotionConfig reducedMotion="user">
+          <AnimatePresence mode="wait" initial={false}>
+            <m.div
+              key={pathname}
+              variants={pageVariants}
+              initial="initial"
+              animate="enter"
+              exit="exit"
+            >
+              <Outlet />
+            </m.div>
+          </AnimatePresence>
+        </MotionConfig>
+      </LazyMotion>
+      <Toaster richColors position="bottom-center" />
     </QueryClientProvider>
   );
 }
-
