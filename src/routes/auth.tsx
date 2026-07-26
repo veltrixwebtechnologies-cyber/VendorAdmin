@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth";
 
+const OTP_LENGTH = 8;
+
 const searchSchema = z.object({
   redirect: z.string().optional().catch(undefined),
 });
@@ -154,7 +156,7 @@ function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [otp, setOtp] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
   const [code, setCode] = useState("");
 
   async function sendCode(e: React.FormEvent) {
@@ -171,13 +173,15 @@ function SignUpForm() {
     });
     setBusy(false);
     if (error) return toast.error(error.message);
-    setOtp("sent");
+    setOtpSent(true);
     toast.success(`Verification code sent to ${email.trim()}`);
   }
 
   async function verifyAndCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (code.trim() !== otp) return toast.error("Incorrect verification code");
+    if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(code.trim())) {
+      return toast.error(`Enter the ${OTP_LENGTH}-digit verification code`);
+    }
     setBusy(true);
     const verification = supabase.auth.verifyOtp({
       email: email.trim(),
@@ -211,17 +215,17 @@ function SignUpForm() {
       return toast.error(passwordError.message);
     }
     setBusy(false);
-    setOtp(null);
+    setOtpSent(false);
     setCode("");
     setPassword("");
     toast.success("Account created. Opening Seller Hub…");
   }
 
-  if (otp) {
+  if (otpSent) {
     return (
       <form onSubmit={verifyAndCreate} className="space-y-4 animate-fade-in">
         <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 text-xs">
-          We sent a 6-digit verification code to <span className="font-medium">{email}</span>. Check your inbox or spam folder.
+          We sent an {OTP_LENGTH}-digit verification code to <span className="font-medium">{email}</span>. Check your inbox or spam folder.
         </div>
         <div>
           <Label htmlFor="otp">Verification code</Label>
@@ -229,18 +233,18 @@ function SignUpForm() {
             id="otp"
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
+            maxLength={OTP_LENGTH}
             required
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-            placeholder="6-digit code"
+            placeholder={`${OTP_LENGTH}-digit code`}
           />
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="flex-1" onClick={() => { setOtp(null); setCode(""); }}>
+          <Button type="button" variant="outline" className="flex-1" onClick={() => { setOtpSent(false); setCode(""); }}>
             Back
           </Button>
-          <Button type="submit" className="flex-1" disabled={busy || code.length !== 6}>
+          <Button type="submit" className="flex-1" disabled={busy || code.length !== OTP_LENGTH}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} Verify & create
           </Button>
         </div>
