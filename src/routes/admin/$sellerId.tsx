@@ -57,6 +57,17 @@ function AdminSellerDetail() {
   }
 
   const doAction = async (action: "approve" | "reject" | "more_info", reason?: string) => {
+    if (action === "approve") {
+      const documentTypes = new Set(docs.map((document) => document.doc_type));
+      const missingStorefrontMedia = [
+        !documentTypes.has("shopLogo") && "shop logo",
+        !documentTypes.has("shopBanner") && "shop banner",
+      ].filter(Boolean);
+      if (missingStorefrontMedia.length > 0) {
+        toast.error(`Cannot approve: missing ${missingStorefrontMedia.join(" and ")}.`);
+        return;
+      }
+    }
     await review.mutateAsync({ id: seller.id, action, note: reason });
     toast.success(action === "approve" ? "Approved" : action === "reject" ? "Rejected" : "Info requested");
     navigate({ to: "/admin" });
@@ -79,6 +90,8 @@ function AdminSellerDetail() {
         </div>
         <Badge className="bg-accent text-accent-foreground">{seller.status}</Badge>
       </div>
+
+      <StorefrontPreview docs={docs} shopName={seller.business.shopName || "Shop"} />
 
       <VendorActivity userId={seller.userId} />
 
@@ -170,6 +183,51 @@ function AdminSellerDetail() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function StorefrontPreview({ docs, shopName }: { docs: DocRow[]; shopName: string }) {
+  const [images, setImages] = useState<{ logo?: string; banner?: string }>({});
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const logo = docs.find((document) => document.doc_type === "shopLogo" && document.file_url);
+      const banner = docs.find((document) => document.doc_type === "shopBanner" && document.file_url);
+      const [logoUrl, bannerUrl] = await Promise.all([
+        logo?.file_url ? signedDocUrl(logo.file_url) : null,
+        banner?.file_url ? signedDocUrl(banner.file_url) : null,
+      ]);
+      if (active) setImages({ logo: logoUrl ?? undefined, banner: bannerUrl ?? undefined });
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [docs]);
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="relative h-40 bg-muted sm:h-52">
+        {images.banner ? (
+          <img src={images.banner} alt={`${shopName} storefront`} className="h-full w-full object-cover" />
+        ) : (
+          <div className="grid h-full place-items-center text-sm text-muted-foreground">Shop banner missing</div>
+        )}
+        <div className="absolute bottom-3 left-4 flex items-end gap-3">
+          <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-lg border-2 border-background bg-card shadow">
+            {images.logo ? (
+              <img src={images.logo} alt={`${shopName} logo`} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xl font-bold text-primary">{shopName.slice(0, 1).toUpperCase()}</span>
+            )}
+          </div>
+          <span className="rounded-md bg-background/90 px-2 py-1 text-sm font-semibold shadow-sm backdrop-blur">
+            Customer storefront preview
+          </span>
+        </div>
+      </div>
+    </Card>
   );
 }
 

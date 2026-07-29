@@ -169,7 +169,7 @@ function SellerSidebar() {
               })}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link to="/">
+                  <Link to="/seller/support">
                     <MessageSquare className="h-4 w-4" />
                     <span>Support</span>
                   </Link>

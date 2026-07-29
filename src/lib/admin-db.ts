@@ -35,6 +35,11 @@ export interface SupportTicket {
   id: string; user_id: string | null; raised_by: "customer"|"vendor";
   subject: string; body: string; priority: "low"|"normal"|"high"|"urgent";
   status: "open"|"pending"|"resolved"|"closed"; assigned_to: string | null;
+  order_id?: string | null; issue_type?: string | null; support_stage?: string;
+  selected_product_ids?: string[]; evidence_urls?: string[]; video_url?: string | null;
+  customer_comment?: string | null; eligible?: boolean; eligibility_reason?: string | null;
+  decision?: string | null; refund_amount?: number | null; replacement_approved?: boolean;
+  reporting_deadline?: string | null; resolved_at?: string | null;
   created_at: string; updated_at: string;
 }
 export interface AdminBroadcast {
@@ -137,9 +142,18 @@ export const useFlashSales = () => useList<FlashSale>("flash_sales");
 export function useUpsertFlashSale() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (sale: Partial<FlashSale> & { title: string; starts_at: string; ends_at: string }) => {
-      const { data, error } = await (supabase as any).from("flash_sales").upsert(sale).select().single();
-      if (error) throw error; return data;
+    mutationFn: async (sale: Partial<FlashSale> & { title: string; starts_at: string; ends_at: string; product_ids?: string[] }) => {
+      const { product_ids, ...saleData } = sale;
+      const { data, error } = await (supabase as any).from("flash_sales").upsert(saleData).select().single();
+      if (error) throw error;
+      if (product_ids) {
+        await (supabase as any).from("flash_sale_products").delete().eq("flash_sale_id", data.id);
+        if (product_ids.length) {
+          const { error: relationError } = await (supabase as any).from("flash_sale_products").insert(product_ids.map(product_id => ({ flash_sale_id: data.id, product_id })));
+          if (relationError) throw relationError;
+        }
+      }
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["flash_sales"] }),
   });
@@ -161,6 +175,16 @@ export function useFeatureBrand() {
   return useMutation({
     mutationFn: async ({ brand_id, display_order }: { brand_id: string; display_order: number }) => {
       const { error } = await (supabase as any).from("featured_brands").upsert({ brand_id, display_order });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["featured_brands"] }),
+  });
+}
+export function useUnfeatureBrand() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (brand_id: string) => {
+      const { error } = await (supabase as any).from("featured_brands").delete().eq("brand_id", brand_id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["featured_brands"] }),

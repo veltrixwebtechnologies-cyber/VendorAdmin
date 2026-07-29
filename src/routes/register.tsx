@@ -722,6 +722,15 @@ function StepReview({ seller, onEdit, onBack }: { seller: Seller; onEdit: (n: nu
   ]), [seller]);
 
   const doSubmit = async () => {
+    const missingStorefrontMedia = [
+      !seller.documents.shopLogo && "Shop Logo",
+      !seller.documents.shopBanner && "Shop Banner",
+    ].filter(Boolean);
+    if (missingStorefrontMedia.length > 0) {
+      toast.error(`Missing: ${missingStorefrontMedia.join(", ")}`);
+      onEdit(6);
+      return;
+    }
     try {
       await submitMut.mutateAsync();
       toast.success("Application submitted for approval");

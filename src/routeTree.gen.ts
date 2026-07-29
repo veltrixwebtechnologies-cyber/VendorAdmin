@@ -44,6 +44,7 @@ import { Route as SellerReportsRouteImport } from './routes/seller/reports'
 import { Route as SellerReviewsRouteImport } from './routes/seller/reviews'
 import { Route as SellerSettlementsRouteImport } from './routes/seller/settlements'
 import { Route as SellerStoreRouteImport } from './routes/seller/store'
+import { Route as SellerSupportRouteImport } from './routes/seller/support'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -220,6 +221,11 @@ const SellerStoreRoute = SellerStoreRouteImport.update({
   path: '/store',
   getParentRoute: () => SellerRouteRoute,
 } as any)
+const SellerSupportRoute = SellerSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => SellerRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -255,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/seller/reviews': typeof SellerReviewsRoute
   '/seller/settlements': typeof SellerSettlementsRoute
   '/seller/store': typeof SellerStoreRoute
+  '/seller/support': typeof SellerSupportRoute
   '/admin/': typeof AdminIndexRoute
   '/seller/': typeof SellerIndexRoute
 }
@@ -290,6 +297,7 @@ export interface FileRoutesByTo {
   '/seller/reviews': typeof SellerReviewsRoute
   '/seller/settlements': typeof SellerSettlementsRoute
   '/seller/store': typeof SellerStoreRoute
+  '/seller/support': typeof SellerSupportRoute
   '/admin': typeof AdminIndexRoute
   '/seller': typeof SellerIndexRoute
 }
@@ -328,6 +336,7 @@ export interface FileRoutesById {
   '/seller/reviews': typeof SellerReviewsRoute
   '/seller/settlements': typeof SellerSettlementsRoute
   '/seller/store': typeof SellerStoreRoute
+  '/seller/support': typeof SellerSupportRoute
   '/admin/': typeof AdminIndexRoute
   '/seller/': typeof SellerIndexRoute
 }
@@ -367,6 +376,7 @@ export interface FileRouteTypes {
     | '/seller/reviews'
     | '/seller/settlements'
     | '/seller/store'
+    | '/seller/support'
     | '/admin/'
     | '/seller/'
   fileRoutesByTo: FileRoutesByTo
@@ -402,6 +412,7 @@ export interface FileRouteTypes {
     | '/seller/reviews'
     | '/seller/settlements'
     | '/seller/store'
+    | '/seller/support'
     | '/admin'
     | '/seller'
   id:
@@ -439,6 +450,7 @@ export interface FileRouteTypes {
     | '/seller/reviews'
     | '/seller/settlements'
     | '/seller/store'
+    | '/seller/support'
     | '/admin/'
     | '/seller/'
   fileRoutesById: FileRoutesById
@@ -699,6 +711,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SellerStoreRouteImport
       parentRoute: typeof SellerRouteRoute
     }
+    '/seller/support': {
+      id: '/seller/support'
+      path: '/support'
+      fullPath: '/seller/support'
+      preLoaderRoute: typeof SellerSupportRouteImport
+      parentRoute: typeof SellerRouteRoute
+    }
   }
 }
 
@@ -760,6 +779,7 @@ interface SellerRouteRouteChildren {
   SellerReviewsRoute: typeof SellerReviewsRoute
   SellerSettlementsRoute: typeof SellerSettlementsRoute
   SellerStoreRoute: typeof SellerStoreRoute
+  SellerSupportRoute: typeof SellerSupportRoute
   SellerIndexRoute: typeof SellerIndexRoute
 }
 
@@ -773,6 +793,7 @@ const SellerRouteRouteChildren: SellerRouteRouteChildren = {
   SellerReviewsRoute: SellerReviewsRoute,
   SellerSettlementsRoute: SellerSettlementsRoute,
   SellerStoreRoute: SellerStoreRoute,
+  SellerSupportRoute: SellerSupportRoute,
   SellerIndexRoute: SellerIndexRoute,
 }
 
