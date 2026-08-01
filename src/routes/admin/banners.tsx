@@ -29,6 +29,11 @@ export const Route = createFileRoute("/admin/banners")({
   component: BannersPage,
 });
 
+function resolveBannerImage(imageUrl: string) {
+  if (/^(https?:|data:|blob:)/i.test(imageUrl)) return imageUrl;
+  return supabase.storage.from("banner-images").getPublicUrl(imageUrl).data.publicUrl;
+}
+
 function BannersPage() {
   const q = useBanners();
   const upsert = useUpsertBanner();
@@ -44,8 +49,7 @@ function BannersPage() {
         .from("banner-images")
         .upload(path, file, { upsert: false });
       if (error) throw error;
-      const { data } = supabase.storage.from("banner-images").getPublicUrl(path);
-      setEditing((e) => (e ? { ...e, image_url: data.publicUrl } : e));
+      setEditing((e) => (e ? { ...e, image_url: path } : e));
       toast.success("Uploaded");
     } catch (e: any) {
       toast.error(e.message || "Upload failed");
@@ -89,7 +93,7 @@ function BannersPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 stagger">
           {(q.data ?? []).map((b) => (
             <Card key={b.id} className="overflow-hidden hover-lift">
-              <img src={b.image_url} alt={b.title} className="h-32 w-full object-cover" />
+              <img src={resolveBannerImage(b.image_url)} alt={b.title} className="h-32 w-full object-cover" />
               <CardContent className="p-3 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="truncate font-semibold">{b.title}</div>
@@ -181,7 +185,7 @@ function BannersPage() {
                 </div>
                 {editing.image_url && (
                   <img
-                    src={editing.image_url}
+                    src={resolveBannerImage(editing.image_url)}
                     alt=""
                     className="mt-2 h-24 w-full rounded-md object-cover"
                   />
