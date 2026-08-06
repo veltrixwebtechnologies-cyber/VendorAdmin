@@ -48,6 +48,12 @@ const TABS: Array<{ value: OrderStatus | "all"; label: string }> = [
   { value: "packed", label: "Packed" }, { value: "ready_for_pickup", label: "Ready for pickup" }, { value: "out_for_delivery", label: "Out for delivery" }, { value: "delivered", label: "Delivered" }, { value: "cancelled", label: "Cancelled" },
 ];
 
+const FALLBACK_STATUS_META = { label: "Unknown", className: "bg-muted text-muted-foreground" };
+
+function getStatusMeta(status: OrderStatus) {
+  return STATUS_META[status] ?? FALLBACK_STATUS_META;
+}
+
 function OrdersPage() {
   const q = useMyOrders();
   const orders = q.data ?? [];
@@ -103,7 +109,7 @@ function OrdersPage() {
                   <div className="flex-1 min-w-[180px]">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm font-semibold">{o.orderNumber}</span>
-                      <Badge className={STATUS_META[o.status].className}>{STATUS_META[o.status].label}</Badge>
+                      <Badge className={getStatusMeta(o.status).className}>{getStatusMeta(o.status).label}</Badge>
                     </div>
                     <div className="mt-1 text-sm text-muted-foreground">
                       {o.buyerName}{o.city ? ` • ${o.city}` : ""}{o.state ? `, ${o.state}` : ""}
@@ -166,7 +172,7 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
                 <span className="font-mono">{order.orderNumber}</span>
-                <Badge className={STATUS_META[order.status].className}>{STATUS_META[order.status].label}</Badge>
+                <Badge className={getStatusMeta(order.status).className}>{getStatusMeta(order.status).label}</Badge>
               </SheetTitle>
               <SheetDescription>Placed on {new Date(order.createdAt).toLocaleString()}</SheetDescription>
             </SheetHeader>
@@ -219,7 +225,14 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                   {nextStatus && (
                     <Button
                       onClick={async () => {
-                        try { const next = await advance.mutateAsync({ id: order.id }); toast.success(`Marked as ${next}`); }
+                        try {
+                          const result = await advance.mutateAsync({ id: order.id });
+                          toast.success(
+                            result.dispatched > 0
+                              ? `Marked as ${result.status}. Delivery request sent.`
+                              : `Marked as ${result.status}. Waiting for an eligible partner with a fresh location.`,
+                          );
+                        }
                         catch (e: any) { toast.error(e?.message ?? "Failed"); }
                       }}
                       disabled={advance.isPending || isDemoProgressing}

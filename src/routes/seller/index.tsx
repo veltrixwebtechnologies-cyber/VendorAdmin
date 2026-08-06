@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
-import { useMySeller, useMyOrders, useSimulateDemoOrder, type Seller, type SellerStatus } from "@/lib/db";
+import { getDataErrorMessage, useMySeller, useMyOrders, useSimulateDemoOrder, type Seller, type SellerStatus } from "@/lib/db";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listProducts, type ProductDto } from "@/lib/products.functions";
@@ -31,6 +31,23 @@ export const Route = createFileRoute("/seller/")({
 function SellerDashboard() {
   const sellerQ = useMySeller();
   const seller = sellerQ.data;
+
+  if (sellerQ.isError) {
+    return (
+      <Card className="mx-auto max-w-5xl border-destructive/40">
+        <CardContent className="space-y-3 py-8 text-center">
+          <AlertTriangle className="mx-auto h-6 w-6 text-destructive" />
+          <p className="font-medium">Seller dashboard could not load.</p>
+          <p className="text-sm text-muted-foreground">
+            {getDataErrorMessage(sellerQ.error)}
+          </p>
+          <Button variant="outline" onClick={() => void sellerQ.refetch()}>
+            <RefreshCw className="h-4 w-4" /> Try again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (sellerQ.isLoading || !seller) {
     return (

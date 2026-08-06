@@ -134,6 +134,20 @@ export interface Settlement {
   utr?: string;
 }
 
+export function getDataErrorMessage(error: unknown, fallback = "Please try again.") {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object") {
+    const value = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+    const message = typeof value.message === "string" ? value.message : "";
+    const details = typeof value.details === "string" ? value.details : "";
+    const hint = typeof value.hint === "string" ? value.hint : "";
+    const context = [details, hint].filter(Boolean).join(" ");
+    if (message || context) return [message, context].filter(Boolean).join(" ");
+    if (typeof value.code === "string") return `Database request failed (${value.code}).`;
+  }
+  return fallback;
+}
+
 /* ------------ Mappers ------------ */
 
 function rowToSeller(r: any): Seller {
@@ -286,8 +300,14 @@ export function useMySeller() {
   const q = useQuery({
     queryKey: ["my-seller", user?.id],
     enabled: !!user,
+    retry: false,
     queryFn: async () => {
-      const { data, error } = await supabase.from("sellers").select("*").eq("user_id", user!.id).maybeSingle();
+      const request = supabase.from("sellers").select("*").eq("user_id", user!.id).maybeSingle();
+      const result = await Promise.race([
+        request,
+        new Promise<never>((_, reject) => globalThis.setTimeout(() => reject(new Error("Seller profile request timed out. Check your Supabase connection and try again.")), 5_000)),
+      ]);
+      const { data, error } = result;
       if (error) throw error;
       if (data) return rowToSeller(data);
       // Auto-create a minimal draft seller
@@ -492,32 +512,25 @@ export function useMyOrders() {
   return query;
 }
 
-const ORDER_FLOW: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup", "out_for_delivery", "delivered"];
-
 export function useAdvanceOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: { id: string }) => {
-      const { data: cur, error: gErr } = await supabase.from("orders").select("*").eq("id", v.id).single();
-      if (gErr) throw gErr;
-      const idx = ORDER_FLOW.indexOf(cur.status);
-      if (idx < 0 || idx >= ORDER_FLOW.length - 1) throw new Error("Cannot advance from this status");
-      const next = ORDER_FLOW[idx + 1];
-      const patch: any = { status: next };
-      if (next === "out_for_delivery" && !cur.awb_number) {
-        patch.awb_number = "AWB" + Math.floor(Math.random() * 9e9 + 1e9);
-        patch.courier = ["BlueDart", "Delhivery", "Ekart", "XpressBees"][Math.floor(Math.random() * 4)];
+      const { data, error } = await (supabase as any).rpc("advance_seller_order", {
+        _order_id: v.id,
+      });
+      if (error) {
+        console.error("[orders] advance_seller_order failed", {
+          orderId: v.id,
+          code: error.code,
+          status: error.status,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+        throw error;
       }
-      if (next === "delivered") patch.delivered_at = new Date().toISOString();
-      const { data: updated, error } = await supabase
-        .from("orders")
-        .update(patch)
-        .eq("id", v.id)
-        .select("id, status")
-        .single();
-      if (error) throw error;
-      if (!updated) throw new Error("Order status was not updated");
-      return next;
+      return data as { status: OrderStatus; dispatched: number };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-orders"] });

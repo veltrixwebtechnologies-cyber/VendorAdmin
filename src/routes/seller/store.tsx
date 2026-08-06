@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Loader2, Store } from "lucide-react";
+import { AlertTriangle, Loader2, RefreshCw, Store } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useMySeller } from "@/lib/db";
+import { getDataErrorMessage, useMySeller } from "@/lib/db";
 
 export const Route = createFileRoute("/seller/store")({
   head: () => ({
@@ -18,6 +18,18 @@ export const Route = createFileRoute("/seller/store")({
 
 function StoreSetupPage() {
   const sellerQ = useMySeller();
+  if (sellerQ.isError) {
+    return (
+      <Card className="mx-auto max-w-3xl border-destructive/40">
+        <CardContent className="space-y-3 py-8 text-center">
+          <AlertTriangle className="mx-auto h-6 w-6 text-destructive" />
+          <p className="font-medium">Store setup could not load.</p>
+          <p className="text-sm text-muted-foreground">{getDataErrorMessage(sellerQ.error)}</p>
+          <Button variant="outline" onClick={() => void sellerQ.refetch()}><RefreshCw className="h-4 w-4" /> Try again</Button>
+        </CardContent>
+      </Card>
+    );
+  }
   if (sellerQ.isLoading || !sellerQ.data) {
     return <div className="grid min-h-[40vh] place-items-center"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
   }
