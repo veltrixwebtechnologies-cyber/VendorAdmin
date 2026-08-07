@@ -543,14 +543,12 @@ export function useCancelOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: { id: string; reason: string }) => {
-      const { data: updated, error } = await supabase
-        .from("orders")
-        .update({ status: "cancelled" })
-        .eq("id", v.id)
-        .select("id, status")
-        .single();
+      const { data, error } = await (supabase as any).rpc("cancel_seller_order", {
+        _order_id: v.id,
+        _reason: v.reason,
+      });
       if (error) throw error;
-      if (!updated) throw new Error("Order was not cancelled");
+      if (!data) throw new Error("Order was not cancelled");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-orders"] });
