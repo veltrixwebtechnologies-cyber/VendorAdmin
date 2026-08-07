@@ -95,4 +95,20 @@ $$;
 REVOKE ALL ON FUNCTION public.cancel_seller_order(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.cancel_seller_order(uuid, text) TO authenticated;
 
+-- Do not expose every ready-for-pickup order to every online partner. A
+-- partner receives order details only after an assignment row is created for
+-- that partner; dispatch itself remains server-side.
+CREATE OR REPLACE FUNCTION public.delivery_partner_can_read_unassigned_order(_order_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT false;
+$$;
+
+REVOKE ALL ON FUNCTION public.delivery_partner_can_read_unassigned_order(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.delivery_partner_can_read_unassigned_order(uuid) TO authenticated;
+
 NOTIFY pgrst, 'reload schema';
