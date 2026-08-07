@@ -9,7 +9,8 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-  IF public.has_role(auth.uid(), 'admin'::public.app_role) THEN
+  IF auth.role() = 'service_role'
+     OR public.has_role(auth.uid(), 'admin'::public.app_role) THEN
     RETURN NEW;
   END IF;
 
