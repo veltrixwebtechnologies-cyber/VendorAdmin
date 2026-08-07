@@ -227,13 +227,23 @@ function MoreInfoBanner({ message }: { message?: string }) {
 }
 
 function ApprovedChecklist({ seller }: { seller: Seller }) {
+  const { user } = useAuth();
+  const list = useServerFn(listProducts);
+  const productsQ = useQuery<ProductDto[]>({
+    queryKey: ["products", user?.id],
+    queryFn: () => list() as Promise<ProductDto[]>,
+    enabled: !!user,
+  });
+  const products = productsQ.data ?? [];
+  const hasProduct = products.length > 0;
+  const hasActiveProduct = products.some((product) => product.status === "active");
   const items = [
     { label: "Account created", done: true },
     { label: "Documents verified", done: true },
     { label: "Bank details added", done: !!seller.bank.accountNumber },
     { label: "Complete store profile", done: !!seller.business.description },
-    { label: "Add first product", done: false },
-    { label: "Start selling", done: false },
+    { label: "Add first product", done: hasProduct },
+    { label: "Start selling", done: hasActiveProduct },
   ];
   const done = items.filter((i) => i.done).length;
   const pct = (done / items.length) * 100;
@@ -269,7 +279,7 @@ function ApprovedChecklist({ seller }: { seller: Seller }) {
           </ul>
           <div className="flex flex-wrap gap-2 pt-2">
             <Link to="/seller/store"><Button variant="outline"><Store className="h-4 w-4" /> Complete store profile</Button></Link>
-            <Link to="/seller/products"><Button>Add first product</Button></Link>
+            <Link to="/seller/products"><Button>{hasProduct ? "Manage products" : "Add first product"}</Button></Link>
           </div>
         </CardContent>
       </Card>
