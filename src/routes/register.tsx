@@ -16,23 +16,12 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
+import { sendSellerEmailOtp, verifySellerEmailOtp } from "@/lib/seller-otp.functions";
 import {
   useMySeller, useSubmitMySeller, useUpdateMySeller, uploadSellerDoc,
   type Seller, type BusinessType, type SellerDocuments, type StoredFile,
 } from "@/lib/db";
-
-/* --- OTP simulation (in-memory only; identical UX to before) --- */
-const otpMap = new Map<string, { code: string; expiresAt: number }>();
-function generateOtp(target: string) {
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  otpMap.set(target, { code, expiresAt: Date.now() + 5 * 60_000 });
-  return code;
-}
-function verifyOtp(target: string, code: string) {
-  const e = otpMap.get(target);
-  if (!e || Date.now() > e.expiresAt) return false;
-  return e.code === code;
-}
 
 const STEPS = ["Account", "Business", "Address", "Bank", "Tax & Legal", "Documents", "Review"] as const;
 const searchSchema = z.object({ step: z.coerce.number().min(1).max(7).optional() });
@@ -308,25 +297,27 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
   const emailVerified = seller.account.emailVerified;
   const mobileVerified = seller.account.mobileVerified;
 
-  const sendEmailOtp = () => {
+  const sendEmailOtp = async () => {
     const p = accountSchema.shape.email.safeParse(values.email);
     if (!p.success) return setErrors((e) => ({ ...e, email: p.error.issues[0].message }));
-    const code = generateOtp("email:" + values.email);
-    setEmailSent(true);
-    toast.success(`Email OTP: ${code}`, { description: "Simulated — enter to verify." });
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return toast.error("Please sign in again before verifying your email");
+    try { await sendSellerEmailOtp({ data: { accessToken: token, email: values.email } }); setEmailSent(true); toast.success("Verification code sent to your email"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Could not send verification code"); }
   };
   const sendMobileOtp = () => {
     const p = accountSchema.shape.mobile.safeParse(values.mobile);
     if (!p.success) return setErrors((e) => ({ ...e, mobile: p.error.issues[0].message }));
-    const code = generateOtp("mobile:" + values.mobile);
-    setMobileSent(true);
-    toast.success(`Mobile OTP: ${code}`, { description: "Simulated — enter to verify." });
+    setMobileSent(false);
+    toast.error("SMS verification is not configured. Mobile verification remains pending.");
   };
   const verifyEmail = async () => {
-    if (verifyOtp("email:" + values.email, emailCode)) {
-      await update.mutateAsync({ account: { ...seller.account, ...values, emailVerified: true } });
-      toast.success("Email verified");
-    } else toast.error("Invalid or expired OTP");
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return toast.error("Please sign in again before verifying your email");
+    try { await verifySellerEmailOtp({ data: { accessToken: token, email: values.email, code: emailCode } }); await update.mutateAsync({ account: { ...seller.account, ...values, emailVerified: true } }); toast.success("Email verified"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Invalid or expired OTP"); }
   };
   const verifyMobile = async () => {
     if (verifyOtp("mobile:" + values.mobile, mobileCode)) {

@@ -80,7 +80,6 @@ export interface Seller {
 const STORAGE_KEY = "sellers:v1";
 const DOCS_KEY = "sellers:docs:v1";
 const CURRENT_KEY = "sellers:current";
-const OTP_KEY = "sellers:otps";
 const STEP_KEY = "sellers:step";
 
 type State = {
@@ -308,39 +307,6 @@ export function rejectSeller(id: string, reason: string) {
 
 export function requestMoreInfo(id: string, message: string) {
   updateSeller(id, { status: "more_info", reviewNote: message });
-}
-
-/* OTP simulation */
-
-type OtpMap = Record<string, { code: string; expiresAt: number }>;
-
-function readOtps(): OtpMap {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(localStorage.getItem(OTP_KEY) || "{}") as OtpMap;
-  } catch {
-    return {};
-  }
-}
-function writeOtps(m: OtpMap) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(OTP_KEY, JSON.stringify(m));
-}
-
-export function generateOtp(target: string): string {
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  const m = readOtps();
-  m[target] = { code, expiresAt: Date.now() + 5 * 60_000 };
-  writeOtps(m);
-  return code;
-}
-
-export function verifyOtp(target: string, code: string): boolean {
-  const m = readOtps();
-  const entry = m[target];
-  if (!entry) return false;
-  if (Date.now() > entry.expiresAt) return false;
-  return entry.code === code;
 }
 
 /* Saved wizard step (for resume-where-you-left-off) */

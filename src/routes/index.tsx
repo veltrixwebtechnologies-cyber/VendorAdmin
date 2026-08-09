@@ -74,7 +74,7 @@ function Index() {
             <ul className="mt-8 grid gap-3 text-sm text-muted-foreground stagger">
               {[
                 "7-step guided onboarding",
-                "Simulated OTP email/mobile verification",
+                "Server-verified seller email verification",
                 "Admin review with approve / reject / request more info",
               ].map((t) => (
                 <li key={t} className="flex items-center gap-2">
