@@ -29,7 +29,6 @@ AS $$
   );
 $$;
 
-REVOKE ALL ON FUNCTION public.account_exists(text, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.account_exists(text, text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.account_exists(text, text) FROM PUBLIC, anon, authenticated;
 
 NOTIFY pgrst, 'reload schema';
