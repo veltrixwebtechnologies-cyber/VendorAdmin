@@ -557,20 +557,6 @@ export function useCancelOrder() {
   });
 }
 
-export function useSimulateDemoOrder() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.rpc("seed_demo_order");
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-orders"] });
-      qc.invalidateQueries({ queryKey: ["my-notifications"] });
-    },
-  });
-}
-
 /* ------------ Product stock (uses direct supabase for simplicity) ------------ */
 
 export function useUpdateProductStock() {
@@ -743,7 +729,16 @@ export async function uploadSellerDoc(
   docType: string,
   file: File,
 ): Promise<StoredFile> {
-  const ext = file.name.split(".").pop() || "bin";
+  if (file.size <= 0 || file.size > 10 * 1024 * 1024) throw new Error("Document exceeds the 10 MB limit");
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+  const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+  const isWebp = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  const allowed = (isPdf && ext === "pdf") || (isJpeg && ["jpg", "jpeg"].includes(ext)) || (isPng && ext === "png") || (isWebp && ext === "webp");
+  if (!allowed) throw new Error("Unsupported or invalid document file");
+
   const path = `${userId}/${docType}-${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("seller-docs").upload(path, file, { upsert: true, contentType: file.type });
   if (error) throw error;

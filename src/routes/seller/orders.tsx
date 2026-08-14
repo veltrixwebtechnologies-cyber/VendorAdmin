@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronRight, Loader2, MapPin, Package, Phone, Play, ShoppingBag, Truck, XCircle } from "lucide-react";
+import { ChevronRight, Loader2, MapPin, Package, Phone, ShoppingBag, Truck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 import {
-  useAdvanceOrder, useCancelOrder, useMyOrders, useSimulateDemoOrder,
+  useAdvanceOrder, useCancelOrder, useMyOrders,
   type Order, type OrderStatus,
 } from "@/lib/db";
 
@@ -42,7 +42,7 @@ const STATUS_META: Record<OrderStatus, { label: string; className: string }> = {
   cancelled: { label: "Cancelled", className: "bg-destructive text-destructive-foreground" },
   returned: { label: "Returned", className: "bg-muted text-muted-foreground" },
 };
-const FLOW: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup", "out_for_delivery", "delivered"];
+const FLOW: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup"];
 const TABS: Array<{ value: OrderStatus | "all"; label: string }> = [
   { value: "all", label: "All" }, { value: "new", label: "New" }, { value: "accepted", label: "Accepted" },
   { value: "packed", label: "Packed" }, { value: "ready_for_pickup", label: "Ready for pickup" }, { value: "out_for_delivery", label: "Out for delivery" }, { value: "delivered", label: "Delivered" }, { value: "cancelled", label: "Cancelled" },
@@ -57,7 +57,6 @@ function getStatusMeta(status: OrderStatus) {
 function OrdersPage() {
   const q = useMyOrders();
   const orders = q.data ?? [];
-  const simulate = useSimulateDemoOrder();
   const [tab, setTab] = useState<OrderStatus | "all">("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const openOrder = useMemo(() => orders.find((o) => o.id === openId) ?? null, [orders, openId]);
@@ -76,10 +75,6 @@ function OrdersPage() {
           <h1 className="text-2xl font-bold">Orders</h1>
           <p className="text-sm text-muted-foreground">{orders.length} total orders • Accept, pack and ship right from here.</p>
         </div>
-        <Button variant="outline" onClick={async () => {
-          try { await simulate.mutateAsync(); toast.success("Demo order created"); }
-          catch (e: any) { toast.error(e?.message ?? "Add a product first"); }
-        }}>Simulate demo order</Button>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as OrderStatus | "all")}>
@@ -98,7 +93,7 @@ function OrdersPage() {
         <Card><CardContent className="flex flex-col items-center gap-3 py-16 text-center">
           <div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"><ShoppingBag className="h-6 w-6" /></div>
           <div className="font-medium">No orders here yet</div>
-          <p className="text-sm text-muted-foreground">Use "Simulate demo order" above to see the fulfilment flow.</p>
+          <p className="text-sm text-muted-foreground">Customer orders will appear here after checkout.</p>
         </CardContent></Card>
       ) : (
         <div className="grid gap-3">
@@ -121,7 +116,7 @@ function OrdersPage() {
                   </div>
                   <div className="text-right">
                     <div className="font-semibold">₹{o.total.toLocaleString("en-IN")}</div>
-                    <div className="text-xs text-muted-foreground">{new Date(o.createdAt).toLocaleDateString()}</div>
+                    <div className="text-xs text-muted-foreground">{new Date(o.createdAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </CardContent>
@@ -138,31 +133,9 @@ function OrdersPage() {
 
 function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: () => void }) {
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [isDemoProgressing, setIsDemoProgressing] = useState(false);
   const advance = useAdvanceOrder();
   const cancel = useCancelOrder();
   const nextStatus = order ? nextStep(order.status) : null;
-
-  const completeDemoFlow = async () => {
-    if (!order || isDemoProgressing) return;
-    const currentIndex = FLOW.indexOf(order.status);
-    if (currentIndex < 0 || currentIndex >= FLOW.length - 1) return;
-
-    setIsDemoProgressing(true);
-    try {
-      for (let index = currentIndex; index < FLOW.length - 1; index += 1) {
-        await advance.mutateAsync({ id: order.id });
-        if (index < FLOW.length - 2) {
-          await new Promise((resolve) => window.setTimeout(resolve, 5_000));
-        }
-      }
-      toast.success("Demo order delivered");
-    } catch (error: any) {
-      toast.error(error?.message ?? "Could not complete the demo flow");
-    } finally {
-      setIsDemoProgressing(false);
-    }
-  };
 
   return (
     <Sheet open={!!order} onOpenChange={(o) => !o && onClose()}>
@@ -174,7 +147,7 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                 <span className="font-mono">{order.orderNumber}</span>
                 <Badge className={getStatusMeta(order.status).className}>{getStatusMeta(order.status).label}</Badge>
               </SheetTitle>
-              <SheetDescription>Placed on {new Date(order.createdAt).toLocaleString()}</SheetDescription>
+              <SheetDescription>Placed on {new Date(order.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</SheetDescription>
             </SheetHeader>
 
             <div className="mt-4 space-y-5">
@@ -235,18 +208,12 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                         }
                         catch (e: any) { toast.error(e?.message ?? "Failed"); }
                       }}
-                      disabled={advance.isPending || isDemoProgressing}
+                      disabled={advance.isPending}
                     >
-                      <Package className="h-4 w-4" /> Mark as {nextStatus}
+                      <Package className="h-4 w-4" /> {order.status === "ready_for_pickup" ? "Retry delivery request" : `Mark as ${nextStatus}`}
                     </Button>
                   )}
-                  {nextStatus && (
-                    <Button variant="outline" onClick={() => void completeDemoFlow()} disabled={isDemoProgressing || advance.isPending}>
-                      {isDemoProgressing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                      {isDemoProgressing ? "Running demo flow" : "Complete demo flow"}
-                    </Button>
-                  )}
-                  <Button variant="outline" onClick={() => setCancelOpen(true)} disabled={isDemoProgressing}>
+                  <Button variant="outline" onClick={() => setCancelOpen(true)} disabled={advance.isPending}>
                     <XCircle className="h-4 w-4" /> Cancel order
                   </Button>
                 </div>
@@ -276,6 +243,7 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
 }
 
 function nextStep(status: OrderStatus): OrderStatus | null {
+  if (status === "ready_for_pickup") return "ready_for_pickup";
   const idx = FLOW.indexOf(status);
   if (idx < 0 || idx >= FLOW.length - 1) return null;
   return FLOW[idx + 1];

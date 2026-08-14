@@ -49,12 +49,7 @@ function AdminOrders() {
   const qc = useQueryClient();
   const upd = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { data, error } = await (supabase as any)
-        .from("orders")
-        .update({ status })
-        .eq("id", id)
-        .select("id, status")
-        .single();
+      const { data, error } = await (supabase as any).rpc("admin_advance_order", { _order_id: id, _next_status: status });
       if (error) throw error;
       if (!data) throw new Error("Order status was not updated");
     },
@@ -102,13 +97,15 @@ function AdminOrders() {
                   <span className="truncate font-medium">{o.buyer_name || "Guest"}</span>
                   <Badge variant="outline" className="text-[10px] capitalize">{o.status}</Badge>
                 </div>
-                <div className="truncate text-xs text-muted-foreground">#{o.id.slice(0,8)} · {new Date(o.created_at).toLocaleString("en-IN")} · ₹{Number(o.total||0).toLocaleString("en-IN")}</div>
+                <div className="truncate text-xs text-muted-foreground">#{o.id.slice(0,8)} · {new Date(o.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · ₹{Number(o.total||0).toLocaleString("en-IN")}</div>
               </div>
               <div className="flex flex-wrap gap-1">
-                <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"shipped"},{onSuccess:()=>toast.success("Marked shipped")})}>Ship</Button>
-                <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"delivered"},{onSuccess:()=>toast.success("Delivered")})}>Deliver</Button>
-                <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"cancelled"},{onSuccess:()=>toast.success("Cancelled")})}>Cancel</Button>
-                <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"returned"},{onSuccess:()=>toast.success("Refund logged")})}>Refund</Button>
+                {o.status === "new" && <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"accepted"},{onSuccess:()=>toast.success("Accepted")})}>Accept</Button>}
+                {o.status === "accepted" && <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"packed"},{onSuccess:()=>toast.success("Packed")})}>Pack</Button>}
+                {o.status === "packed" && <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"ready_for_pickup"},{onSuccess:()=>toast.success("Ready for pickup")})}>Ready</Button>}
+                {o.status === "out_for_delivery" && <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"delivered"},{onSuccess:()=>toast.success("Delivered")})}>Deliver</Button>}
+                {!['cancelled','returned','delivered'].includes(o.status) && <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"cancelled"},{onSuccess:()=>toast.success("Cancelled")})}>Cancel</Button>}
+                {o.status === "delivered" && <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:o.id,status:"returned"},{onSuccess:()=>toast.success("Marked returned; refund requires payment-provider processing")})}>Return</Button>}
               </div>
             </div>
           ))}

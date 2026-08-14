@@ -1,14 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { AlertTriangle, Box, CheckCircle2, Circle, Clock, Package, Play, RefreshCw, ShoppingBag, Store } from "lucide-react";
-import { toast } from "sonner";
+import { AlertTriangle, Box, CheckCircle2, Circle, Clock, Package, RefreshCw, ShoppingBag, Store } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
-import { getDataErrorMessage, useMySeller, useMyOrders, useSimulateDemoOrder, type Seller, type SellerStatus } from "@/lib/db";
+import { getDataErrorMessage, useMySeller, useMyOrders, type Seller, type SellerStatus } from "@/lib/db";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listProducts, type ProductDto } from "@/lib/products.functions";
@@ -106,7 +105,6 @@ function ApprovedStats() {
     enabled: !!user,
   });
   const products = productsQ.data ?? [];
-  const simulate = useSimulateDemoOrder();
 
   const stats = useMemo(() => {
     const active = products.filter((p) => p.status === "active").length;
@@ -156,24 +154,6 @@ function ApprovedStats() {
         })}
       </div>
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
-          <div>
-            <div className="text-sm font-medium">Simulate a demo order</div>
-            <p className="text-xs text-muted-foreground">Creates a fake customer order for one of your products so you can test the full flow.</p>
-          </div>
-          <Button
-            variant="outline"
-            disabled={simulate.isPending || products.length === 0}
-            onClick={async () => {
-              try { await simulate.mutateAsync(); toast.success("New demo order created"); }
-              catch (e: any) { toast.error(e?.message ?? "Failed"); }
-            }}
-          >
-            <Play className="h-4 w-4" /> Generate order
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

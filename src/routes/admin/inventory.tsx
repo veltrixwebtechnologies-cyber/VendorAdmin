@@ -69,8 +69,8 @@ function InventoryPage() {
               <div className="flex items-center gap-2 shrink-0">
                 {isOut && <Badge variant="destructive">Out</Badge>}
                 {isLow && <Badge variant="outline" className="border-accent text-accent-foreground">Low</Badge>}
-                <Input type="number" defaultValue={p.stock ?? 0} className="h-8 w-20" onBlur={e=>{
-                  const n = Number(e.target.value);
+                <Input type="number" min={0} defaultValue={p.stock ?? 0} className="h-8 w-20" onBlur={e=>{
+                  const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
                   if (n !== p.stock) upd.mutate({id:p.id, patch:{stock:n}},{onSuccess:()=>toast.success("Stock updated")});
                 }} />
                 <Button size="sm" variant="outline" onClick={()=>upd.mutate({id:p.id, patch:{status: p.status==="hidden"?"approved":"hidden"}},{onSuccess:()=>toast.success(p.status==="hidden"?"Enabled":"Disabled")})}>

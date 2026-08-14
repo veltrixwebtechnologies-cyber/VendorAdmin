@@ -126,13 +126,19 @@ CREATE OR REPLACE FUNCTION public.place_order_once(
   p_coupon_code text DEFAULT NULL
 )
 RETURNS public.orders LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-DECLARE uid uuid := auth.uid(); existing_order public.orders; created public.orders;
+DECLARE uid uuid := auth.uid(); existing_order public.orders; created public.orders; existing_order_id uuid;
 BEGIN
   IF uid IS NULL OR p_request_id IS NULL THEN RAISE EXCEPTION 'Authentication and request id required'; END IF;
   INSERT INTO public.checkout_requests(user_id, request_id) VALUES (uid, p_request_id)
   ON CONFLICT (user_id, request_id) DO NOTHING;
-  SELECT o.* INTO existing_order FROM public.checkout_requests r JOIN public.orders o ON o.id = r.order_id
-    WHERE r.user_id = uid AND r.request_id = p_request_id;
+  -- Serialize retries for the same authenticated user/request pair. Without
+  -- this lock two concurrent requests can both create an order.
+  SELECT r.order_id INTO existing_order_id
+    FROM public.checkout_requests r
+    WHERE r.user_id = uid AND r.request_id = p_request_id
+    FOR UPDATE;
+  SELECT o.* INTO existing_order FROM public.orders o
+    WHERE o.id = existing_order_id;
   IF existing_order.id IS NOT NULL THEN RETURN existing_order; END IF;
   created := public.place_order(p_buyer_name, p_buyer_phone, p_buyer_address, p_items, p_payment_method, false, p_coupon_code);
   UPDATE public.checkout_requests SET order_id = created.id WHERE user_id = uid AND request_id = p_request_id;
@@ -143,12 +149,19 @@ REVOKE ALL ON FUNCTION public.place_order_once(uuid,text,text,text,jsonb,text,te
 GRANT EXECUTE ON FUNCTION public.place_order_once(uuid,text,text,text,jsonb,text,text) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.record_payment_webhook(
-  p_order_id uuid, p_transaction_id text, p_amount numeric, p_currency text, p_status text
+  p_order_id uuid, p_transaction_id text, p_amount numeric, p_currency text, p_status text,
+  p_signature text, p_payload text
 )
 RETURNS public.orders LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE result public.orders;
+  webhook_secret text := current_setting('app.payment_webhook_secret', true);
+  expected_signature text;
 BEGIN
   IF auth.role() <> 'service_role' THEN RAISE EXCEPTION 'Only payment webhooks may call this function'; END IF;
+  IF webhook_secret IS NULL OR btrim(webhook_secret) = '' THEN RAISE EXCEPTION 'Payment webhook secret is not configured'; END IF;
+  IF p_signature IS NULL OR p_payload IS NULL THEN RAISE EXCEPTION 'Unsigned payment event'; END IF;
+  expected_signature := encode(extensions.hmac(convert_to(p_payload, 'UTF8'), convert_to(webhook_secret, 'UTF8'), 'sha256'), 'hex');
+  IF lower(btrim(p_signature)) <> lower(expected_signature) THEN RAISE EXCEPTION 'Invalid payment webhook signature'; END IF;
   IF p_currency <> 'INR' OR p_status NOT IN ('authorized','paid','failed','refunded') OR p_amount <= 0 THEN RAISE EXCEPTION 'Invalid payment event'; END IF;
   SELECT * INTO result FROM public.orders WHERE id = p_order_id FOR UPDATE;
   IF result.id IS NULL OR result.total <> p_amount THEN RAISE EXCEPTION 'Payment amount/order mismatch'; END IF;
@@ -161,8 +174,8 @@ BEGIN
   RETURN result;
 END;
 $$;
-REVOKE ALL ON FUNCTION public.record_payment_webhook(uuid,text,numeric,text,text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.record_payment_webhook(uuid,text,numeric,text,text) TO service_role;
+REVOKE ALL ON FUNCTION public.record_payment_webhook(uuid,text,numeric,text,text,text,text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_payment_webhook(uuid,text,numeric,text,text,text,text) TO service_role;
 
 -- Withdrawal requests are created only by this balance-checked RPC.
 REVOKE INSERT ON public.delivery_withdrawal_requests FROM authenticated;

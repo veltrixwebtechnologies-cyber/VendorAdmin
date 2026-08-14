@@ -3,13 +3,6 @@ import { createHash, randomInt } from "crypto";
 
 const hash = (email: string, code: string) => createHash("sha256").update(`${email}:${code}`).digest("hex");
 const emailOk = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-let globalOtpWindow = { startedAt: 0, count: 0 };
-function enforceGlobalOtpLimit() {
-  const now = Date.now();
-  if (now - globalOtpWindow.startedAt >= 60_000) globalOtpWindow = { startedAt: now, count: 0 };
-  if (globalOtpWindow.count >= 30) throw new Error("Verification service is temporarily busy. Try again later.");
-  globalOtpWindow.count += 1;
-}
 
 export const sendSellerEmailOtp = createServerFn({ method: "POST" })
   .inputValidator((d: { accessToken: string; email: string }) => {
@@ -18,9 +11,10 @@ export const sendSellerEmailOtp = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    enforceGlobalOtpLimit();
     const { data: auth, error: authError } = await supabaseAdmin.auth.getUser(data.accessToken);
     if (authError || !auth.user || auth.user.email?.toLowerCase() !== data.email) throw new Error("Session/email mismatch");
+    const { data: allowed, error: limitError } = await supabaseAdmin.rpc("consume_seller_otp_rate_limit", { _account_key: auth.user.id });
+    if (limitError || allowed !== true) throw new Error("Too many verification requests. Try again later.");
     const otpTable = supabaseAdmin.from("seller_verification_otps" as any) as any;
     const { data: recent } = await otpTable.select("created_at").eq("user_id", auth.user.id).eq("email", data.email).maybeSingle();
     if (recent && Date.now() - new Date(recent.created_at).getTime() < 60_000) throw new Error("Please wait before requesting another code");
