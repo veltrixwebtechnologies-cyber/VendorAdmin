@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, Store, Package, FolderTree, ShoppingCart,
   CreditCard, Wallet, Boxes, Star, Ticket, Image as ImageIcon,
-  BarChart3, LifeBuoy, Bell, Settings,
+  BarChart3, LifeBuoy, Bell, Settings, Radio,
   Sparkles,
 } from "lucide-react";
 import {
@@ -34,6 +34,7 @@ const NAV = [
     { title: "Reports", url: "/admin/reports", icon: BarChart3 },
   ]},
   { group: "Operations", items: [
+    { title: "Dispatch", url: "/admin/dispatch", icon: Radio },
     { title: "Support Tickets", url: "/admin/tickets", icon: LifeBuoy },
     { title: "Notifications", url: "/admin/notifications", icon: Bell },
     { title: "Settings", url: "/admin/settings", icon: Settings },
