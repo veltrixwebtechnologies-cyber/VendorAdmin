@@ -27,13 +27,7 @@ export interface Product {
 }
 
 export type OrderStatus =
-  | "new"
-  | "accepted"
-  | "packed"
-  | "shipped"
-  | "delivered"
-  | "cancelled"
-  | "returned";
+  "new" | "accepted" | "packed" | "shipped" | "delivered" | "cancelled" | "returned";
 
 export interface OrderItem {
   productId: string;
@@ -72,7 +66,7 @@ type State = { products: Record<string, Product>; orders: Record<string, Order> 
 
 const listeners = new Set<() => void>();
 let state: State = load();
-let seededFor = new Set<string>();
+const seededFor = new Set<string>();
 
 function load(): State {
   if (typeof window === "undefined") return { products: {}, orders: {} };
@@ -302,7 +296,9 @@ export function cancelOrder(id: string, reason: string) {
 
 /* ---------- Seed demo data for a seller (one time) ---------- */
 
-const DEMO_PRODUCTS: Array<Omit<Product, "id" | "sellerId" | "createdAt" | "updatedAt" | "status">> = [
+const DEMO_PRODUCTS: Array<
+  Omit<Product, "id" | "sellerId" | "createdAt" | "updatedAt" | "status">
+> = [
   {
     name: "Cotton Kurta - Indigo",
     sku: "KUR-IND-M",
@@ -405,45 +401,72 @@ export function seedCatalogForSeller(sellerId: string) {
       shipping,
       total: sub + shipping,
       paymentMode,
-      awb: status === "shipped" || status === "delivered" ? "AWB" + (100000000 + idx * 12345) : undefined,
+      awb:
+        status === "shipped" || status === "delivered"
+          ? "AWB" + (100000000 + idx * 12345)
+          : undefined,
       courier: status === "shipped" || status === "delivered" ? "Delhivery" : undefined,
       timeline,
     };
   };
 
   const demoOrders = [
-    mkOrder(1, "new", [{ productId: p1.id, name: p1.name, sku: p1.sku, qty: 1, price: p1.price }], "Prepaid", {
-      name: "Rhea Kapoor",
-      phone: "9812345670",
-      addr: "22 Palm Grove",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pin: "400001",
-    }),
-    mkOrder(2, "accepted", [{ productId: p2.id, name: p2.name, sku: p2.sku, qty: 2, price: p2.price }], "COD", {
-      name: "Vikram Rao",
-      phone: "9876501234",
-      addr: "5 MG Road",
-      city: "Bengaluru",
-      state: "Karnataka",
-      pin: "560001",
-    }),
-    mkOrder(3, "shipped", [{ productId: p1.id, name: p1.name, sku: p1.sku, qty: 1, price: p1.price }], "Prepaid", {
-      name: "Neha Iyer",
-      phone: "9998887771",
-      addr: "9 Anna Salai",
-      city: "Chennai",
-      state: "Tamil Nadu",
-      pin: "600002",
-    }),
-    mkOrder(4, "delivered", [{ productId: p4.id, name: p4.name, sku: p4.sku, qty: 3, price: p4.price }], "Prepaid", {
-      name: "Amit Sen",
-      phone: "9765432100",
-      addr: "3 Park Street",
-      city: "Kolkata",
-      state: "West Bengal",
-      pin: "700016",
-    }),
+    mkOrder(
+      1,
+      "new",
+      [{ productId: p1.id, name: p1.name, sku: p1.sku, qty: 1, price: p1.price }],
+      "Prepaid",
+      {
+        name: "Rhea Kapoor",
+        phone: "9812345670",
+        addr: "22 Palm Grove",
+        city: "Mumbai",
+        state: "Maharashtra",
+        pin: "400001",
+      },
+    ),
+    mkOrder(
+      2,
+      "accepted",
+      [{ productId: p2.id, name: p2.name, sku: p2.sku, qty: 2, price: p2.price }],
+      "COD",
+      {
+        name: "Vikram Rao",
+        phone: "9876501234",
+        addr: "5 MG Road",
+        city: "Bengaluru",
+        state: "Karnataka",
+        pin: "560001",
+      },
+    ),
+    mkOrder(
+      3,
+      "shipped",
+      [{ productId: p1.id, name: p1.name, sku: p1.sku, qty: 1, price: p1.price }],
+      "Prepaid",
+      {
+        name: "Neha Iyer",
+        phone: "9998887771",
+        addr: "9 Anna Salai",
+        city: "Chennai",
+        state: "Tamil Nadu",
+        pin: "600002",
+      },
+    ),
+    mkOrder(
+      4,
+      "delivered",
+      [{ productId: p4.id, name: p4.name, sku: p4.sku, qty: 3, price: p4.price }],
+      "Prepaid",
+      {
+        name: "Amit Sen",
+        phone: "9765432100",
+        addr: "3 Park Street",
+        city: "Kolkata",
+        state: "West Bengal",
+        pin: "700016",
+      },
+    ),
   ];
   for (const o of demoOrders) orders[o.id] = o;
 

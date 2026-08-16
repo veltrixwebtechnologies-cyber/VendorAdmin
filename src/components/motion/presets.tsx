@@ -85,5 +85,9 @@ export function StaggerItem({
   className,
   ...props
 }: HTMLMotionProps<"div"> & { children: ReactNode }) {
-  return <m.div variants={fadeUp} className={className} {...props}>{children}</m.div>;
+  return (
+    <m.div variants={fadeUp} className={className} {...props}>
+      {children}
+    </m.div>
+  );
 }

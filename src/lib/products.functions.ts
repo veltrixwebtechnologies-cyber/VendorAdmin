@@ -42,10 +42,7 @@ async function ensureSellerId(supabase: any, userId: string): Promise<string> {
   return inserted.id as string;
 }
 
-async function signImageIfPath(
-  supabase: any,
-  raw: string | null,
-): Promise<string | null> {
+async function signImageIfPath(supabase: any, raw: string | null): Promise<string | null> {
   if (!raw) return null;
   // Passthrough for absolute URLs / data URLs
   if (/^(https?:|data:)/i.test(raw)) return raw;
@@ -203,9 +200,7 @@ export const bulkCreateProductsFn = createServerFn({ method: "POST" })
       image_url: r.imageUrl || null,
       status: "pending",
     }));
-    const { error, count } = await supabase
-      .from("products")
-      .insert(rows, { count: "exact" });
+    const { error, count } = await supabase.from("products").insert(rows, { count: "exact" });
     if (error) throw error;
     return { inserted: count ?? rows.length };
   });

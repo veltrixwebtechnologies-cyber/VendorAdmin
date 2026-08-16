@@ -1,6 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileUp, ImageIcon, Loader2, Package, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
+import {
+  FileUp,
+  ImageIcon,
+  Loader2,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -140,7 +151,9 @@ function ProductsPage() {
       bulk({ data: { rows: rows.map((r) => normalize({ ...blank(), ...r })) } }),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["products"] });
-      toast.success(`Imported ${r.inserted} product${r.inserted === 1 ? "" : "s"} — sent for approval`);
+      toast.success(
+        `Imported ${r.inserted} product${r.inserted === 1 ? "" : "s"} — sent for approval`,
+      );
     },
     onError: (e: any) => toast.error(e?.message ?? "Import failed"),
   });
@@ -169,14 +182,27 @@ function ProductsPage() {
     });
     const sorted = [...list];
     switch (sortBy) {
-      case "name_asc": sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
-      case "name_desc": sorted.sort((a, b) => b.name.localeCompare(a.name)); break;
-      case "price_asc": sorted.sort((a, b) => a.price - b.price); break;
-      case "price_desc": sorted.sort((a, b) => b.price - a.price); break;
-      case "stock_asc": sorted.sort((a, b) => a.stock - b.stock); break;
-      case "stock_desc": sorted.sort((a, b) => b.stock - a.stock); break;
+      case "name_asc":
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "name_desc":
+        sorted.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "price_asc":
+        sorted.sort((a, b) => a.price - b.price);
+        break;
+      case "price_desc":
+        sorted.sort((a, b) => b.price - a.price);
+        break;
+      case "stock_asc":
+        sorted.sort((a, b) => a.stock - b.stock);
+        break;
+      case "stock_desc":
+        sorted.sort((a, b) => b.stock - a.stock);
+        break;
       case "updated_asc":
-        sorted.sort((a, b) => +new Date(a.updatedAt) - +new Date(b.updatedAt)); break;
+        sorted.sort((a, b) => +new Date(a.updatedAt) - +new Date(b.updatedAt));
+        break;
       case "updated_desc":
       default:
         sorted.sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
@@ -185,7 +211,10 @@ function ProductsPage() {
   }, [products, query, statusFilter, categoryFilter, sortBy]);
 
   const filtersActive =
-    query.trim() !== "" || statusFilter !== "all" || categoryFilter !== "all" || sortBy !== "updated_desc";
+    query.trim() !== "" ||
+    statusFilter !== "all" ||
+    categoryFilter !== "all" ||
+    sortBy !== "updated_desc";
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -227,16 +256,22 @@ function ProductsPage() {
               />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
                 {CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[170px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
@@ -247,7 +282,9 @@ function ProductsPage() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
-              <SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[190px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="updated_desc">Recently updated</SelectItem>
                 <SelectItem value="updated_asc">Oldest updated</SelectItem>
@@ -263,9 +300,14 @@ function ProductsPage() {
               <Button
                 variant="ghost"
                 onClick={() => {
-                  setQuery(""); setStatusFilter("all"); setCategoryFilter("all"); setSortBy("updated_desc");
+                  setQuery("");
+                  setStatusFilter("all");
+                  setCategoryFilter("all");
+                  setSortBy("updated_desc");
                 }}
-              >Clear</Button>
+              >
+                Clear
+              </Button>
             )}
           </div>
           <div className="text-xs text-muted-foreground">
@@ -274,11 +316,16 @@ function ProductsPage() {
 
           {productsQ.isLoading ? (
             <div className="space-y-2 py-4">
-              {[0, 1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-14 w-full" />
+              ))}
             </div>
           ) : productsQ.isError ? (
             <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-              Failed to load products. <button className="underline" onClick={() => productsQ.refetch()}>Retry</button>
+              Failed to load products.{" "}
+              <button className="underline" onClick={() => productsQ.refetch()}>
+                Retry
+              </button>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
@@ -286,9 +333,13 @@ function ProductsPage() {
                 <Package className="h-6 w-6" />
               </div>
               <div>
-                <div className="font-medium">No products {products.length > 0 ? "match" : "yet"}</div>
+                <div className="font-medium">
+                  No products {products.length > 0 ? "match" : "yet"}
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  {products.length > 0 ? "Try clearing filters, or add another product." : "Add your first product to start selling."}
+                  {products.length > 0
+                    ? "Try clearing filters, or add another product."
+                    : "Add your first product to start selling."}
                 </p>
               </div>
               <Button onClick={() => setCreating(true)}>
@@ -316,7 +367,9 @@ function ProductsPage() {
                     const low = p.stock <= p.lowStockAt;
                     return (
                       <TableRow key={p.id} className="animate-fade-in">
-                        <TableCell><ProductThumb src={p.imageUrl ?? undefined} alt={p.name} /></TableCell>
+                        <TableCell>
+                          <ProductThumb src={p.imageUrl ?? undefined} alt={p.name} />
+                        </TableCell>
                         <TableCell>
                           <div className="font-medium">{p.name}</div>
                           <div className="text-xs text-muted-foreground">{p.brand}</div>
@@ -332,9 +385,13 @@ function ProductsPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={low ? "text-destructive font-medium" : ""}>{p.stock}</span>
+                          <span className={low ? "text-destructive font-medium" : ""}>
+                            {p.stock}
+                          </span>
                         </TableCell>
-                        <TableCell><Badge className={meta.className}>{meta.label}</Badge></TableCell>
+                        <TableCell>
+                          <Badge className={meta.className}>{meta.label}</Badge>
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Button variant="ghost" size="icon" onClick={() => setEditing(p)}>
@@ -394,7 +451,9 @@ function ProductsPage() {
                   setPendingDelete(null);
                 }
               }}
-            >Delete</AlertDialogAction>
+            >
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -479,9 +538,15 @@ function ProductFormDialog({
           <div>
             <Label>Category</Label>
             <Select value={form.category} onValueChange={(v) => set("category", v)}>
-              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -491,28 +556,47 @@ function ProductFormDialog({
           </div>
           <div>
             <Label>MRP (₹)</Label>
-            <Input type="number" min={0} value={form.mrp}
-              onChange={(e) => set("mrp", Number(e.target.value))} />
+            <Input
+              type="number"
+              min={0}
+              value={form.mrp}
+              onChange={(e) => set("mrp", Number(e.target.value))}
+            />
           </div>
           <div>
             <Label>Selling price (₹)</Label>
-            <Input type="number" min={0} value={form.price}
-              onChange={(e) => set("price", Number(e.target.value))} />
+            <Input
+              type="number"
+              min={0}
+              value={form.price}
+              onChange={(e) => set("price", Number(e.target.value))}
+            />
           </div>
           <div>
             <Label>Stock</Label>
-            <Input type="number" min={0} value={form.stock}
-              onChange={(e) => set("stock", Number(e.target.value))} />
+            <Input
+              type="number"
+              min={0}
+              value={form.stock}
+              onChange={(e) => set("stock", Number(e.target.value))}
+            />
           </div>
           <div>
             <Label>Low-stock alert at</Label>
-            <Input type="number" min={0} value={form.lowStockAt}
-              onChange={(e) => set("lowStockAt", Number(e.target.value))} />
+            <Input
+              type="number"
+              min={0}
+              value={form.lowStockAt}
+              onChange={(e) => set("lowStockAt", Number(e.target.value))}
+            />
           </div>
           <div className="sm:col-span-2">
             <Label>Description</Label>
-            <Textarea rows={3} value={form.description}
-              onChange={(e) => set("description", e.target.value)} />
+            <Textarea
+              rows={3}
+              value={form.description}
+              onChange={(e) => set("description", e.target.value)}
+            />
           </div>
         </div>
 
@@ -532,8 +616,16 @@ function ProductFormDialog({
 
 function blank(): ProductFormData {
   return {
-    name: "", sku: "", category: "", brand: "", description: "",
-    mrp: 0, price: 0, stock: 0, lowStockAt: 5, imageUrl: "",
+    name: "",
+    sku: "",
+    category: "",
+    brand: "",
+    description: "",
+    mrp: 0,
+    price: 0,
+    stock: 0,
+    lowStockAt: 5,
+    imageUrl: "",
   };
 }
 
@@ -566,7 +658,9 @@ function ProductThumb({ src, alt }: { src?: string; alt: string }) {
       alt={alt}
       loading="lazy"
       className="h-12 w-12 rounded-md border object-cover"
-      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.display = "none";
+      }}
     />
   );
 }
@@ -585,15 +679,23 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (v: string)
   useEffect(() => {
     let cancelled = false;
     async function resolve() {
-      if (!value) { setPreview(""); return; }
-      if (/^(https?:|data:)/i.test(value)) { setPreview(value); return; }
+      if (!value) {
+        setPreview("");
+        return;
+      }
+      if (/^(https?:|data:)/i.test(value)) {
+        setPreview(value);
+        return;
+      }
       const { data } = await supabase.storage
         .from("product-images")
         .createSignedUrl(value, 60 * 60);
       if (!cancelled) setPreview(data?.signedUrl ?? "");
     }
     void resolve();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [value]);
 
   async function handleFile(file: File) {
@@ -626,7 +728,11 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (v: string)
       <div className="flex items-start gap-3">
         {preview ? (
           <div className="relative">
-            <img src={preview} alt="Product preview" className="h-24 w-24 rounded-md border object-cover" />
+            <img
+              src={preview}
+              alt="Product preview"
+              className="h-24 w-24 rounded-md border object-cover"
+            />
             <button
               type="button"
               onClick={() => onChange("")}
@@ -644,16 +750,25 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (v: string)
         <div className="flex flex-1 flex-col gap-2">
           <div className="flex flex-wrap gap-2">
             <Button
-              type="button" variant="outline" size="sm"
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => inputRef.current?.click()}
               disabled={uploading}
             >
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
               {uploading ? "Uploading…" : "Upload image"}
             </Button>
           </div>
           <input
-            ref={inputRef} type="file" accept="image/*" className="hidden"
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void handleFile(f);

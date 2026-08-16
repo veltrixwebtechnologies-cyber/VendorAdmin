@@ -3,13 +3,7 @@ import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export function ComingSoon({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+export function ComingSoon({ title, description }: { title: string; description: string }) {
   return (
     <div className="flex min-h-[60vh] w-full items-center justify-center animate-fade-in">
       <Card className="w-full max-w-2xl hover-lift">
@@ -23,11 +17,12 @@ export function ComingSoon({
             <p className="mt-1 text-xs text-muted-foreground">Coming in Phase 2.</p>
           </div>
           <Link to="/seller">
-            <Button variant="outline" className="hover-scale">Back to dashboard</Button>
+            <Button variant="outline" className="hover-scale">
+              Back to dashboard
+            </Button>
           </Link>
         </CardContent>
       </Card>
     </div>
-
   );
 }

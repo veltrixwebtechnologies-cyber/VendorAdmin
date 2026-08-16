@@ -39,7 +39,10 @@ export const Route = createFileRoute("/seller")({
       { title: "Seller Dashboard — Seller Hub" },
       { name: "description", content: "Manage your store, products, orders and settlements." },
       { property: "og:title", content: "Seller Dashboard — Seller Hub" },
-      { property: "og:description", content: "Manage your store, products, orders and settlements." },
+      {
+        property: "og:description",
+        content: "Manage your store, products, orders and settlements.",
+      },
     ],
   }),
   component: SellerLayout,
@@ -75,11 +78,16 @@ function SellerLayout() {
   useEffect(() => {
     // Store Setup is the onboarding entry point. Other seller operations stay
     // locked until an admin approves the application.
-    if (!sellerQ.isLoading && sellerQ.data && sellerQ.data.status !== "approved" && pathname !== "/seller" && pathname !== "/seller/store") {
+    if (
+      !sellerQ.isLoading &&
+      sellerQ.data &&
+      sellerQ.data.status !== "approved" &&
+      pathname !== "/seller" &&
+      pathname !== "/seller/store"
+    ) {
       navigate({ to: "/register", replace: true });
     }
   }, [sellerQ.data, sellerQ.isLoading, pathname, navigate]);
-
 
   if (loading || !user) {
     return (
@@ -132,7 +140,6 @@ function SellerLayout() {
     </SidebarProvider>
   );
 }
-
 
 function SellerSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });

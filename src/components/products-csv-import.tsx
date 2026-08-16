@@ -348,7 +348,8 @@ export function ProductsCsvImport({
             Cancel
           </Button>
           <Button onClick={doImport} disabled={summary.valid === 0}>
-            <Upload className="h-4 w-4" /> Import {summary.valid > 0 ? `${summary.valid} row${summary.valid === 1 ? "" : "s"}` : ""}
+            <Upload className="h-4 w-4" /> Import{" "}
+            {summary.valid > 0 ? `${summary.valid} row${summary.valid === 1 ? "" : "s"}` : ""}
           </Button>
         </DialogFooter>
       </DialogContent>

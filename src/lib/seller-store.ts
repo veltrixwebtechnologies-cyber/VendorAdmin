@@ -1,17 +1,8 @@
 import { useSyncExternalStore } from "react";
 
-export type SellerStatus =
-  | "draft"
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "more_info";
+export type SellerStatus = "draft" | "pending" | "approved" | "rejected" | "more_info";
 
-export type BusinessType =
-  | "Individual"
-  | "Sole Proprietorship"
-  | "Partnership"
-  | "Private Limited";
+export type BusinessType = "Individual" | "Sole Proprietorship" | "Partnership" | "Private Limited";
 
 export interface StoredFile {
   name: string;
@@ -173,7 +164,6 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
-
 function subscribe(cb: () => void) {
   listeners.add(cb);
   return () => {
@@ -283,11 +273,7 @@ export function updateSeller(id: string, patch: Partial<Seller>) {
   emit();
 }
 
-export function patchSellerSection<K extends keyof Seller>(
-  id: string,
-  key: K,
-  value: Seller[K],
-) {
+export function patchSellerSection<K extends keyof Seller>(id: string, key: K, value: Seller[K]) {
   const existing = state.sellers[id];
   if (!existing) return;
   updateSeller(id, { [key]: value } as Partial<Seller>);
@@ -330,7 +316,6 @@ export function setSavedStep(id: string, step: number) {
     /* ignore quota */
   }
 }
-
 
 /* Seed demo data once */
 

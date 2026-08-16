@@ -93,7 +93,11 @@ function BannersPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 stagger">
           {(q.data ?? []).map((b) => (
             <Card key={b.id} className="overflow-hidden hover-lift">
-              <img src={resolveBannerImage(b.image_url)} alt={b.title} className="h-32 w-full object-cover" />
+              <img
+                src={resolveBannerImage(b.image_url)}
+                alt={b.title}
+                className="h-32 w-full object-cover"
+              />
               <CardContent className="p-3 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="truncate font-semibold">{b.title}</div>

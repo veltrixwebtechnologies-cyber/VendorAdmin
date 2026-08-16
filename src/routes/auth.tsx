@@ -23,7 +23,10 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in — Seller Hub" },
-      { name: "description", content: "Sign in or create your seller account to manage your store." },
+      {
+        name: "description",
+        content: "Sign in or create your seller account to manage your store.",
+      },
       { property: "og:title", content: "Sign in — Seller Hub" },
       { property: "og:description", content: "Sign in or create your seller account." },
     ],
@@ -60,9 +63,7 @@ function AuthPage() {
         <div className="rounded-3xl border border-white bg-white/80 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl md:p-10">
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-bold text-slate-900">Welcome</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Please enter your details to continue.
-            </p>
+            <p className="mt-1 text-sm text-slate-500">Please enter your details to continue.</p>
           </div>
 
           <Tabs defaultValue="signin">
@@ -104,7 +105,6 @@ function AuthPage() {
     </div>
   );
 }
-
 
 function SignInForm() {
   const [email, setEmail] = useState("");
@@ -229,7 +229,16 @@ function SignUpForm() {
     const { data, error } = await Promise.race([
       verification,
       new Promise<{ data: { session: null }; error: Error }>((resolve) =>
-        setTimeout(() => resolve({ data: { session: null }, error: new Error("Signup timed out. Check the deployed Supabase environment variables.") }), 10000),
+        setTimeout(
+          () =>
+            resolve({
+              data: { session: null },
+              error: new Error(
+                "Signup timed out. Check the deployed Supabase environment variables.",
+              ),
+            }),
+          10000,
+        ),
       ),
     ]);
     if (error) {
@@ -263,7 +272,8 @@ function SignUpForm() {
     return (
       <form onSubmit={verifyAndCreate} className="space-y-4 animate-fade-in">
         <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 text-xs">
-          We sent an {OTP_LENGTH}-digit verification code to <span className="font-medium">{email}</span>. Check your inbox or spam folder.
+          We sent an {OTP_LENGTH}-digit verification code to{" "}
+          <span className="font-medium">{email}</span>. Check your inbox or spam folder.
         </div>
         <div>
           <Label htmlFor="otp">Verification code</Label>
@@ -279,7 +289,15 @@ function SignUpForm() {
           />
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="flex-1" onClick={() => { setOtpSent(false); setCode(""); }}>
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => {
+              setOtpSent(false);
+              setCode("");
+            }}
+          >
             Back
           </Button>
           <Button type="submit" className="flex-1" disabled={busy || code.length !== OTP_LENGTH}>
@@ -290,16 +308,18 @@ function SignUpForm() {
           type="button"
           className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
           onClick={() => {
-            void supabase.auth.signInWithOtp({
-              email: email.trim(),
-              options: {
-                shouldCreateUser: true,
-                data: { display_name: displayName || email.trim().split("@")[0] },
-              },
-            }).then(({ error }) => {
-              if (error) toast.error(error.message);
-              else toast.success("A new verification code was sent.");
-            });
+            void supabase.auth
+              .signInWithOtp({
+                email: email.trim(),
+                options: {
+                  shouldCreateUser: true,
+                  data: { display_name: displayName || email.trim().split("@")[0] },
+                },
+              })
+              .then(({ error }) => {
+                if (error) toast.error(error.message);
+                else toast.success("A new verification code was sent.");
+              });
           }}
         >
           Resend code

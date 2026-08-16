@@ -3,14 +3,29 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import {
-  ArrowLeft, ArrowRight, Check, CheckCircle2, FileUp, Loader2, MailCheck, Pencil, Send, ShieldCheck,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  FileUp,
+  Loader2,
+  MailCheck,
+  Pencil,
+  Send,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,11 +34,25 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { sendSellerEmailOtp, verifySellerEmailOtp } from "@/lib/seller-otp.functions";
 import {
-  useMySeller, useSubmitMySeller, useUpdateMySeller, uploadSellerDoc,
-  type Seller, type BusinessType, type SellerDocuments, type StoredFile,
+  useMySeller,
+  useSubmitMySeller,
+  useUpdateMySeller,
+  uploadSellerDoc,
+  type Seller,
+  type BusinessType,
+  type SellerDocuments,
+  type StoredFile,
 } from "@/lib/db";
 
-const STEPS = ["Account", "Business", "Address", "Bank", "Tax & Legal", "Documents", "Review"] as const;
+const STEPS = [
+  "Account",
+  "Business",
+  "Address",
+  "Bank",
+  "Tax & Legal",
+  "Documents",
+  "Review",
+] as const;
 const searchSchema = z.object({ step: z.coerce.number().min(1).max(7).optional() });
 
 export const Route = createFileRoute("/register")({
@@ -47,7 +76,8 @@ function RegisterPage() {
   const sellerQ = useMySeller();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", search: { redirect: "/register" }, replace: true });
+    if (!loading && !user)
+      navigate({ to: "/auth", search: { redirect: "/register" }, replace: true });
   }, [loading, user, navigate]);
 
   useEffect(() => {
@@ -61,7 +91,11 @@ function RegisterPage() {
   };
 
   if (loading || sellerQ.isLoading || !sellerQ.data) {
-    return <div className="grid min-h-screen place-items-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+    return (
+      <div className="grid min-h-screen place-items-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
   const seller = sellerQ.data;
 
@@ -70,11 +104,16 @@ function RegisterPage() {
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Link to="/" className="flex min-w-0 items-center gap-2">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground font-bold">S</div>
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground font-bold">
+              S
+            </div>
             <span className="truncate font-semibold">Seller Hub</span>
           </Link>
           <TopStepTabs current={step} onGoto={goto} />
-          <Link to="/seller" className="text-xs font-semibold uppercase tracking-wide text-primary hover:underline sm:text-sm">
+          <Link
+            to="/seller"
+            className="text-xs font-semibold uppercase tracking-wide text-primary hover:underline sm:text-sm"
+          >
             Dashboard
           </Link>
         </div>
@@ -88,12 +127,24 @@ function RegisterPage() {
         <section className="min-w-0">
           <div key={step} className="animate-fade-in">
             {step === 1 && <StepAccount seller={seller} onNext={() => goto(2)} />}
-            {step === 2 && <StepBusiness seller={seller} onBack={() => goto(1)} onNext={() => goto(3)} />}
-            {step === 3 && <StepAddress seller={seller} onBack={() => goto(2)} onNext={() => goto(4)} />}
-            {step === 4 && <StepBank seller={seller} onBack={() => goto(3)} onNext={() => goto(5)} />}
-            {step === 5 && <StepTax seller={seller} onBack={() => goto(4)} onNext={() => goto(6)} />}
-            {step === 6 && <StepDocuments seller={seller} onBack={() => goto(5)} onNext={() => goto(7)} />}
-            {step === 7 && <StepReview seller={seller} onEdit={(n) => goto(n)} onBack={() => goto(6)} />}
+            {step === 2 && (
+              <StepBusiness seller={seller} onBack={() => goto(1)} onNext={() => goto(3)} />
+            )}
+            {step === 3 && (
+              <StepAddress seller={seller} onBack={() => goto(2)} onNext={() => goto(4)} />
+            )}
+            {step === 4 && (
+              <StepBank seller={seller} onBack={() => goto(3)} onNext={() => goto(5)} />
+            )}
+            {step === 5 && (
+              <StepTax seller={seller} onBack={() => goto(4)} onNext={() => goto(6)} />
+            )}
+            {step === 6 && (
+              <StepDocuments seller={seller} onBack={() => goto(5)} onNext={() => goto(7)} />
+            )}
+            {step === 7 && (
+              <StepReview seller={seller} onEdit={(n) => goto(n)} onBack={() => goto(6)} />
+            )}
           </div>
         </section>
 
@@ -111,7 +162,6 @@ function RegisterPage() {
           />
         </aside>
       </main>
-
     </div>
   );
 }
@@ -134,8 +184,8 @@ function TopStepTabs({ current, onGoto }: { current: number; onGoto: (n: number)
                 state === "done"
                   ? "border-success bg-success text-success-foreground"
                   : state === "active"
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground",
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground",
               ].join(" ")}
             >
               {state === "done" ? <Check className="h-3 w-3" /> : n}
@@ -150,7 +200,6 @@ function TopStepTabs({ current, onGoto }: { current: number; onGoto: (n: number)
             >
               {label}
             </span>
-
           </li>
         );
       })}
@@ -160,21 +209,62 @@ function TopStepTabs({ current, onGoto }: { current: number; onGoto: (n: number)
 
 /* ---------- Left checklist with completion % ---------- */
 function OnboardingChecklist({
-  seller, current, onGoto,
-}: { seller: Seller; current: number; onGoto: (n: number) => void }) {
+  seller,
+  current,
+  onGoto,
+}: {
+  seller: Seller;
+  current: number;
+  onGoto: (n: number) => void;
+}) {
   const items = useMemo(() => {
-    const a = seller.account, b = seller.business, ad = seller.address, bk = seller.bank, tx = seller.tax, dc = seller.documents;
+    const a = seller.account,
+      b = seller.business,
+      ad = seller.address,
+      bk = seller.bank,
+      tx = seller.tax,
+      dc = seller.documents;
     return [
       { step: 1, group: "Account", label: "Mobile verification", done: !!a.mobileVerified },
       { step: 1, group: "Account", label: "Email verification", done: !!a.emailVerified },
-      { step: 2, group: "Business Details", label: "Shop & category", done: !!(b.shopName && b.category) },
-      { step: 2, group: "Business Details", label: "Owner & description", done: !!(b.ownerName && b.description) },
-      { step: 3, group: "Store & Pickup", label: "Shop address", done: !!(ad.shopAddress && ad.pincode) },
-      { step: 3, group: "Store & Pickup", label: "Pickup address", done: !!(ad.pickupSame || ad.pickupAddress) },
+      {
+        step: 2,
+        group: "Business Details",
+        label: "Shop & category",
+        done: !!(b.shopName && b.category),
+      },
+      {
+        step: 2,
+        group: "Business Details",
+        label: "Owner & description",
+        done: !!(b.ownerName && b.description),
+      },
+      {
+        step: 3,
+        group: "Store & Pickup",
+        label: "Shop address",
+        done: !!(ad.shopAddress && ad.pincode),
+      },
+      {
+        step: 3,
+        group: "Store & Pickup",
+        label: "Pickup address",
+        done: !!(ad.pickupSame || ad.pickupAddress),
+      },
       { step: 4, group: "Bank", label: "Bank account", done: !!(bk.accountNumber && bk.ifsc) },
       { step: 5, group: "Tax & Legal", label: "PAN added", done: !!tx.pan },
-      { step: 6, group: "Documents", label: "ID & bank proof", done: !!(dc.panCard && dc.govId && dc.bankProof) },
-      { step: 6, group: "Documents", label: "Logo & banner", done: !!(dc.shopLogo && dc.shopBanner) },
+      {
+        step: 6,
+        group: "Documents",
+        label: "ID & bank proof",
+        done: !!(dc.panCard && dc.govId && dc.bankProof),
+      },
+      {
+        step: 6,
+        group: "Documents",
+        label: "Logo & banner",
+        done: !!(dc.shopLogo && dc.shopBanner),
+      },
     ];
   }, [seller]);
 
@@ -195,7 +285,9 @@ function OnboardingChecklist({
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-foreground">Your onboarding status</p>
-        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{pct}%</span>
+        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">
+          {pct}%
+        </span>
       </div>
       <Progress value={pct} className="mt-2 h-1.5" />
       <ul className="mt-4 space-y-4">
@@ -224,9 +316,15 @@ function OnboardingChecklist({
                           : "border-accent bg-background text-accent",
                       ].join(" ")}
                     >
-                      {it.done ? <Check className="h-2.5 w-2.5" /> : <span className="h-1 w-1 rounded-full bg-accent" />}
+                      {it.done ? (
+                        <Check className="h-2.5 w-2.5" />
+                      ) : (
+                        <span className="h-1 w-1 rounded-full bg-accent" />
+                      )}
                     </span>
-                    <span className={it.done ? "text-foreground" : "text-muted-foreground"}>{it.label}</span>
+                    <span className={it.done ? "text-foreground" : "text-muted-foreground"}>
+                      {it.label}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -242,8 +340,16 @@ function OnboardingChecklist({
 }
 
 function PromoCard({
-  title, body, cta, tone = "primary",
-}: { title: string; body: string; cta: string; tone?: "primary" | "accent" }) {
+  title,
+  body,
+  cta,
+  tone = "primary",
+}: {
+  title: string;
+  body: string;
+  cta: string;
+  tone?: "primary" | "accent";
+}) {
   return (
     <div
       className={[
@@ -253,7 +359,10 @@ function PromoCard({
     >
       <p className="text-sm font-semibold text-foreground">{title}</p>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
-      <button type="button" className="mt-3 text-xs font-semibold uppercase tracking-wide text-primary hover:underline">
+      <button
+        type="button"
+        className="mt-3 text-xs font-semibold uppercase tracking-wide text-primary hover:underline"
+      >
         {cta} →
       </button>
     </div>
@@ -265,8 +374,13 @@ function useAutosave<K extends keyof Seller>(_seller: Seller, key: K, values: Se
   const update = useUpdateMySeller();
   const first = useRef(true);
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    const t = setTimeout(() => { update.mutate({ [key]: values } as any); }, 700);
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      update.mutate({ [key]: values } as any);
+    }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, key]);
@@ -303,8 +417,13 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return toast.error("Please sign in again before verifying your email");
-    try { await sendSellerEmailOtp({ data: { accessToken: token, email: values.email } }); setEmailSent(true); toast.success("Verification code sent to your email"); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Could not send verification code"); }
+    try {
+      await sendSellerEmailOtp({ data: { accessToken: token, email: values.email } });
+      setEmailSent(true);
+      toast.success("Verification code sent to your email");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not send verification code");
+    }
   };
   const sendMobileOtp = () => {
     const p = accountSchema.shape.mobile.safeParse(values.mobile);
@@ -316,8 +435,15 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return toast.error("Please sign in again before verifying your email");
-    try { await verifySellerEmailOtp({ data: { accessToken: token, email: values.email, code: emailCode } }); await update.mutateAsync({ account: { ...seller.account, ...values, emailVerified: true } }); toast.success("Email verified"); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Invalid or expired OTP"); }
+    try {
+      await verifySellerEmailOtp({
+        data: { accessToken: token, email: values.email, code: emailCode },
+      });
+      await update.mutateAsync({ account: { ...seller.account, ...values, emailVerified: true } });
+      toast.success("Email verified");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Invalid or expired OTP");
+    }
   };
   const verifyMobile = async () => {
     if (verifyOtp("mobile:" + values.mobile, mobileCode)) {
@@ -342,38 +468,101 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
     <StepCard title="Create your seller account" subtitle="Step 1 of 7">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Full name" error={errors.fullName}>
-          <Input value={values.fullName} onChange={(e) => setValues({ ...values, fullName: e.target.value })} placeholder="Jane Doe" />
+          <Input
+            value={values.fullName}
+            onChange={(e) => setValues({ ...values, fullName: e.target.value })}
+            placeholder="Jane Doe"
+          />
         </Field>
-        <Field label="Email address" error={errors.email}
-          right={emailVerified ? <span className="inline-flex items-center gap-1 text-xs text-success"><MailCheck className="h-3.5 w-3.5" /> Verified</span> : null}>
+        <Field
+          label="Email address"
+          error={errors.email}
+          right={
+            emailVerified ? (
+              <span className="inline-flex items-center gap-1 text-xs text-success">
+                <MailCheck className="h-3.5 w-3.5" /> Verified
+              </span>
+            ) : null
+          }
+        >
           <div className="flex gap-2">
-            <Input type="email" value={values.email} onChange={(e) => setValues({ ...values, email: e.target.value })} disabled={emailVerified} />
-            <Button type="button" variant="outline" onClick={sendEmailOtp} disabled={emailVerified}><Send className="h-4 w-4" /> Send OTP</Button>
+            <Input
+              type="email"
+              value={values.email}
+              onChange={(e) => setValues({ ...values, email: e.target.value })}
+              disabled={emailVerified}
+            />
+            <Button type="button" variant="outline" onClick={sendEmailOtp} disabled={emailVerified}>
+              <Send className="h-4 w-4" /> Send OTP
+            </Button>
           </div>
           {emailSent && !emailVerified && (
             <div className="mt-2 flex gap-2">
-              <Input inputMode="numeric" maxLength={6} value={emailCode} onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))} placeholder="6-digit code" />
-              <Button type="button" onClick={verifyEmail}>Verify</Button>
+              <Input
+                inputMode="numeric"
+                maxLength={6}
+                value={emailCode}
+                onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="6-digit code"
+              />
+              <Button type="button" onClick={verifyEmail}>
+                Verify
+              </Button>
             </div>
           )}
         </Field>
-        <Field label="Mobile number" error={errors.mobile}
-          right={mobileVerified ? <span className="inline-flex items-center gap-1 text-xs text-success"><ShieldCheck className="h-3.5 w-3.5" /> Verified</span> : null}>
+        <Field
+          label="Mobile number"
+          error={errors.mobile}
+          right={
+            mobileVerified ? (
+              <span className="inline-flex items-center gap-1 text-xs text-success">
+                <ShieldCheck className="h-3.5 w-3.5" /> Verified
+              </span>
+            ) : null
+          }
+        >
           <div className="flex gap-2">
-            <Input value={values.mobile} onChange={(e) => setValues({ ...values, mobile: e.target.value.replace(/\D/g, "") })} placeholder="10-digit mobile" disabled={mobileVerified} />
-            <Button type="button" variant="outline" onClick={sendMobileOtp} disabled={mobileVerified}><Send className="h-4 w-4" /> Send OTP</Button>
+            <Input
+              value={values.mobile}
+              onChange={(e) => setValues({ ...values, mobile: e.target.value.replace(/\D/g, "") })}
+              placeholder="10-digit mobile"
+              disabled={mobileVerified}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={sendMobileOtp}
+              disabled={mobileVerified}
+            >
+              <Send className="h-4 w-4" /> Send OTP
+            </Button>
           </div>
           {mobileSent && !mobileVerified && (
             <div className="mt-2 flex gap-2">
-              <Input inputMode="numeric" maxLength={6} value={mobileCode} onChange={(e) => setMobileCode(e.target.value.replace(/\D/g, ""))} placeholder="6-digit code" />
-              <Button type="button" onClick={verifyMobile}>Verify</Button>
+              <Input
+                inputMode="numeric"
+                maxLength={6}
+                value={mobileCode}
+                onChange={(e) => setMobileCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="6-digit code"
+              />
+              <Button type="button" onClick={verifyMobile}>
+                Verify
+              </Button>
             </div>
           )}
         </Field>
       </div>
       <StepFooter>
-        <Link to="/seller"><Button variant="ghost"><ArrowLeft className="h-4 w-4" /> Dashboard</Button></Link>
-        <Button onClick={submit} disabled={update.isPending}>Save & Continue <ArrowRight className="h-4 w-4" /></Button>
+        <Link to="/seller">
+          <Button variant="ghost">
+            <ArrowLeft className="h-4 w-4" /> Dashboard
+          </Button>
+        </Link>
+        <Button onClick={submit} disabled={update.isPending}>
+          Save & Continue <ArrowRight className="h-4 w-4" />
+        </Button>
       </StepFooter>
     </StepCard>
   );
@@ -388,9 +577,28 @@ const businessSchema = z.object({
   category: z.string().trim().min(2, "Required"),
   description: z.string().trim().min(10, "Add a short description").max(500),
 });
-const CATEGORIES = ["Fashion","Electronics","Home & Kitchen","Groceries","Beauty","Books","Textiles","Toys","Sports","Other"];
+const CATEGORIES = [
+  "Fashion",
+  "Electronics",
+  "Home & Kitchen",
+  "Groceries",
+  "Beauty",
+  "Books",
+  "Textiles",
+  "Toys",
+  "Sports",
+  "Other",
+];
 
-function StepBusiness({ seller, onBack, onNext }: { seller: Seller; onBack: () => void; onNext: () => void }) {
+function StepBusiness({
+  seller,
+  onBack,
+  onNext,
+}: {
+  seller: Seller;
+  onBack: () => void;
+  onNext: () => void;
+}) {
   const [v, setV] = useState(seller.business);
   useAutosave(seller, "business", v);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -398,7 +606,8 @@ function StepBusiness({ seller, onBack, onNext }: { seller: Seller; onBack: () =
   const submit = async () => {
     const p = businessSchema.safeParse(v);
     if (!p.success) {
-      const errs: Record<string, string> = {}; p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
+      const errs: Record<string, string> = {};
+      p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
       return setErrors(errs);
     }
     await update.mutateAsync({ business: v });
@@ -407,31 +616,64 @@ function StepBusiness({ seller, onBack, onNext }: { seller: Seller; onBack: () =
   return (
     <StepCard title="Business information" subtitle="Step 2 of 7">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Shop name" error={errors.shopName}><Input value={v.shopName} onChange={(e) => setV({ ...v, shopName: e.target.value })} /></Field>
-        <Field label="Owner name" error={errors.ownerName}><Input value={v.ownerName} onChange={(e) => setV({ ...v, ownerName: e.target.value })} /></Field>
+        <Field label="Shop name" error={errors.shopName}>
+          <Input value={v.shopName} onChange={(e) => setV({ ...v, shopName: e.target.value })} />
+        </Field>
+        <Field label="Owner name" error={errors.ownerName}>
+          <Input value={v.ownerName} onChange={(e) => setV({ ...v, ownerName: e.target.value })} />
+        </Field>
         <Field label="Business type" error={errors.businessType}>
-          <Select value={v.businessType || undefined} onValueChange={(x) => setV({ ...v, businessType: x as BusinessType })}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+          <Select
+            value={v.businessType || undefined}
+            onValueChange={(x) => setV({ ...v, businessType: x as BusinessType })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
             <SelectContent>
-              {["Individual","Sole Proprietorship","Partnership","Private Limited"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}
+              {["Individual", "Sole Proprietorship", "Partnership", "Private Limited"].map((x) => (
+                <SelectItem key={x} value={x}>
+                  {x}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </Field>
         <Field label="Category" error={errors.category}>
-          <Select value={v.category || undefined} onValueChange={(x) => setV({ ...v, category: x })}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>{CATEGORIES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+          <Select
+            value={v.category || undefined}
+            onValueChange={(x) => setV({ ...v, category: x })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((x) => (
+                <SelectItem key={x} value={x}>
+                  {x}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </Field>
         <div className="sm:col-span-2">
           <Field label="Shop description" error={errors.description}>
-            <Textarea rows={4} value={v.description} onChange={(e) => setV({ ...v, description: e.target.value })} placeholder="What do you sell and what makes you different?" />
+            <Textarea
+              rows={4}
+              value={v.description}
+              onChange={(e) => setV({ ...v, description: e.target.value })}
+              placeholder="What do you sell and what makes you different?"
+            />
           </Field>
         </div>
       </div>
       <StepFooter>
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <Button onClick={submit} disabled={update.isPending}>Save & Continue <ArrowRight className="h-4 w-4" /></Button>
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+        <Button onClick={submit} disabled={update.isPending}>
+          Save & Continue <ArrowRight className="h-4 w-4" />
+        </Button>
       </StepFooter>
     </StepCard>
   );
@@ -439,22 +681,35 @@ function StepBusiness({ seller, onBack, onNext }: { seller: Seller; onBack: () =
 
 /* ---------------- Step 3: Address ---------------- */
 
-const addressSchema = z.object({
-  shopAddress: z.string().trim().min(4, "Required"),
-  city: z.string().trim().min(2, "Required"),
-  state: z.string().trim().min(2, "Required"),
-  pincode: z.string().regex(/^\d{6}$/, "6-digit pincode"),
-  landmark: z.string().max(80).optional().or(z.literal("")),
-  pickupSame: z.boolean(),
-  pickupAddress: z.string().optional().or(z.literal("")),
-  pickupCity: z.string().optional().or(z.literal("")),
-  pickupState: z.string().optional().or(z.literal("")),
-  pickupPincode: z.string().optional().or(z.literal("")),
-}).refine((d) =>
-  d.pickupSame || (d.pickupAddress && d.pickupCity && d.pickupState && /^\d{6}$/.test(d.pickupPincode || "")),
-  { message: "Complete pickup address", path: ["pickupAddress"] });
+const addressSchema = z
+  .object({
+    shopAddress: z.string().trim().min(4, "Required"),
+    city: z.string().trim().min(2, "Required"),
+    state: z.string().trim().min(2, "Required"),
+    pincode: z.string().regex(/^\d{6}$/, "6-digit pincode"),
+    landmark: z.string().max(80).optional().or(z.literal("")),
+    pickupSame: z.boolean(),
+    pickupAddress: z.string().optional().or(z.literal("")),
+    pickupCity: z.string().optional().or(z.literal("")),
+    pickupState: z.string().optional().or(z.literal("")),
+    pickupPincode: z.string().optional().or(z.literal("")),
+  })
+  .refine(
+    (d) =>
+      d.pickupSame ||
+      (d.pickupAddress && d.pickupCity && d.pickupState && /^\d{6}$/.test(d.pickupPincode || "")),
+    { message: "Complete pickup address", path: ["pickupAddress"] },
+  );
 
-function StepAddress({ seller, onBack, onNext }: { seller: Seller; onBack: () => void; onNext: () => void }) {
+function StepAddress({
+  seller,
+  onBack,
+  onNext,
+}: {
+  seller: Seller;
+  onBack: () => void;
+  onNext: () => void;
+}) {
   const [v, setV] = useState(seller.address);
   useAutosave(seller, "address", v);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -462,7 +717,8 @@ function StepAddress({ seller, onBack, onNext }: { seller: Seller; onBack: () =>
   const submit = async () => {
     const p = addressSchema.safeParse(v);
     if (!p.success) {
-      const errs: Record<string, string> = {}; p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
+      const errs: Record<string, string> = {};
+      p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
       return setErrors(errs);
     }
     await update.mutateAsync({ address: v });
@@ -473,39 +729,81 @@ function StepAddress({ seller, onBack, onNext }: { seller: Seller; onBack: () =>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <Field label="Shop address" error={errors.shopAddress}>
-            <Textarea rows={2} value={v.shopAddress} onChange={(e) => setV({ ...v, shopAddress: e.target.value })} />
+            <Textarea
+              rows={2}
+              value={v.shopAddress}
+              onChange={(e) => setV({ ...v, shopAddress: e.target.value })}
+            />
           </Field>
         </div>
-        <Field label="City" error={errors.city}><Input value={v.city} onChange={(e) => setV({ ...v, city: e.target.value })} /></Field>
-        <Field label="State" error={errors.state}><Input value={v.state} onChange={(e) => setV({ ...v, state: e.target.value })} /></Field>
-        <Field label="Pincode" error={errors.pincode}>
-          <Input value={v.pincode} onChange={(e) => setV({ ...v, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })} />
+        <Field label="City" error={errors.city}>
+          <Input value={v.city} onChange={(e) => setV({ ...v, city: e.target.value })} />
         </Field>
-        <Field label="Landmark (optional)"><Input value={v.landmark} onChange={(e) => setV({ ...v, landmark: e.target.value })} /></Field>
+        <Field label="State" error={errors.state}>
+          <Input value={v.state} onChange={(e) => setV({ ...v, state: e.target.value })} />
+        </Field>
+        <Field label="Pincode" error={errors.pincode}>
+          <Input
+            value={v.pincode}
+            onChange={(e) => setV({ ...v, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+          />
+        </Field>
+        <Field label="Landmark (optional)">
+          <Input value={v.landmark} onChange={(e) => setV({ ...v, landmark: e.target.value })} />
+        </Field>
 
         <div className="sm:col-span-2 flex items-center gap-2 pt-2">
-          <Checkbox id="pickupSame" checked={v.pickupSame} onCheckedChange={(x) => setV({ ...v, pickupSame: Boolean(x) })} />
-          <Label htmlFor="pickupSame" className="cursor-pointer">Pickup address is same as shop address</Label>
+          <Checkbox
+            id="pickupSame"
+            checked={v.pickupSame}
+            onCheckedChange={(x) => setV({ ...v, pickupSame: Boolean(x) })}
+          />
+          <Label htmlFor="pickupSame" className="cursor-pointer">
+            Pickup address is same as shop address
+          </Label>
         </div>
 
         {!v.pickupSame && (
           <>
             <div className="sm:col-span-2">
               <Field label="Pickup address" error={errors.pickupAddress}>
-                <Textarea rows={2} value={v.pickupAddress} onChange={(e) => setV({ ...v, pickupAddress: e.target.value })} />
+                <Textarea
+                  rows={2}
+                  value={v.pickupAddress}
+                  onChange={(e) => setV({ ...v, pickupAddress: e.target.value })}
+                />
               </Field>
             </div>
-            <Field label="City"><Input value={v.pickupCity} onChange={(e) => setV({ ...v, pickupCity: e.target.value })} /></Field>
-            <Field label="State"><Input value={v.pickupState} onChange={(e) => setV({ ...v, pickupState: e.target.value })} /></Field>
+            <Field label="City">
+              <Input
+                value={v.pickupCity}
+                onChange={(e) => setV({ ...v, pickupCity: e.target.value })}
+              />
+            </Field>
+            <Field label="State">
+              <Input
+                value={v.pickupState}
+                onChange={(e) => setV({ ...v, pickupState: e.target.value })}
+              />
+            </Field>
             <Field label="Pincode">
-              <Input value={v.pickupPincode} onChange={(e) => setV({ ...v, pickupPincode: e.target.value.replace(/\D/g, "").slice(0, 6) })} />
+              <Input
+                value={v.pickupPincode}
+                onChange={(e) =>
+                  setV({ ...v, pickupPincode: e.target.value.replace(/\D/g, "").slice(0, 6) })
+                }
+              />
             </Field>
           </>
         )}
       </div>
       <StepFooter>
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <Button onClick={submit} disabled={update.isPending}>Save & Continue <ArrowRight className="h-4 w-4" /></Button>
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+        <Button onClick={submit} disabled={update.isPending}>
+          Save & Continue <ArrowRight className="h-4 w-4" />
+        </Button>
       </StepFooter>
     </StepCard>
   );
@@ -518,10 +816,22 @@ const bankSchema = z.object({
   bankName: z.string().trim().min(2, "Required"),
   accountNumber: z.string().regex(/^\d{9,18}$/, "9–18 digit account number"),
   ifsc: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC (e.g. HDFC0001234)"),
-  upi: z.string().regex(/^[\w.\-]{2,}@[\w\-]{2,}$/, "Invalid UPI ID").optional().or(z.literal("")),
+  upi: z
+    .string()
+    .regex(/^[\w.-]{2,}@[\w-]{2,}$/, "Invalid UPI ID")
+    .optional()
+    .or(z.literal("")),
 });
 
-function StepBank({ seller, onBack, onNext }: { seller: Seller; onBack: () => void; onNext: () => void }) {
+function StepBank({
+  seller,
+  onBack,
+  onNext,
+}: {
+  seller: Seller;
+  onBack: () => void;
+  onNext: () => void;
+}) {
   const [v, setV] = useState(seller.bank);
   useAutosave(seller, "bank", v);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -529,7 +839,8 @@ function StepBank({ seller, onBack, onNext }: { seller: Seller; onBack: () => vo
   const submit = async () => {
     const p = bankSchema.safeParse({ ...v, ifsc: v.ifsc.toUpperCase() });
     if (!p.success) {
-      const errs: Record<string, string> = {}; p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
+      const errs: Record<string, string> = {};
+      p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
       return setErrors(errs);
     }
     await update.mutateAsync({ bank: { ...v, ifsc: v.ifsc.toUpperCase() } });
@@ -538,21 +849,42 @@ function StepBank({ seller, onBack, onNext }: { seller: Seller; onBack: () => vo
   return (
     <StepCard title="Bank details" subtitle="Step 4 of 7">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Account holder name" error={errors.holderName}><Input value={v.holderName} onChange={(e) => setV({ ...v, holderName: e.target.value })} /></Field>
-        <Field label="Bank name" error={errors.bankName}><Input value={v.bankName} onChange={(e) => setV({ ...v, bankName: e.target.value })} /></Field>
+        <Field label="Account holder name" error={errors.holderName}>
+          <Input
+            value={v.holderName}
+            onChange={(e) => setV({ ...v, holderName: e.target.value })}
+          />
+        </Field>
+        <Field label="Bank name" error={errors.bankName}>
+          <Input value={v.bankName} onChange={(e) => setV({ ...v, bankName: e.target.value })} />
+        </Field>
         <Field label="Account number" error={errors.accountNumber}>
-          <Input value={v.accountNumber} onChange={(e) => setV({ ...v, accountNumber: e.target.value.replace(/\D/g, "").slice(0, 18) })} />
+          <Input
+            value={v.accountNumber}
+            onChange={(e) =>
+              setV({ ...v, accountNumber: e.target.value.replace(/\D/g, "").slice(0, 18) })
+            }
+          />
         </Field>
         <Field label="IFSC code" error={errors.ifsc}>
-          <Input value={v.ifsc} onChange={(e) => setV({ ...v, ifsc: e.target.value.toUpperCase().slice(0, 11) })} />
+          <Input
+            value={v.ifsc}
+            onChange={(e) => setV({ ...v, ifsc: e.target.value.toUpperCase().slice(0, 11) })}
+          />
         </Field>
         <div className="sm:col-span-2">
-          <Field label="UPI ID (optional)" error={errors.upi}><Input value={v.upi} onChange={(e) => setV({ ...v, upi: e.target.value })} /></Field>
+          <Field label="UPI ID (optional)" error={errors.upi}>
+            <Input value={v.upi} onChange={(e) => setV({ ...v, upi: e.target.value })} />
+          </Field>
         </div>
       </div>
       <StepFooter>
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <Button onClick={submit} disabled={update.isPending}>Save & Continue <ArrowRight className="h-4 w-4" /></Button>
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+        <Button onClick={submit} disabled={update.isPending}>
+          Save & Continue <ArrowRight className="h-4 w-4" />
+        </Button>
       </StepFooter>
     </StepCard>
   );
@@ -562,11 +894,23 @@ function StepBank({ seller, onBack, onNext }: { seller: Seller; onBack: () => vo
 
 const taxSchema = z.object({
   pan: z.string().regex(/^[A-Z]{5}\d{4}[A-Z]$/, "Invalid PAN (e.g. ABCDE1234F)"),
-  gst: z.string().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z]\dZ[A-Z\d]$/, "Invalid GSTIN").optional().or(z.literal("")),
+  gst: z
+    .string()
+    .regex(/^\d{2}[A-Z]{5}\d{4}[A-Z]\dZ[A-Z\d]$/, "Invalid GSTIN")
+    .optional()
+    .or(z.literal("")),
   businessRegNumber: z.string().max(40).optional().or(z.literal("")),
 });
 
-function StepTax({ seller, onBack, onNext }: { seller: Seller; onBack: () => void; onNext: () => void }) {
+function StepTax({
+  seller,
+  onBack,
+  onNext,
+}: {
+  seller: Seller;
+  onBack: () => void;
+  onNext: () => void;
+}) {
   const [v, setV] = useState(seller.tax);
   useAutosave(seller, "tax", v);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -574,7 +918,8 @@ function StepTax({ seller, onBack, onNext }: { seller: Seller; onBack: () => voi
   const submit = async () => {
     const p = taxSchema.safeParse({ ...v, pan: v.pan.toUpperCase(), gst: v.gst.toUpperCase() });
     if (!p.success) {
-      const errs: Record<string, string> = {}; p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
+      const errs: Record<string, string> = {};
+      p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
       return setErrors(errs);
     }
     await update.mutateAsync({ tax: { ...v, pan: v.pan.toUpperCase(), gst: v.gst.toUpperCase() } });
@@ -584,20 +929,35 @@ function StepTax({ seller, onBack, onNext }: { seller: Seller; onBack: () => voi
     <StepCard title="Tax & legal details" subtitle="Step 5 of 7">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="PAN number" error={errors.pan}>
-          <Input value={v.pan} onChange={(e) => setV({ ...v, pan: e.target.value.toUpperCase().slice(0, 10) })} placeholder="ABCDE1234F" />
+          <Input
+            value={v.pan}
+            onChange={(e) => setV({ ...v, pan: e.target.value.toUpperCase().slice(0, 10) })}
+            placeholder="ABCDE1234F"
+          />
         </Field>
         <Field label="GST number (optional)" error={errors.gst}>
-          <Input value={v.gst} onChange={(e) => setV({ ...v, gst: e.target.value.toUpperCase().slice(0, 15) })} placeholder="22ABCDE1234F1Z5" />
+          <Input
+            value={v.gst}
+            onChange={(e) => setV({ ...v, gst: e.target.value.toUpperCase().slice(0, 15) })}
+            placeholder="22ABCDE1234F1Z5"
+          />
         </Field>
         <div className="sm:col-span-2">
           <Field label="Business registration number (optional)" error={errors.businessRegNumber}>
-            <Input value={v.businessRegNumber} onChange={(e) => setV({ ...v, businessRegNumber: e.target.value })} />
+            <Input
+              value={v.businessRegNumber}
+              onChange={(e) => setV({ ...v, businessRegNumber: e.target.value })}
+            />
           </Field>
         </div>
       </div>
       <StepFooter>
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <Button onClick={submit} disabled={update.isPending}>Save & Continue <ArrowRight className="h-4 w-4" /></Button>
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+        <Button onClick={submit} disabled={update.isPending}>
+          Save & Continue <ArrowRight className="h-4 w-4" />
+        </Button>
       </StepFooter>
     </StepCard>
   );
@@ -605,16 +965,39 @@ function StepTax({ seller, onBack, onNext }: { seller: Seller; onBack: () => voi
 
 /* ---------------- Step 6: Documents (upload to Supabase storage) ---------------- */
 
-const DOC_FIELDS: Array<{ key: keyof SellerDocuments; label: string; required: boolean; accept: string }> = [
+const DOC_FIELDS: Array<{
+  key: keyof SellerDocuments;
+  label: string;
+  required: boolean;
+  accept: string;
+}> = [
   { key: "panCard", label: "PAN Card", required: true, accept: "image/*,.pdf" },
   { key: "govId", label: "Aadhaar / Government ID", required: true, accept: "image/*,.pdf" },
-  { key: "gstCertificate", label: "GST Certificate (optional)", required: false, accept: "image/*,.pdf" },
-  { key: "bankProof", label: "Cancelled Cheque / Bank Proof", required: true, accept: "image/*,.pdf" },
+  {
+    key: "gstCertificate",
+    label: "GST Certificate (optional)",
+    required: false,
+    accept: "image/*,.pdf",
+  },
+  {
+    key: "bankProof",
+    label: "Cancelled Cheque / Bank Proof",
+    required: true,
+    accept: "image/*,.pdf",
+  },
   { key: "shopLogo", label: "Shop Logo", required: true, accept: "image/*" },
   { key: "shopBanner", label: "Shop Banner", required: true, accept: "image/*" },
 ];
 
-function StepDocuments({ seller, onBack, onNext }: { seller: Seller; onBack: () => void; onNext: () => void }) {
+function StepDocuments({
+  seller,
+  onBack,
+  onNext,
+}: {
+  seller: Seller;
+  onBack: () => void;
+  onNext: () => void;
+}) {
   const [docs, setDocs] = useState<SellerDocuments>(seller.documents);
   const [busy, setBusy] = useState<string | null>(null);
   const update = useUpdateMySeller();
@@ -650,18 +1033,33 @@ function StepDocuments({ seller, onBack, onNext }: { seller: Seller; onBack: () 
         {DOC_FIELDS.map(({ key, label, required, accept }) => {
           const f = docs[key];
           return (
-            <div key={key} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><FileUp className="h-5 w-5" /></div>
+            <div
+              key={key}
+              className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
+            >
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+                <FileUp className="h-5 w-5" />
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  {label}{required && <span className="text-destructive">*</span>}
+                  {label}
+                  {required && <span className="text-destructive">*</span>}
                 </div>
-                {f ? <div className="mt-1 truncate text-xs text-muted-foreground">{f.name} · {((f.size ?? 0)/1024).toFixed(1)} KB</div>
-                  : <div className="mt-1 text-xs text-muted-foreground">No file selected</div>}
+                {f ? (
+                  <div className="mt-1 truncate text-xs text-muted-foreground">
+                    {f.name} · {((f.size ?? 0) / 1024).toFixed(1)} KB
+                  </div>
+                ) : (
+                  <div className="mt-1 text-xs text-muted-foreground">No file selected</div>
+                )}
               </div>
               <label className="cursor-pointer">
-                <input type="file" className="hidden" accept={accept}
-                  onChange={(e) => handleFile(key, e.target.files?.[0])} />
+                <input
+                  type="file"
+                  className="hidden"
+                  accept={accept}
+                  onChange={(e) => handleFile(key, e.target.files?.[0])}
+                />
                 <span className="inline-flex h-9 items-center rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
                   {busy === key ? "Uploading…" : f ? "Replace" : "Upload"}
                 </span>
@@ -671,8 +1069,12 @@ function StepDocuments({ seller, onBack, onNext }: { seller: Seller; onBack: () 
         })}
       </div>
       <StepFooter>
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <Button onClick={submit} disabled={update.isPending}>Save & Continue <ArrowRight className="h-4 w-4" /></Button>
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+        <Button onClick={submit} disabled={update.isPending}>
+          Save & Continue <ArrowRight className="h-4 w-4" />
+        </Button>
       </StepFooter>
     </StepCard>
   );
@@ -680,37 +1082,77 @@ function StepDocuments({ seller, onBack, onNext }: { seller: Seller; onBack: () 
 
 /* ---------------- Step 7: Review + Submit ---------------- */
 
-function StepReview({ seller, onEdit, onBack }: { seller: Seller; onEdit: (n: number) => void; onBack: () => void }) {
+function StepReview({
+  seller,
+  onEdit,
+  onBack,
+}: {
+  seller: Seller;
+  onEdit: (n: number) => void;
+  onBack: () => void;
+}) {
   const navigate = useNavigate();
   const submitMut = useSubmitMySeller();
 
-  const sections = useMemo(() => ([
-    { step: 1, title: "Account", rows: [
-      ["Full name", seller.account.fullName],
-      ["Email", `${seller.account.email}${seller.account.emailVerified ? " ✓" : ""}`],
-      ["Mobile", `${seller.account.mobile}${seller.account.mobileVerified ? " ✓" : ""}`],
-    ] as Array<[string, string]> },
-    { step: 2, title: "Business", rows: [
-      ["Shop name", seller.business.shopName],
-      ["Owner", seller.business.ownerName],
-      ["Type", seller.business.businessType],
-      ["Category", seller.business.category],
-    ] as Array<[string, string]> },
-    { step: 3, title: "Address", rows: [
-      ["Address", `${seller.address.shopAddress}, ${seller.address.city}, ${seller.address.state} - ${seller.address.pincode}`],
-    ] as Array<[string, string]> },
-    { step: 4, title: "Bank", rows: [
-      ["Holder", seller.bank.holderName],
-      ["Bank", seller.bank.bankName],
-      ["Account", seller.bank.accountNumber.replace(/.(?=.{4})/g, "•")],
-      ["IFSC", seller.bank.ifsc],
-    ] as Array<[string, string]> },
-    { step: 5, title: "Tax", rows: [
-      ["PAN", seller.tax.pan],
-      ["GST", seller.tax.gst || "—"],
-    ] as Array<[string, string]> },
-    { step: 6, title: "Documents", rows: Object.entries(seller.documents).map(([k, v]) => [k, v?.name || "—"]) as Array<[string, string]> },
-  ]), [seller]);
+  const sections = useMemo(
+    () => [
+      {
+        step: 1,
+        title: "Account",
+        rows: [
+          ["Full name", seller.account.fullName],
+          ["Email", `${seller.account.email}${seller.account.emailVerified ? " ✓" : ""}`],
+          ["Mobile", `${seller.account.mobile}${seller.account.mobileVerified ? " ✓" : ""}`],
+        ] as Array<[string, string]>,
+      },
+      {
+        step: 2,
+        title: "Business",
+        rows: [
+          ["Shop name", seller.business.shopName],
+          ["Owner", seller.business.ownerName],
+          ["Type", seller.business.businessType],
+          ["Category", seller.business.category],
+        ] as Array<[string, string]>,
+      },
+      {
+        step: 3,
+        title: "Address",
+        rows: [
+          [
+            "Address",
+            `${seller.address.shopAddress}, ${seller.address.city}, ${seller.address.state} - ${seller.address.pincode}`,
+          ],
+        ] as Array<[string, string]>,
+      },
+      {
+        step: 4,
+        title: "Bank",
+        rows: [
+          ["Holder", seller.bank.holderName],
+          ["Bank", seller.bank.bankName],
+          ["Account", seller.bank.accountNumber.replace(/.(?=.{4})/g, "•")],
+          ["IFSC", seller.bank.ifsc],
+        ] as Array<[string, string]>,
+      },
+      {
+        step: 5,
+        title: "Tax",
+        rows: [
+          ["PAN", seller.tax.pan],
+          ["GST", seller.tax.gst || "—"],
+        ] as Array<[string, string]>,
+      },
+      {
+        step: 6,
+        title: "Documents",
+        rows: Object.entries(seller.documents).map(([k, v]) => [k, v?.name || "—"]) as Array<
+          [string, string]
+        >,
+      },
+    ],
+    [seller],
+  );
 
   const doSubmit = async () => {
     const missingStorefrontMedia = [
@@ -738,7 +1180,9 @@ function StepReview({ seller, onEdit, onBack }: { seller: Seller; onEdit: (n: nu
           <Card key={s.step}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base">{s.title}</CardTitle>
-              <Button size="sm" variant="ghost" onClick={() => onEdit(s.step)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+              <Button size="sm" variant="ghost" onClick={() => onEdit(s.step)}>
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </Button>
             </CardHeader>
             <CardContent>
               <dl className="grid gap-1 text-sm sm:grid-cols-[160px_1fr]">
@@ -754,7 +1198,9 @@ function StepReview({ seller, onEdit, onBack }: { seller: Seller; onEdit: (n: nu
         ))}
       </div>
       <StepFooter>
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4" /> Back</Button>
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
         <Button onClick={doSubmit} disabled={submitMut.isPending}>
           {submitMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Submit for approval
         </Button>
@@ -765,7 +1211,15 @@ function StepReview({ seller, onEdit, onBack }: { seller: Seller; onEdit: (n: nu
 
 /* ---------------- shared shells ---------------- */
 
-function StepCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function StepCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -777,13 +1231,28 @@ function StepCard({ title, subtitle, children }: { title: string; subtitle?: str
   );
 }
 function StepFooter({ children }: { children: React.ReactNode }) {
-  return <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">{children}</div>;
+  return (
+    <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+      {children}
+    </div>
+  );
 }
-function Field({ label, error, right, children }: { label: string; error?: string; right?: React.ReactNode; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  right,
+  children,
+}: {
+  label: string;
+  error?: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <Label>{label}</Label>{right}
+        <Label>{label}</Label>
+        {right}
       </div>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}

@@ -37,10 +37,14 @@ function AdminVendors() {
   const perPage = 10;
 
   const rows = useMemo(() => {
-    let r: Seller[] = filter === "all" ? sellers : sellers.filter(s => s.status === filter);
+    let r: Seller[] = filter === "all" ? sellers : sellers.filter((s) => s.status === filter);
     if (search.trim()) {
       const s = search.toLowerCase();
-      r = r.filter(v => (v.business.shopName + " " + v.business.ownerName + " " + v.account.email).toLowerCase().includes(s));
+      r = r.filter((v) =>
+        (v.business.shopName + " " + v.business.ownerName + " " + v.account.email)
+          .toLowerCase()
+          .includes(s),
+      );
     }
     return r;
   }, [sellers, filter, search]);
@@ -51,7 +55,8 @@ function AdminVendors() {
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: sellers.length };
-    for (const f of FILTERS) if (f.key !== "all") c[f.key] = sellers.filter(x => x.status === f.key).length;
+    for (const f of FILTERS)
+      if (f.key !== "all") c[f.key] = sellers.filter((x) => x.status === f.key).length;
     return c;
   }, [sellers]);
 
@@ -59,46 +64,81 @@ function AdminVendors() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Vendors</h1>
-        <p className="text-sm text-muted-foreground">Manage vendor applications, approvals, and shops.</p>
+        <p className="text-sm text-muted-foreground">
+          Manage vendor applications, approvals, and shops.
+        </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {FILTERS.map(f => (
-          <Button key={f.key} size="sm" variant={filter === f.key ? "default" : "outline"}
-            onClick={() => { setFilter(f.key); setPage(1); }} className="rounded-full">
+        {FILTERS.map((f) => (
+          <Button
+            key={f.key}
+            size="sm"
+            variant={filter === f.key ? "default" : "outline"}
+            onClick={() => {
+              setFilter(f.key);
+              setPage(1);
+            }}
+            className="rounded-full"
+          >
             {f.label} <span className="ml-1 text-[11px] opacity-70">({counts[f.key] ?? 0})</span>
           </Button>
         ))}
         <div className="relative ml-auto w-full sm:w-64">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search shop, owner, email" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-8 h-9" />
+          <Input
+            placeholder="Search shop, owner, email"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="pl-8 h-9"
+          />
         </div>
       </div>
 
       {q.isLoading ? (
-        <div className="grid gap-2">{Array.from({length:4}).map((_,i)=><div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />)}</div>
+        <div className="grid gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
+          ))}
+        </div>
       ) : paged.length === 0 ? (
-        <Card><CardContent className="grid place-items-center py-16 text-sm text-muted-foreground">No vendors match this filter.</CardContent></Card>
+        <Card>
+          <CardContent className="grid place-items-center py-16 text-sm text-muted-foreground">
+            No vendors match this filter.
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-2 stagger">
-          {paged.map(v => (
+          {paged.map((v) => (
             <Card key={v.id} className="hover-lift">
               <CardContent className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 sm:p-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-bold text-primary">
-                    {(v.business.shopName || "S").slice(0,1).toUpperCase()}
+                    {(v.business.shopName || "S").slice(0, 1).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate font-semibold">{v.business.shopName || "Unnamed shop"}</span>
-                      <Badge variant={statusVariant(v.status)} className="text-[10px] capitalize">{v.status.replace("_"," ")}</Badge>
+                      <span className="truncate font-semibold">
+                        {v.business.shopName || "Unnamed shop"}
+                      </span>
+                      <Badge variant={statusVariant(v.status)} className="text-[10px] capitalize">
+                        {v.status.replace("_", " ")}
+                      </Badge>
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {v.business.ownerName || "—"} · {v.account.email} · {v.submittedAt ? `Submitted ${new Date(v.submittedAt).toLocaleDateString()}` : "Not submitted"}
+                      {v.business.ownerName || "—"} · {v.account.email} ·{" "}
+                      {v.submittedAt
+                        ? `Submitted ${new Date(v.submittedAt).toLocaleDateString()}`
+                        : "Not submitted"}
                     </div>
                   </div>
                 </div>
                 <Link to="/admin/$sellerId" params={{ sellerId: v.id }}>
-                  <Button size="sm" variant="outline" className="gap-1">Review <ChevronRight className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="outline" className="gap-1">
+                    Review <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </Link>
               </CardContent>
             </Card>
@@ -108,10 +148,21 @@ function AdminVendors() {
 
       {total > perPage && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Showing {(p-1)*perPage+1}-{Math.min(p*perPage, total)} of {total}</span>
+          <span>
+            Showing {(p - 1) * perPage + 1}-{Math.min(p * perPage, total)} of {total}
+          </span>
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" disabled={p<=1} onClick={()=>setPage(p-1)}>Previous</Button>
-            <Button size="sm" variant="outline" disabled={p>=pages} onClick={()=>setPage(p+1)}>Next</Button>
+            <Button size="sm" variant="outline" disabled={p <= 1} onClick={() => setPage(p - 1)}>
+              Previous
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={p >= pages}
+              onClick={() => setPage(p + 1)}
+            >
+              Next
+            </Button>
           </div>
         </div>
       )}

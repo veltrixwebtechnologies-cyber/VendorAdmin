@@ -4,8 +4,12 @@ import { LogOut, Moon, Sun, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
@@ -44,7 +48,12 @@ function AdminLayout() {
   }, [onLogin, loading, user, isAdminQ.isLoading, isAdminQ.data, navigate]);
 
   if (onLogin) return <Outlet />;
-  if (notReady) return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading admin console…</div>;
+  if (notReady)
+    return (
+      <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
+        Loading admin console…
+      </div>
+    );
   if (!user || !isAdminQ.data) return null;
 
   const initial = (user.email?.[0] ?? "A").toUpperCase();
@@ -61,22 +70,39 @@ function AdminLayout() {
               <Input placeholder="Search users, vendors, products, orders…" className="pl-8 h-9" />
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-2">
-              <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme" className="h-9 w-9">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggle}
+                aria-label="Toggle theme"
+                className="h-9 w-9"
+              >
                 {mode === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
               <NotificationsBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-9 gap-2 px-1.5 sm:px-2">
-                    <Avatar className="h-7 w-7"><AvatarFallback>{initial}</AvatarFallback></Avatar>
-                    <span className="hidden max-w-[160px] truncate text-xs font-medium lg:inline">{user.email}</span>
+                    <Avatar className="h-7 w-7">
+                      <AvatarFallback>{initial}</AvatarFallback>
+                    </Avatar>
+                    <span className="hidden max-w-[160px] truncate text-xs font-medium lg:inline">
+                      {user.email}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate({ to: "/admin/settings" })}>Settings</DropdownMenuItem>
-                  <DropdownMenuItem onClick={async () => { await signOut(); navigate({ to: "/admin/login" }); }}>
+                  <DropdownMenuItem onClick={() => navigate({ to: "/admin/settings" })}>
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await signOut();
+                      navigate({ to: "/admin/login" });
+                    }}
+                  >
                     <LogOut className="mr-2 h-4 w-4" /> Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>

@@ -11,9 +11,6 @@ export const Route = createFileRoute("/seller/reviews")({
     ],
   }),
   component: () => (
-    <ComingSoon
-      title="Reviews"
-      description="View ratings, read reviews, and reply to customers."
-    />
+    <ComingSoon title="Reviews" description="View ratings, read reviews, and reply to customers." />
   ),
 });

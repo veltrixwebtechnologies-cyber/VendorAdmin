@@ -97,9 +97,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Become a Seller — Seller Hub" },
-      { name: "twitter:description", content: "Join our marketplace in 7 simple steps. Reach millions of customers with a verified seller account." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/042907d7-8a63-4fea-8189-969f1d81a499/id-preview-8353330a--771160b3-6377-4ffd-a9c8-d1c0475e958b.lovable.app-1784720683985.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/042907d7-8a63-4fea-8189-969f1d81a499/id-preview-8353330a--771160b3-6377-4ffd-a9c8-d1c0475e958b.lovable.app-1784720683985.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Join our marketplace in 7 simple steps. Reach millions of customers with a verified seller account.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/042907d7-8a63-4fea-8189-969f1d81a499/id-preview-8353330a--771160b3-6377-4ffd-a9c8-d1c0475e958b.lovable.app-1784720683985.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/042907d7-8a63-4fea-8189-969f1d81a499/id-preview-8353330a--771160b3-6377-4ffd-a9c8-d1c0475e958b.lovable.app-1784720683985.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

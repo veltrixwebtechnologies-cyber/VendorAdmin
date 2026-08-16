@@ -10,8 +10,18 @@ import { useAuth } from "@/lib/auth";
 /* ------------ Types ------------ */
 
 export type SellerStatus = "draft" | "pending" | "approved" | "rejected" | "more_info";
-export type OrderStatus = "new" | "accepted" | "packed" | "ready_for_pickup" | "out_for_delivery" | "shipped" | "delivered" | "cancelled" | "returned";
-export type BusinessType = "" | "Individual" | "Sole Proprietorship" | "Partnership" | "Private Limited";
+export type OrderStatus =
+  | "new"
+  | "accepted"
+  | "packed"
+  | "ready_for_pickup"
+  | "out_for_delivery"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "returned";
+export type BusinessType =
+  "" | "Individual" | "Sole Proprietorship" | "Partnership" | "Private Limited";
 
 export interface StoredFile {
   name: string;
@@ -151,7 +161,10 @@ export function getDataErrorMessage(error: unknown, fallback = "Please try again
 /* ------------ Mappers ------------ */
 
 function rowToSeller(r: any): Seller {
-  const w: Record<string, any> = (r.wizard_data && typeof r.wizard_data === "object" && !Array.isArray(r.wizard_data)) ? r.wizard_data : {};
+  const w: Record<string, any> =
+    r.wizard_data && typeof r.wizard_data === "object" && !Array.isArray(r.wizard_data)
+      ? r.wizard_data
+      : {};
   return {
     id: r.id,
     userId: r.user_id,
@@ -257,7 +270,10 @@ function rowToOrder(r: any, items: any[]): Order {
   const w = r.buyer_address ?? "";
   // buyer_address stores "address, city, state - pincode" (we set it that way when seeding).
   // Best-effort parse for display.
-  const [addr = "", rest = ""] = w.split(",").length > 1 ? [w.split(",").slice(0, -2).join(","), w.split(",").slice(-2).join(",")] : [w, ""];
+  const [addr = "", rest = ""] =
+    w.split(",").length > 1
+      ? [w.split(",").slice(0, -2).join(","), w.split(",").slice(-2).join(",")]
+      : [w, ""];
   const cityState = rest.split(" - ")[0]?.trim() ?? "";
   const pincode = rest.split(" - ")[1]?.trim() ?? "";
   const [city = "", state = ""] = cityState.split(",").map((s: string) => s.trim());
@@ -305,7 +321,17 @@ export function useMySeller() {
       const request = supabase.from("sellers").select("*").eq("user_id", user!.id).maybeSingle();
       const result = await Promise.race([
         request,
-        new Promise<never>((_, reject) => globalThis.setTimeout(() => reject(new Error("Seller profile request timed out. Check your Supabase connection and try again.")), 5_000)),
+        new Promise<never>((_, reject) =>
+          globalThis.setTimeout(
+            () =>
+              reject(
+                new Error(
+                  "Seller profile request timed out. Check your Supabase connection and try again.",
+                ),
+              ),
+            5_000,
+          ),
+        ),
       ]);
       const { data, error } = result;
       if (error) throw error;
@@ -331,9 +357,15 @@ export function useUpdateMySeller() {
     mutationFn: async (patch: Partial<Seller>) => {
       if (!user) throw new Error("Not signed in");
       // Read current wizard_data
-      const { data: cur } = await supabase.from("sellers").select("wizard_data").eq("user_id", user.id).maybeSingle();
-      const curWizard = (cur?.wizard_data && typeof cur.wizard_data === "object" && !Array.isArray(cur.wizard_data))
-        ? (cur.wizard_data as Record<string, any>) : {};
+      const { data: cur } = await supabase
+        .from("sellers")
+        .select("wizard_data")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const curWizard =
+        cur?.wizard_data && typeof cur.wizard_data === "object" && !Array.isArray(cur.wizard_data)
+          ? (cur.wizard_data as Record<string, any>)
+          : {};
       const dbPatch = sellerPatchToDb(patch, curWizard);
       const { data, error } = await supabase
         .from("sellers")
@@ -354,9 +386,15 @@ export function useSubmitMySeller() {
   return useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Not signed in");
-      const { data: cur } = await supabase.from("sellers").select("wizard_data").eq("user_id", user.id).maybeSingle();
-      const curWizard = (cur?.wizard_data && typeof cur.wizard_data === "object" && !Array.isArray(cur.wizard_data))
-        ? (cur.wizard_data as Record<string, any>) : {};
+      const { data: cur } = await supabase
+        .from("sellers")
+        .select("wizard_data")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const curWizard =
+        cur?.wizard_data && typeof cur.wizard_data === "object" && !Array.isArray(cur.wizard_data)
+          ? (cur.wizard_data as Record<string, any>)
+          : {};
       const w = { ...curWizard, submittedAt: new Date().toISOString() };
       const { error } = await supabase
         .from("sellers")
@@ -374,7 +412,10 @@ export function useAllSellers() {
   return useQuery({
     queryKey: ["admin-sellers"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("sellers").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("sellers")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []).map(rowToSeller);
     },
@@ -386,7 +427,11 @@ export function useSellerById(id: string | null | undefined) {
     queryKey: ["admin-seller", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase.from("sellers").select("*").eq("id", id!).maybeSingle();
+      const { data, error } = await supabase
+        .from("sellers")
+        .select("*")
+        .eq("id", id!)
+        .maybeSingle();
       if (error) throw error;
       return data ? rowToSeller(data) : null;
     },
@@ -396,21 +441,39 @@ export function useSellerById(id: string | null | undefined) {
 export function useReviewSeller() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (v: { id: string; action: "approve" | "reject" | "more_info"; note?: string }) => {
-      const status = v.action === "approve" ? "approved" : v.action === "reject" ? "rejected" : "more_info";
+    mutationFn: async (v: {
+      id: string;
+      action: "approve" | "reject" | "more_info";
+      note?: string;
+    }) => {
+      const status =
+        v.action === "approve" ? "approved" : v.action === "reject" ? "rejected" : "more_info";
       const { error } = await supabase
         .from("sellers")
         .update({ status, admin_notes: v.note ?? null, reviewed_at: new Date().toISOString() })
         .eq("id", v.id);
       if (error) throw error;
       // Notify seller
-      const { data: seller } = await supabase.from("sellers").select("user_id, business_name").eq("id", v.id).maybeSingle();
+      const { data: seller } = await supabase
+        .from("sellers")
+        .select("user_id, business_name")
+        .eq("id", v.id)
+        .maybeSingle();
       if (seller) {
-        const label = status === "approved" ? "Application approved" : status === "rejected" ? "Application rejected" : "More information requested";
+        const label =
+          status === "approved"
+            ? "Application approved"
+            : status === "rejected"
+              ? "Application rejected"
+              : "More information requested";
         await supabase.from("notifications").insert({
           user_id: seller.user_id,
           title: label,
-          body: v.note || (status === "approved" ? "You can now list products and receive orders." : "Please check your registration for details."),
+          body:
+            v.note ||
+            (status === "approved"
+              ? "You can now list products and receive orders."
+              : "Please check your registration for details."),
           kind: "status",
           link: "/seller",
         });
@@ -431,7 +494,12 @@ export function useIsAdmin() {
     queryKey: ["is-admin", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", user!.id).eq("role", "admin").maybeSingle();
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .eq("role", "admin")
+        .maybeSingle();
       if (error) throw error;
       return !!data;
     },
@@ -565,7 +633,8 @@ export function useUpdateProductStock() {
     mutationFn: async (v: { id: string; stock?: number; lowStockAt?: number }) => {
       const patch: any = {};
       if (v.stock !== undefined) patch.stock = Math.max(0, Math.floor(v.stock));
-      if (v.lowStockAt !== undefined) patch.low_stock_threshold = Math.max(0, Math.floor(v.lowStockAt));
+      if (v.lowStockAt !== undefined)
+        patch.low_stock_threshold = Math.max(0, Math.floor(v.lowStockAt));
       const { error } = await supabase.from("products").update(patch).eq("id", v.id);
       if (error) throw error;
     },
@@ -606,7 +675,10 @@ export function useMarkNotificationRead() {
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read_at: new Date().toISOString() })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["my-notifications", user?.id] }),
@@ -654,7 +726,17 @@ export interface CycleSummary {
   codFees: number;
   net: number;
   status: "processing" | "paid";
-  txns: Array<{ orderId: string; orderNumber: string; date: string; gross: number; commission: number; gstOnFees: number; codFee: number; net: number; paymentMode: string }>;
+  txns: Array<{
+    orderId: string;
+    orderNumber: string;
+    date: string;
+    gross: number;
+    commission: number;
+    gstOnFees: number;
+    codFee: number;
+    net: number;
+    paymentMode: string;
+  }>;
 }
 
 export function useMySettlements() {
@@ -665,7 +747,9 @@ export function useMySettlements() {
     queryFn: async () => {
       const { data: orders, error } = await supabase
         .from("orders")
-        .select("id, order_number, status, subtotal, shipping_fee, total, delivered_at, placed_at, seller_id")
+        .select(
+          "id, order_number, status, subtotal, shipping_fee, total, delivered_at, placed_at, seller_id",
+        )
         .eq("user_id", user!.id)
         .eq("status", "delivered");
       if (error) throw error;
@@ -679,8 +763,10 @@ export function useMySettlements() {
         const date = o.delivered_at ?? o.placed_at;
         const start = startOfWeek(date);
         const key = start.toISOString().slice(0, 10);
-        const end = new Date(start); end.setDate(end.getDate() + 6);
-        const payout = new Date(end); payout.setDate(payout.getDate() + 2);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        const payout = new Date(end);
+        payout.setDate(payout.getDate() + 2);
         const cur =
           cycles.get(key) ??
           ({
@@ -713,7 +799,9 @@ export function useMySettlements() {
         });
         cycles.set(key, cur);
       }
-      const sorted = Array.from(cycles.values()).sort((a, b) => (a.cycleStart < b.cycleStart ? 1 : -1));
+      const sorted = Array.from(cycles.values()).sort((a, b) =>
+        a.cycleStart < b.cycleStart ? 1 : -1,
+      );
 
       // Settlements are created by admin/backend only — sellers cannot self-issue payout records.
       return sorted;
@@ -729,18 +817,33 @@ export async function uploadSellerDoc(
   docType: string,
   file: File,
 ): Promise<StoredFile> {
-  if (file.size <= 0 || file.size > 10 * 1024 * 1024) throw new Error("Document exceeds the 10 MB limit");
+  if (file.size <= 0 || file.size > 10 * 1024 * 1024)
+    throw new Error("Document exceeds the 10 MB limit");
   const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
   const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
   const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
-  const isWebp = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  const isWebp =
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50;
   const ext = (file.name.split(".").pop() || "").toLowerCase();
-  const allowed = (isPdf && ext === "pdf") || (isJpeg && ["jpg", "jpeg"].includes(ext)) || (isPng && ext === "png") || (isWebp && ext === "webp");
+  const allowed =
+    (isPdf && ext === "pdf") ||
+    (isJpeg && ["jpg", "jpeg"].includes(ext)) ||
+    (isPng && ext === "png") ||
+    (isWebp && ext === "webp");
   if (!allowed) throw new Error("Unsupported or invalid document file");
 
   const path = `${userId}/${docType}-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("seller-docs").upload(path, file, { upsert: true, contentType: file.type });
+  const { error } = await supabase.storage
+    .from("seller-docs")
+    .upload(path, file, { upsert: true, contentType: file.type });
   if (error) throw error;
   await supabase.from("seller_documents").insert({
     seller_id: sellerId,

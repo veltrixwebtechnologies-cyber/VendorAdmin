@@ -4,65 +4,148 @@ import { supabase } from "@/integrations/supabase/client";
 
 /* ---------- Types ---------- */
 export interface Category {
-  id: string; parent_id: string | null; name: string; slug: string;
-  description: string | null; image_url: string | null; sort_order: number;
-  is_active: boolean; created_at: string; updated_at: string;
+  id: string;
+  parent_id: string | null;
+  name: string;
+  slug: string;
+  description: string | null;
+  image_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 export interface Brand {
-  id: string; name: string; slug: string; logo_url: string | null;
-  is_active: boolean; created_at: string; updated_at: string;
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 export interface Coupon {
-  id: string; code: string; description: string | null;
-  discount_type: "percent" | "flat" | "free_shipping"; discount_value: number;
-  min_order: number; max_discount: number | null; usage_limit: number | null;
-  used_count: number; starts_at: string | null; expires_at: string | null;
-  is_active: boolean; created_at: string; updated_at: string;
+  id: string;
+  code: string;
+  description: string | null;
+  discount_type: "percent" | "flat" | "free_shipping";
+  discount_value: number;
+  min_order: number;
+  max_discount: number | null;
+  usage_limit: number | null;
+  used_count: number;
+  starts_at: string | null;
+  expires_at: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 export interface Banner {
-  id: string; title: string; subtitle: string | null; image_url: string;
-  link_url: string | null; placement: "hero"|"featured_category"|"featured_product"|"promo";
-  sort_order: number; is_active: boolean; starts_at: string | null;
-  ends_at: string | null; created_at: string; updated_at: string;
+  id: string;
+  title: string;
+  subtitle: string | null;
+  image_url: string;
+  link_url: string | null;
+  placement: "hero" | "featured_category" | "featured_product" | "promo";
+  sort_order: number;
+  is_active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 export interface Review {
-  id: string; product_id: string | null; user_id: string | null; rating: number;
-  title: string | null; body: string | null;
-  status: "pending"|"approved"|"hidden"|"reported"; reported_count: number;
-  created_at: string; updated_at: string;
+  id: string;
+  product_id: string | null;
+  user_id: string | null;
+  rating: number;
+  title: string | null;
+  body: string | null;
+  status: "pending" | "approved" | "hidden" | "reported";
+  reported_count: number;
+  created_at: string;
+  updated_at: string;
 }
 export interface SupportTicket {
-  id: string; user_id: string | null; raised_by: "customer"|"vendor";
-  subject: string; body: string; priority: "low"|"normal"|"high"|"urgent";
-  status: "open"|"pending"|"resolved"|"closed"; assigned_to: string | null;
-  order_id?: string | null; issue_type?: string | null; support_stage?: string;
-  selected_product_ids?: string[]; evidence_urls?: string[]; video_url?: string | null;
-  customer_comment?: string | null; eligible?: boolean; eligibility_reason?: string | null;
-  decision?: string | null; refund_amount?: number | null; replacement_approved?: boolean;
-  reporting_deadline?: string | null; resolved_at?: string | null;
-  created_at: string; updated_at: string;
+  id: string;
+  user_id: string | null;
+  raised_by: "customer" | "vendor";
+  subject: string;
+  body: string;
+  priority: "low" | "normal" | "high" | "urgent";
+  status: "open" | "pending" | "resolved" | "closed";
+  assigned_to: string | null;
+  order_id?: string | null;
+  issue_type?: string | null;
+  support_stage?: string;
+  selected_product_ids?: string[];
+  evidence_urls?: string[];
+  video_url?: string | null;
+  customer_comment?: string | null;
+  eligible?: boolean;
+  eligibility_reason?: string | null;
+  decision?: string | null;
+  refund_amount?: number | null;
+  replacement_approved?: boolean;
+  reporting_deadline?: string | null;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 export interface AdminBroadcast {
-  id: string; title: string; body: string;
-  channel: "in_app"|"email"|"push";
-  audience: "all_users"|"all_vendors"|"selected_users"|"selected_vendors";
-  target_ids: string[]; sent_by: string | null; sent_at: string; recipient_count: number;
+  id: string;
+  title: string;
+  body: string;
+  channel: "in_app" | "email" | "push";
+  audience: "all_users" | "all_vendors" | "selected_users" | "selected_vendors";
+  target_ids: string[];
+  sent_by: string | null;
+  sent_at: string;
+  recipient_count: number;
 }
 export interface PlatformSettings {
-  id: number; marketplace_name: string; logo_url: string | null;
-  commission_percent: number; shipping_flat: number; tax_percent: number;
-  return_policy: string | null; privacy_policy: string | null;
-  terms_conditions: string | null; payment_gateway: string; updated_at: string;
+  id: number;
+  marketplace_name: string;
+  logo_url: string | null;
+  commission_percent: number;
+  shipping_flat: number;
+  tax_percent: number;
+  return_policy: string | null;
+  privacy_policy: string | null;
+  terms_conditions: string | null;
+  payment_gateway: string;
+  updated_at: string;
 }
-export interface FlashSale { id: string; title: string; discount_type: "percent" | "flat"; discount_value: number; starts_at: string; ends_at: string; is_active: boolean; }
-export interface Collection { id: string; name: string; slug: string; description: string | null; image_url: string | null; starts_at?: string | null; ends_at?: string | null; is_active: boolean; display_order: number; }
+export interface FlashSale {
+  id: string;
+  title: string;
+  discount_type: "percent" | "flat";
+  discount_value: number;
+  starts_at: string;
+  ends_at: string;
+  is_active: boolean;
+}
+export interface Collection {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  image_url: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  is_active: boolean;
+  display_order: number;
+}
 
 /* ---------- Generic helpers ---------- */
 function useList<T>(table: string, order = "created_at", ascending = false) {
   return useQuery<T[]>({
     queryKey: [table, "list", order, ascending],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from(table).select("*").order(order, { ascending });
+      const { data, error } = await (supabase as any)
+        .from(table)
+        .select("*")
+        .order(order, { ascending });
       if (error) throw error;
       return (data ?? []) as T[];
     },
@@ -75,8 +158,13 @@ export function useUpsertCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (c: Partial<Category> & { name: string; slug: string }) => {
-      const { data, error } = await (supabase as any).from("categories").upsert(c).select().single();
-      if (error) throw error; return data;
+      const { data, error } = await (supabase as any)
+        .from("categories")
+        .upsert(c)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["categories"] }),
   });
@@ -99,7 +187,8 @@ export function useUpsertBrand() {
   return useMutation({
     mutationFn: async (b: Partial<Brand> & { name: string; slug: string }) => {
       const { data, error } = await (supabase as any).from("brands").upsert(b).select().single();
-      if (error) throw error; return data;
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["brands"] }),
   });
@@ -120,9 +209,16 @@ export const useCoupons = () => useList<Coupon>("coupons");
 export function useUpsertCoupon() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (c: Partial<Coupon> & { code: string; discount_type: Coupon["discount_type"]; discount_value: number }) => {
+    mutationFn: async (
+      c: Partial<Coupon> & {
+        code: string;
+        discount_type: Coupon["discount_type"];
+        discount_value: number;
+      },
+    ) => {
       const { data, error } = await (supabase as any).from("coupons").upsert(c).select().single();
-      if (error) throw error; return data;
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["coupons"] }),
   });
@@ -142,14 +238,27 @@ export const useFlashSales = () => useList<FlashSale>("flash_sales");
 export function useUpsertFlashSale() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (sale: Partial<FlashSale> & { title: string; starts_at: string; ends_at: string; product_ids?: string[] }) => {
+    mutationFn: async (
+      sale: Partial<FlashSale> & {
+        title: string;
+        starts_at: string;
+        ends_at: string;
+        product_ids?: string[];
+      },
+    ) => {
       const { product_ids, ...saleData } = sale;
-      const { data, error } = await (supabase as any).from("flash_sales").upsert(saleData).select().single();
+      const { data, error } = await (supabase as any)
+        .from("flash_sales")
+        .upsert(saleData)
+        .select()
+        .single();
       if (error) throw error;
       if (product_ids) {
         await (supabase as any).from("flash_sale_products").delete().eq("flash_sale_id", data.id);
         if (product_ids.length) {
-          const { error: relationError } = await (supabase as any).from("flash_sale_products").insert(product_ids.map(product_id => ({ flash_sale_id: data.id, product_id })));
+          const { error: relationError } = await (supabase as any)
+            .from("flash_sale_products")
+            .insert(product_ids.map((product_id) => ({ flash_sale_id: data.id, product_id })));
           if (relationError) throw relationError;
         }
       }
@@ -164,8 +273,13 @@ export function useUpsertCollection(table: "gift_collections" | "seasonal_collec
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (collection: Partial<Collection> & { name: string; slug: string }) => {
-      const { data, error } = await (supabase as any).from(table).upsert(collection).select().single();
-      if (error) throw error; return data;
+      const { data, error } = await (supabase as any)
+        .from(table)
+        .upsert(collection)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: [table] }),
   });
@@ -173,8 +287,16 @@ export function useUpsertCollection(table: "gift_collections" | "seasonal_collec
 export function useFeatureBrand() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ brand_id, display_order }: { brand_id: string; display_order: number }) => {
-      const { error } = await (supabase as any).from("featured_brands").upsert({ brand_id, display_order });
+    mutationFn: async ({
+      brand_id,
+      display_order,
+    }: {
+      brand_id: string;
+      display_order: number;
+    }) => {
+      const { error } = await (supabase as any)
+        .from("featured_brands")
+        .upsert({ brand_id, display_order });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["featured_brands"] }),
@@ -184,7 +306,10 @@ export function useUnfeatureBrand() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (brand_id: string) => {
-      const { error } = await (supabase as any).from("featured_brands").delete().eq("brand_id", brand_id);
+      const { error } = await (supabase as any)
+        .from("featured_brands")
+        .delete()
+        .eq("brand_id", brand_id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["featured_brands"] }),
@@ -208,7 +333,8 @@ export function useUpsertBanner() {
   return useMutation({
     mutationFn: async (b: Partial<Banner> & { title: string; image_url: string }) => {
       const { data, error } = await (supabase as any).from("banners").upsert(b).select().single();
-      if (error) throw error; return data;
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["banners"] }),
   });
@@ -265,9 +391,17 @@ export const useBroadcasts = () => useList<AdminBroadcast>("admin_broadcasts", "
 export function useSendBroadcast() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (b: Omit<AdminBroadcast, "id"|"sent_at"|"sent_by"|"recipient_count"> & { recipient_count?: number }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await (supabase as any).from("admin_broadcasts").insert({ ...b, sent_by: user?.id });
+    mutationFn: async (
+      b: Omit<AdminBroadcast, "id" | "sent_at" | "sent_by" | "recipient_count"> & {
+        recipient_count?: number;
+      },
+    ) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { error } = await (supabase as any)
+        .from("admin_broadcasts")
+        .insert({ ...b, sent_by: user?.id });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin_broadcasts"] }),
@@ -279,7 +413,11 @@ export function usePlatformSettings() {
   return useQuery<PlatformSettings | null>({
     queryKey: ["platform_settings"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("platform_settings").select("*").eq("id", 1).maybeSingle();
+      const { data, error } = await (supabase as any)
+        .from("platform_settings")
+        .select("*")
+        .eq("id", 1)
+        .maybeSingle();
       if (error) throw error;
       return (data ?? null) as PlatformSettings | null;
     },
@@ -298,7 +436,10 @@ export function useUpdateSettings() {
 
 /* ---------- USER LIST + BLOCK ---------- */
 export interface AdminUserRow {
-  id: string; email: string | null; display_name: string | null; created_at: string;
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  created_at: string;
   is_blocked?: boolean;
 }
 export function useAdminUsers() {
@@ -306,11 +447,16 @@ export function useAdminUsers() {
     queryKey: ["admin_users"],
     queryFn: async () => {
       const [{ data: profiles, error: pe }, { data: blocks }] = await Promise.all([
-        (supabase as any).from("profiles").select("id, email, display_name, created_at").order("created_at", { ascending: false }),
+        (supabase as any)
+          .from("profiles")
+          .select("id, email, display_name, created_at")
+          .order("created_at", { ascending: false }),
         (supabase as any).from("user_status").select("user_id, is_blocked"),
       ]);
       if (pe) throw pe;
-      const map = new Map<string, boolean>((blocks ?? []).map((b: any) => [b.user_id, b.is_blocked]));
+      const map = new Map<string, boolean>(
+        (blocks ?? []).map((b: any) => [b.user_id, b.is_blocked]),
+      );
       return (profiles ?? []).map((p: any) => ({ ...p, is_blocked: map.get(p.id) ?? false }));
     },
   });
@@ -318,10 +464,21 @@ export function useAdminUsers() {
 export function useSetUserBlocked() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ userId, blocked, reason }: { userId: string; blocked: boolean; reason?: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+    mutationFn: async ({
+      userId,
+      blocked,
+      reason,
+    }: {
+      userId: string;
+      blocked: boolean;
+      reason?: string;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await (supabase as any).from("user_status").upsert({
-        user_id: userId, is_blocked: blocked,
+        user_id: userId,
+        is_blocked: blocked,
         reason: blocked ? (reason ?? null) : null,
         blocked_at: blocked ? new Date().toISOString() : null,
         blocked_by: blocked ? user?.id : null,
@@ -339,23 +496,55 @@ export function useAdminOverview() {
     queryFn: async () => {
       const [users, sellers, products, orders, todayOrders] = await Promise.all([
         (supabase as any).from("profiles").select("id", { count: "exact", head: true }),
-        (supabase as any).from("sellers").select("id, status, created_at, reviewed_at, business_name, full_name, email"),
-        (supabase as any).from("products").select("id, status, stock, category, name, selling_price, created_at"),
-        (supabase as any).from("orders").select("id, total, status, created_at, buyer_name, seller_id"),
-        (supabase as any).from("orders").select("id", { count: "exact", head: true })
-          .gte("created_at", new Date(new Date().setHours(0,0,0,0)).toISOString()),
+        (supabase as any)
+          .from("sellers")
+          .select("id, status, created_at, reviewed_at, business_name, full_name, email"),
+        (supabase as any)
+          .from("products")
+          .select("id, status, stock, category, name, selling_price, created_at"),
+        (supabase as any)
+          .from("orders")
+          .select("id, total, status, created_at, buyer_name, seller_id"),
+        (supabase as any)
+          .from("orders")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
       ]);
       const rawSellers = (sellers.data ?? []) as Array<any>;
       return {
         totalUsers: users.count ?? 0,
-        sellers: rawSellers.map(s => ({
-          id: s.id, status: s.status, created_at: s.created_at,
+        sellers: rawSellers.map((s) => ({
+          id: s.id,
+          status: s.status,
+          created_at: s.created_at,
           submitted_at: s.reviewed_at ?? null,
           shop_name: s.business_name ?? null,
           owner_name: s.full_name ?? s.email ?? null,
-        })) as Array<{ id: string; status: string; created_at: string; submitted_at: string | null; shop_name: string | null; owner_name: string | null }>,
-        products: (products.data ?? []) as Array<{ id: string; status: string; stock: number; category: string | null; name: string; selling_price: number; created_at: string }>,
-        orders: (orders.data ?? []) as Array<{ id: string; total: number; status: string; created_at: string; buyer_name: string | null; seller_id: string }>,
+        })) as Array<{
+          id: string;
+          status: string;
+          created_at: string;
+          submitted_at: string | null;
+          shop_name: string | null;
+          owner_name: string | null;
+        }>,
+        products: (products.data ?? []) as Array<{
+          id: string;
+          status: string;
+          stock: number;
+          category: string | null;
+          name: string;
+          selling_price: number;
+          created_at: string;
+        }>,
+        orders: (orders.data ?? []) as Array<{
+          id: string;
+          total: number;
+          status: string;
+          created_at: string;
+          buyer_name: string | null;
+          seller_id: string;
+        }>,
         todayOrders: todayOrders.count ?? 0,
       };
     },

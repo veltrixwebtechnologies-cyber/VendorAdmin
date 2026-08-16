@@ -117,7 +117,9 @@ function AdminLoginPage() {
       toast.message("Sign-in successful — claim admin to continue.");
     } catch (error) {
       console.error("[auth] admin sign in failed", error);
-      toast.error(error instanceof Error ? error.message : "Admin sign in failed. Please try again.");
+      toast.error(
+        error instanceof Error ? error.message : "Admin sign in failed. Please try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -151,11 +153,23 @@ function AdminLoginPage() {
           <form onSubmit={onLogin} className="mt-6 space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Admin email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pass">Password</Label>
-              <Input id="pass" type="password" value={pass} onChange={(e) => setPass(e.target.value)} required />
+              <Input
+                id="pass"
+                type="password"
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+                required
+              />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
               {busy && <Loader2 className="h-4 w-4 animate-spin" />} Sign in
@@ -185,7 +199,8 @@ function AdminLoginPage() {
             ) : (
               <div className="space-y-3">
                 <div className="text-xs text-muted-foreground">
-                  This account does not have admin access. Ask an existing admin to grant you the admin role.
+                  This account does not have admin access. Ask an existing admin to grant you the
+                  admin role.
                 </div>
                 <Button
                   type="button"
@@ -205,7 +220,9 @@ function AdminLoginPage() {
         )}
 
         <div className="mt-6 text-center text-xs text-muted-foreground">
-          <Link to="/" className="story-link">← Back to Seller Hub</Link>
+          <Link to="/" className="story-link">
+            ← Back to Seller Hub
+          </Link>
         </div>
       </div>
     </div>

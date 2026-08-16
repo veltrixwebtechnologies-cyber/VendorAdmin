@@ -15,7 +15,11 @@ export function useTheme() {
   });
   useEffect(() => {
     apply(mode);
-    try { localStorage.setItem(KEY, mode); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(KEY, mode);
+    } catch {
+      /* ignore */
+    }
   }, [mode]);
   const toggle = useCallback(() => setMode((m) => (m === "dark" ? "light" : "dark")), []);
   return { mode, setMode, toggle };
