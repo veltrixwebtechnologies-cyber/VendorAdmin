@@ -15,10 +15,13 @@ export const sendSellerEmailOtp = createServerFn({ method: "POST" })
     const { data: auth, error: authError } = await supabaseAdmin.auth.getUser(data.accessToken);
     if (authError || !auth.user || auth.user.email?.toLowerCase() !== data.email)
       throw new Error("Session/email mismatch");
-    const { data: allowed, error: limitError } = await supabaseAdmin.rpc(
-      "consume_seller_otp_rate_limit",
-      { _account_key: auth.user.id },
-    );
+    const rpc = supabaseAdmin.rpc as unknown as (
+      functionName: string,
+      args: { _account_key: string },
+    ) => Promise<{ data: boolean | null; error: { message: string } | null }>;
+    const { data: allowed, error: limitError } = await rpc("consume_seller_otp_rate_limit", {
+      _account_key: auth.user.id,
+    });
     if (limitError || allowed !== true)
       throw new Error("Too many verification requests. Try again later.");
     const otpTable = supabaseAdmin.from("seller_verification_otps" as any) as any;

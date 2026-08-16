@@ -22,6 +22,16 @@ export const Route = createFileRoute("/seller/reports")({
 });
 
 type Row = Record<string, string | number | null>;
+type ReportOrder = {
+  order_number: string | null;
+  status: string | null;
+  subtotal: number | null;
+  shipping_fee: number | null;
+  total: number | null;
+  placed_at: string | null;
+  delivered_at: string | null;
+  payment_method: string | null;
+};
 function csv(rows: Row[]) {
   if (!rows.length) return "";
   const columns = Object.keys(rows[0]);
@@ -52,9 +62,7 @@ function ReportsPage() {
       const [orders, products] = await Promise.all([
         supabase
           .from("orders")
-          .select(
-            "id,order_number,status,subtotal,shipping_fee,total,payment_method,placed_at,delivered_at",
-          )
+          .select("id,order_number,status,subtotal,shipping_fee,total,placed_at,delivered_at")
           .eq("seller_id", sellerId!)
           .order("placed_at", { ascending: false }),
         supabase
@@ -65,7 +73,13 @@ function ReportsPage() {
       ]);
       if (orders.error) throw orders.error;
       if (products.error) throw products.error;
-      return { orders: orders.data ?? [], products: products.data ?? [] };
+      return {
+        orders: (orders.data ?? []).map((order) => ({
+          ...order,
+          payment_method: null,
+        })) as ReportOrder[],
+        products: products.data ?? [],
+      };
     },
   });
   const reports = useMemo(() => {

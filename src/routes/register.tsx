@@ -82,7 +82,6 @@ function RegisterPage() {
 
   useEffect(() => {
     if (search.step && search.step !== step) setStep(search.step);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.step]);
 
   const goto = (n: number) => {
@@ -382,7 +381,6 @@ function useAutosave<K extends keyof Seller>(_seller: Seller, key: K, values: Se
       update.mutate({ [key]: values } as any);
     }, 700);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, key]);
 }
 
@@ -445,11 +443,8 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
       toast.error(e instanceof Error ? e.message : "Invalid or expired OTP");
     }
   };
-  const verifyMobile = async () => {
-    if (verifyOtp("mobile:" + values.mobile, mobileCode)) {
-      await update.mutateAsync({ account: { ...seller.account, ...values, mobileVerified: true } });
-      toast.success("Mobile verified");
-    } else toast.error("Invalid or expired OTP");
+  const verifyMobile = () => {
+    toast.error("SMS verification is not configured. Mobile verification remains pending.");
   };
 
   const submit = async () => {

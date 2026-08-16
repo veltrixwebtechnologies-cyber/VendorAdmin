@@ -5,6 +5,14 @@ import { m } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
+const MotionButton = m.button as unknown as React.ComponentType<
+  React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    ref?: React.Ref<HTMLButtonElement>;
+    whileHover?: unknown;
+    whileTap?: unknown;
+  }
+>;
+
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
@@ -33,18 +41,22 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  extends
+    Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onAnimationStart">,
+    VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : m.button;
+    const classes = cn(buttonVariants({ variant, size, className }), "premium-button");
+    if (asChild) return <Slot className={classes} ref={ref} {...props} />;
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }), "premium-button")}
+      <MotionButton
+        className={classes}
         ref={ref}
-        {...(!asChild ? { whileHover: { scale: 1.015 }, whileTap: { scale: 0.975 } } : {})}
+        whileHover={{ scale: 1.015 }}
+        whileTap={{ scale: 0.975 }}
         {...props}
       />
     );

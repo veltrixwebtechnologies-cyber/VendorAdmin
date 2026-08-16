@@ -4,6 +4,10 @@ import { m } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
+const MotionChart = m.div as unknown as React.ComponentType<
+  React.HTMLAttributes<HTMLDivElement> & Record<string, unknown>
+>;
+
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
 
@@ -35,7 +39,7 @@ function useChart() {
 
 const ChartContainer = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> & {
+  Omit<React.ComponentProps<"div">, "onAnimationStart"> & {
     config: ChartConfig;
     children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>["children"];
   }
@@ -45,7 +49,7 @@ const ChartContainer = React.forwardRef<
 
   return (
     <ChartContext.Provider value={{ config }}>
-      <m.div
+      <MotionChart
         data-chart={chartId}
         ref={ref}
         initial={{ opacity: 0, scaleY: 0.94 }}
@@ -61,7 +65,7 @@ const ChartContainer = React.forwardRef<
       >
         <ChartStyle id={chartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
-      </m.div>
+      </MotionChart>
     </ChartContext.Provider>
   );
 });
