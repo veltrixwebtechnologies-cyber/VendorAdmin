@@ -30,7 +30,7 @@ export const Route = createFileRoute("/admin/banners")({
 });
 
 function resolveBannerImage(imageUrl: string) {
-  if (/^(https?:|data:|blob:)/i.test(imageUrl)) return imageUrl;
+  if (/^(https?:|data:|blob:)/i.test(imageUrl) || imageUrl.startsWith("/")) return imageUrl;
   return supabase.storage.from("banner-images").getPublicUrl(imageUrl).data.publicUrl;
 }
 
