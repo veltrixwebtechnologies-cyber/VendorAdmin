@@ -37,6 +37,7 @@ import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminVendorsRouteImport } from './routes/admin/vendors'
 import { Route as SellerIndexRouteImport } from './routes/seller/index'
 import { Route as SellerAnalyticsRouteImport } from './routes/seller/analytics'
+import { Route as SellerHoursRouteImport } from './routes/seller/hours'
 import { Route as SellerInventoryRouteImport } from './routes/seller/inventory'
 import { Route as SellerOrdersRouteImport } from './routes/seller/orders'
 import { Route as SellerProductsRouteImport } from './routes/seller/products'
@@ -187,6 +188,11 @@ const SellerAnalyticsRoute = SellerAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => SellerRouteRoute,
 } as any)
+const SellerHoursRoute = SellerHoursRouteImport.update({
+  id: '/hours',
+  path: '/hours',
+  getParentRoute: () => SellerRouteRoute,
+} as any)
 const SellerInventoryRoute = SellerInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -260,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vendors': typeof AdminVendorsRoute
   '/seller/analytics': typeof SellerAnalyticsRoute
+  '/seller/hours': typeof SellerHoursRoute
   '/seller/inventory': typeof SellerInventoryRoute
   '/seller/orders': typeof SellerOrdersRoute
   '/seller/products': typeof SellerProductsRoute
@@ -297,6 +304,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vendors': typeof AdminVendorsRoute
   '/seller/analytics': typeof SellerAnalyticsRoute
+  '/seller/hours': typeof SellerHoursRoute
   '/seller/inventory': typeof SellerInventoryRoute
   '/seller/orders': typeof SellerOrdersRoute
   '/seller/products': typeof SellerProductsRoute
@@ -337,6 +345,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vendors': typeof AdminVendorsRoute
   '/seller/analytics': typeof SellerAnalyticsRoute
+  '/seller/hours': typeof SellerHoursRoute
   '/seller/inventory': typeof SellerInventoryRoute
   '/seller/orders': typeof SellerOrdersRoute
   '/seller/products': typeof SellerProductsRoute
@@ -378,6 +387,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vendors'
     | '/seller/analytics'
+    | '/seller/hours'
     | '/seller/inventory'
     | '/seller/orders'
     | '/seller/products'
@@ -415,6 +425,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vendors'
     | '/seller/analytics'
+    | '/seller/hours'
     | '/seller/inventory'
     | '/seller/orders'
     | '/seller/products'
@@ -454,6 +465,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vendors'
     | '/seller/analytics'
+    | '/seller/hours'
     | '/seller/inventory'
     | '/seller/orders'
     | '/seller/products'
@@ -674,6 +686,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SellerAnalyticsRouteImport
       parentRoute: typeof SellerRouteRoute
     }
+    '/seller/hours': {
+      id: '/seller/hours'
+      path: '/hours'
+      fullPath: '/seller/hours'
+      preLoaderRoute: typeof SellerHoursRouteImport
+      parentRoute: typeof SellerRouteRoute
+    }
     '/seller/inventory': {
       id: '/seller/inventory'
       path: '/inventory'
@@ -792,6 +811,7 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 
 interface SellerRouteRouteChildren {
   SellerAnalyticsRoute: typeof SellerAnalyticsRoute
+  SellerHoursRoute: typeof SellerHoursRoute
   SellerInventoryRoute: typeof SellerInventoryRoute
   SellerOrdersRoute: typeof SellerOrdersRoute
   SellerProductsRoute: typeof SellerProductsRoute
@@ -806,6 +826,7 @@ interface SellerRouteRouteChildren {
 
 const SellerRouteRouteChildren: SellerRouteRouteChildren = {
   SellerAnalyticsRoute: SellerAnalyticsRoute,
+  SellerHoursRoute: SellerHoursRoute,
   SellerInventoryRoute: SellerInventoryRoute,
   SellerOrdersRoute: SellerOrdersRoute,
   SellerProductsRoute: SellerProductsRoute,

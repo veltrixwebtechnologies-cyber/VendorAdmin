@@ -4,6 +4,7 @@ import {
   BarChart3,
   Box,
   ClipboardList,
+  Clock,
   Home,
   LogOut,
   MessageSquare,
@@ -51,6 +52,7 @@ export const Route = createFileRoute("/seller")({
 const NAV = [
   { url: "/seller", label: "Dashboard", icon: Home, exact: true },
   { url: "/seller/store", label: "Store Setup", icon: Store },
+  { url: "/seller/hours", label: "Shop Hours", icon: Clock },
   { url: "/seller/products", label: "Products", icon: Package },
   { url: "/seller/orders", label: "Orders", icon: ShoppingBag },
   { url: "/seller/inventory", label: "Inventory", icon: Box },
