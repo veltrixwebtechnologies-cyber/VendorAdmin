@@ -4,7 +4,7 @@ import { Clock, Power, PowerOff, CalendarX2, CalendarPlus, RefreshCw, History, G
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useMySeller } from "@/lib/db";
 import {
   DAYS, DAY_FULL,
@@ -68,7 +68,6 @@ function LiveStatusChip({ sellerId }: { sellerId: string }) {
 
 /* ── Override panel ───────────────────────────────────────────────────────── */
 function OverridePanel({ sellerId }: { sellerId: string }) {
-  const { toast } = useToast();
   const overrideQ = useActiveOverride(sellerId);
   const setOverride = useSetShopOverride();
   const revert = useRevertShopOverride();
@@ -85,29 +84,29 @@ function OverridePanel({ sellerId }: { sellerId: string }) {
         sellerId, kind: "temporary_closed", reason: reason || undefined,
         effectiveUntil: until ? new Date(until).toISOString() : null,
       });
-      toast({ title: "Shop marked as temporarily closed" });
+      toast.success("Shop marked as temporarily closed");
       setShowForm(false); setReason(""); setUntil("");
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Failed", description: e.message });
+      toast.error(e?.message ?? "Failed");
     }
   }
 
   async function handleOpen() {
     try {
       await setOverride.mutateAsync({ sellerId, kind: "manual_open", reason: reason || undefined });
-      toast({ title: "Shop manually opened" });
+      toast.success("Shop manually opened");
       setShowForm(false); setReason("");
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Failed", description: e.message });
+      toast.error(e?.message ?? "Failed");
     }
   }
 
   async function handleRevert() {
     try {
       await revert.mutateAsync(sellerId);
-      toast({ title: "Override removed — schedule resumed" });
+      toast.success("Override removed — schedule resumed");
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Failed", description: e.message });
+      toast.error(e?.message ?? "Failed");
     }
   }
 
@@ -192,7 +191,6 @@ function TimeRow({ hour, onChange }: { hour: ShopHour; onChange: (h: Partial<Sho
 
 /* ── Holiday row ──────────────────────────────────────────────────────────── */
 function HolidaySection({ sellerId }: { sellerId: string }) {
-  const { toast } = useToast();
   const holidaysQ = useShopHolidays(sellerId);
   const addHoliday = useAddShopHoliday();
   const delHoliday = useDeleteShopHoliday();
@@ -202,7 +200,7 @@ function HolidaySection({ sellerId }: { sellerId: string }) {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name || !form.startDate || !form.endDate) {
-      toast({ variant: "destructive", title: "All fields required" }); return;
+      toast.error("All fields required"); return;
     }
     try {
       await addHoliday.mutateAsync({
@@ -211,11 +209,11 @@ function HolidaySection({ sellerId }: { sellerId: string }) {
         specialOpen:  form.isClosed ? null : form.specialOpen || null,
         specialClose: form.isClosed ? null : form.specialClose || null,
       });
-      toast({ title: "Holiday / special event added" });
+      toast.success("Holiday / special event added");
       setForm({ name: "", startDate: "", endDate: "", isClosed: true, specialOpen: "", specialClose: "" });
       setShowForm(false);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Failed", description: e.message });
+      toast.error(e?.message ?? "Failed");
     }
   }
 
@@ -321,7 +319,6 @@ function AuditLog({ sellerId }: { sellerId: string }) {
 
 /* ── Main page ───────────────────────────────────────────────────────────── */
 function ShopHoursPage() {
-  const { toast } = useToast();
   const sellerQ = useMySeller();
   const seller = sellerQ.data;
   const sellerId = seller?.id ?? null;
@@ -348,13 +345,13 @@ function ShopHoursPage() {
   async function handleSave() {
     if (!sellerId) return;
     const hasError = hours.some(h => h.isOpen && !!validateTimeRange(h.openTime, h.closeTime));
-    if (hasError) { toast({ variant: "destructive", title: "Fix time errors before saving" }); return; }
+    if (hasError) { toast.error("Fix time errors before saving"); return; }
     try {
       await saveAll.mutateAsync({ sellerId, hours: hours.map(h => ({ sellerId, dayOfWeek: h.dayOfWeek, isOpen: h.isOpen, openTime: h.openTime, closeTime: h.closeTime, breakStart: h.breakStart, breakEnd: h.breakEnd })) });
       if (tz !== (seller as any)?.timezone) await updateTz.mutateAsync({ sellerId, timezone: tz });
-      toast({ title: "Business hours saved ✓" });
+      toast.success("Business hours saved ✓");
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Save failed", description: e.message });
+      toast.error(e?.message ?? "Save failed");
     }
   }
 

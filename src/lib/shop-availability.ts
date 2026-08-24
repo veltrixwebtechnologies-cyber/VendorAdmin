@@ -191,16 +191,16 @@ export function useMyShopHours(sellerId: string | null | undefined) {
     queryKey: ["shop-hours", sellerId],
     enabled:  !!sellerId,
     queryFn: async (): Promise<ShopHour[]> => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("shop_hours")
         .select("*")
         .eq("seller_id", sellerId!)
         .order("day_of_week");
       if (error) throw error;
-      const rows = (data ?? []).map(rowToHour);
+      const rows: ShopHour[] = (data ?? []).map(rowToHour);
       // Fill missing days with defaults
-      const byDay = new Map(rows.map((r) => [r.dayOfWeek, r]));
-      return Array.from({ length: 7 }, (_, i) => {
+      const byDay = new Map<DayOfWeek, ShopHour>(rows.map((r) => [r.dayOfWeek, r]));
+      return Array.from({ length: 7 }, (_, i): ShopHour => {
         const dow = i as DayOfWeek;
         return byDay.get(dow) ?? {
           id:          `virtual-${dow}`,
@@ -280,7 +280,7 @@ export function useUpdateShopTimezone() {
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (v: { sellerId: string; timezone: string }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("sellers")
         .update({ timezone: v.timezone })
         .eq("id", v.sellerId);
@@ -301,7 +301,7 @@ export function useActiveOverride(sellerId: string | null | undefined) {
     enabled:  !!sellerId,
     refetchInterval: 60_000,
     queryFn: async (): Promise<ShopOverride | null> => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("shop_overrides")
         .select("*")
         .eq("seller_id", sellerId!)
@@ -365,7 +365,7 @@ export function useShopHolidays(sellerId: string | null | undefined) {
     queryKey: ["shop-holidays", sellerId],
     enabled:  !!sellerId,
     queryFn: async (): Promise<ShopHoliday[]> => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("shop_holidays")
         .select("*")
         .eq("seller_id", sellerId!)
@@ -389,7 +389,7 @@ export function useAddShopHoliday() {
       specialOpen?:  string | null;
       specialClose?: string | null;
     }) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("shop_holidays")
         .insert({
           seller_id:    v.sellerId,
@@ -404,7 +404,7 @@ export function useAddShopHoliday() {
         .single();
       if (error) throw error;
       // Log
-      await supabase.from("shop_availability_log").insert({
+      await (supabase as any).from("shop_availability_log").insert({
         seller_id: v.sellerId,
         action:    "add_holiday",
         payload:   { name: v.name, start: v.startDate, end: v.endDate },
@@ -422,12 +422,12 @@ export function useDeleteShopHoliday() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: { id: string; sellerId: string }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("shop_holidays")
         .delete()
         .eq("id", v.id);
       if (error) throw error;
-      await supabase.from("shop_availability_log").insert({
+      await (supabase as any).from("shop_availability_log").insert({
         seller_id: v.sellerId,
         action:    "del_holiday",
         payload:   { id: v.id },
@@ -447,7 +447,7 @@ export function useAvailabilityLog(sellerId: string | null | undefined) {
     queryKey: ["shop-avail-log", sellerId],
     enabled:  !!sellerId,
     queryFn: async (): Promise<AvailabilityLogEntry[]> => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("shop_availability_log")
         .select("*")
         .eq("seller_id", sellerId!)
