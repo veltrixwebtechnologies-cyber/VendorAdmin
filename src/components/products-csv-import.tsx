@@ -224,7 +224,14 @@ export function ProductsCsvImport({
     if (!good.length) return toast.error("No valid rows to import");
     setBusy(true);
     try {
-      await onImport(good);
+      const BATCH_SIZE = 50;
+      let totalImported = 0;
+      for (let i = 0; i < good.length; i += BATCH_SIZE) {
+        const chunk = good.slice(i, i + BATCH_SIZE);
+        await onImport(chunk);
+        totalImported += chunk.length;
+      }
+      toast.success(`Successfully imported ${totalImported} product${totalImported === 1 ? "" : "s"}`);
       reset();
       onOpenChange(false);
     } catch (e: any) {
