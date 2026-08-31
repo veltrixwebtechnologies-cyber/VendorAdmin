@@ -134,7 +134,15 @@ function AdminSellerDetail() {
 
       <StorefrontPreview docs={docs} shopName={seller.business.shopName || "Shop"} />
 
-      <VendorActivity userId={seller.userId} />
+      {seller.status === "approved" ? (
+        <VendorActivity userId={seller.userId} />
+      ) : (
+        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-950 dark:bg-amber-950/20">
+          <CardContent className="py-3 text-sm text-amber-800 dark:text-amber-300">
+            This seller application is currently <strong className="capitalize">{seller.status}</strong>. Product listing, orders, and payouts are disabled until approved.
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="business">
         <TabsList className="flex-wrap">
@@ -143,9 +151,13 @@ function AdminSellerDetail() {
           <TabsTrigger value="bank">Bank</TabsTrigger>
           <TabsTrigger value="tax">Tax</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="products">Products</TabsTrigger>
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="payouts">Payouts</TabsTrigger>
+          {seller.status === "approved" && (
+            <>
+              <TabsTrigger value="products">Products</TabsTrigger>
+              <TabsTrigger value="orders">Orders</TabsTrigger>
+              <TabsTrigger value="payouts">Payouts</TabsTrigger>
+            </>
+          )}
         </TabsList>
         <TabsContent value="business">
           <InfoCard
@@ -197,15 +209,19 @@ function AdminSellerDetail() {
         <TabsContent value="documents">
           <DocumentsCard docs={docs} />
         </TabsContent>
-        <TabsContent value="products">
-          <VendorProducts userId={seller.userId} />
-        </TabsContent>
-        <TabsContent value="orders">
-          <VendorOrders userId={seller.userId} />
-        </TabsContent>
-        <TabsContent value="payouts">
-          <VendorPayouts userId={seller.userId} />
-        </TabsContent>
+        {seller.status === "approved" && (
+          <>
+            <TabsContent value="products">
+              <VendorProducts userId={seller.userId} />
+            </TabsContent>
+            <TabsContent value="orders">
+              <VendorOrders userId={seller.userId} />
+            </TabsContent>
+            <TabsContent value="payouts">
+              <VendorPayouts userId={seller.userId} />
+            </TabsContent>
+          </>
+        )}
       </Tabs>
 
       <Card>

@@ -118,6 +118,7 @@ function validateRow(raw: Record<string, string>, line: number): ParsedRow {
   else if (!CATEGORIES.includes(category as (typeof CATEGORIES)[number]))
     errors.category = `Must be one of: ${CATEGORIES.join(", ")}`;
   if (!brand) errors.brand = "Required";
+  if (!description) errors.description = "Required";
   if (!Number.isFinite(mrp) || mrp < 0) errors.mrp = "Invalid number";
   if (!Number.isFinite(price) || price <= 0) errors.price = "Must be > 0";
   if (Number.isFinite(mrp) && Number.isFinite(price) && price > mrp)
@@ -185,7 +186,7 @@ export function ProductsCsvImport({
     }
     const headers = grid[0].map((h) => h.trim());
     const missing = HEADERS.filter(
-      (h) => !["description", "imageUrl", "lowStockAt"].includes(h) && !headers.includes(h),
+      (h) => !["imageUrl", "lowStockAt"].includes(h) && !headers.includes(h),
     );
     setMissingHeaders(missing);
     if (missing.length) {

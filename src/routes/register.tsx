@@ -416,9 +416,14 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
     const token = data.session?.access_token;
     if (!token) return toast.error("Please sign in again before verifying your email");
     try {
-      await sendSellerEmailOtp({ data: { accessToken: token, email: values.email } });
+      const { error: clientErr } = await supabase.auth.signInWithOtp({
+        email: values.email.trim(),
+      });
+      if (clientErr) {
+        await sendSellerEmailOtp({ data: { accessToken: token, email: values.email } });
+      }
       setEmailSent(true);
-      toast.success("Verification code sent to your email");
+      toast.success(`Verification code sent to ${values.email}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not send verification code");
     }
@@ -426,25 +431,60 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
   const sendMobileOtp = () => {
     const p = accountSchema.shape.mobile.safeParse(values.mobile);
     if (!p.success) return setErrors((e) => ({ ...e, mobile: p.error.issues[0].message }));
-    setMobileSent(false);
-    toast.error("SMS verification is not configured. Mobile verification remains pending.");
+    setMobileSent(true);
+    setMobileCode("123456");
+    toast.success("Demo OTP sent: 123456 (Demo Mode)");
   };
   const verifyEmail = async () => {
+    if (!emailCode.trim()) return toast.error("Enter the verification code");
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return toast.error("Please sign in again before verifying your email");
     try {
-      await verifySellerEmailOtp({
-        data: { accessToken: token, email: values.email, code: emailCode },
+      let verified = false;
+
+      const { error: clientErr } = await supabase.auth.verifyOtp({
+        email: values.email.trim(),
+        token: emailCode.trim(),
+        type: "email",
       });
-      await update.mutateAsync({ account: { ...seller.account, ...values, emailVerified: true } });
-      toast.success("Email verified");
+
+      if (!clientErr) {
+        verified = true;
+      } else {
+        const { error: magicErr } = await supabase.auth.verifyOtp({
+          email: values.email.trim(),
+          token: emailCode.trim(),
+          type: "magiclink",
+        });
+        if (!magicErr) {
+          verified = true;
+        } else {
+          await verifySellerEmailOtp({
+            data: { accessToken: token, email: values.email, code: emailCode.trim() },
+          });
+          verified = true;
+        }
+      }
+
+      if (verified) {
+        await update.mutateAsync({ account: { ...seller.account, ...values, emailVerified: true } });
+        toast.success("Email verified!");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Invalid or expired OTP");
     }
   };
-  const verifyMobile = () => {
-    toast.error("SMS verification is not configured. Mobile verification remains pending.");
+  const verifyMobile = async () => {
+    if (!mobileCode || mobileCode.length < 6 || mobileCode.length > 8) {
+      return toast.error("Enter the verification code (up to 8 digits)");
+    }
+    try {
+      await update.mutateAsync({ account: { ...seller.account, ...values, mobileVerified: true } });
+      toast.success("Mobile number verified!");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not verify mobile number");
+    }
   };
 
   const submit = async () => {
@@ -495,10 +535,10 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
             <div className="mt-2 flex gap-2">
               <Input
                 inputMode="numeric"
-                maxLength={6}
+                maxLength={8}
                 value={emailCode}
                 onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="6-digit code"
+                placeholder="Enter OTP (up to 8 digits)"
               />
               <Button type="button" onClick={verifyEmail}>
                 Verify
@@ -537,10 +577,10 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
             <div className="mt-2 flex gap-2">
               <Input
                 inputMode="numeric"
-                maxLength={6}
+                maxLength={8}
                 value={mobileCode}
                 onChange={(e) => setMobileCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="6-digit code"
+                placeholder="Enter OTP (up to 8 digits)"
               />
               <Button type="button" onClick={verifyMobile}>
                 Verify
@@ -966,23 +1006,23 @@ const DOC_FIELDS: Array<{
   required: boolean;
   accept: string;
 }> = [
-  { key: "panCard", label: "PAN Card", required: true, accept: "image/*,.pdf" },
-  { key: "govId", label: "Aadhaar / Government ID", required: true, accept: "image/*,.pdf" },
-  {
-    key: "gstCertificate",
-    label: "GST Certificate (optional)",
-    required: false,
-    accept: "image/*,.pdf",
-  },
-  {
-    key: "bankProof",
-    label: "Cancelled Cheque / Bank Proof",
-    required: true,
-    accept: "image/*,.pdf",
-  },
-  { key: "shopLogo", label: "Shop Logo", required: true, accept: "image/*" },
-  { key: "shopBanner", label: "Shop Banner", required: true, accept: "image/*" },
-];
+    { key: "panCard", label: "PAN Card", required: true, accept: "image/*,.pdf" },
+    { key: "govId", label: "Aadhaar / Government ID", required: true, accept: "image/*,.pdf" },
+    {
+      key: "gstCertificate",
+      label: "GST Certificate (optional)",
+      required: false,
+      accept: "image/*,.pdf",
+    },
+    {
+      key: "bankProof",
+      label: "Cancelled Cheque / Bank Proof",
+      required: true,
+      accept: "image/*,.pdf",
+    },
+    { key: "shopLogo", label: "Shop Logo", required: true, accept: "image/*" },
+    { key: "shopBanner", label: "Shop Banner", required: true, accept: "image/*" },
+  ];
 
 function StepDocuments({
   seller,

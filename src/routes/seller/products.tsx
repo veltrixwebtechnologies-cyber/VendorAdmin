@@ -507,6 +507,7 @@ function ProductFormDialog({
     if (form.price <= 0) return toast.error("Price must be greater than 0");
     if (form.mrp < form.price) return toast.error("MRP cannot be lower than price");
     if (!form.category) return toast.error("Choose a category");
+    if (!form.description.trim()) return toast.error("Product description is required");
     void onSubmit(form);
   }
 
@@ -591,9 +592,12 @@ function ProductFormDialog({
             />
           </div>
           <div className="sm:col-span-2">
-            <Label>Description</Label>
+            <Label>
+              Description <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               rows={3}
+              placeholder="Provide a detailed description of the product..."
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
             />

@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, XCircle, CheckCircle2, EyeOff, Trash2 } from "lucide-react";
+import { Search, XCircle, CheckCircle2, EyeOff, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/products")({
@@ -36,14 +36,20 @@ export const Route = createFileRoute("/admin/products")({
 type Row = {
   id: string;
   name: string;
+  description?: string | null;
   category: string | null;
   selling_price: number;
+  original_price?: number | null;
   stock: number;
+  sku?: string | null;
   status: string;
+  rejection_reason?: string | null;
   image_url: string | null;
   user_id: string;
+  created_at?: string;
   shop_name?: string | null;
   seller_email?: string | null;
+  seller_id?: string | null;
 };
 
 const QUICK_REASONS = [
@@ -61,20 +67,27 @@ function useAllProducts() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("products")
-        .select("id, name, category, selling_price, stock, status, image_url, user_id, created_at")
+        .select("id, name, description, category, selling_price, mrp, stock, sku, status, rejection_reason, image_url, user_id, created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      const rows = (data ?? []) as Row[];
+      const rows = (data ?? []).map((r: any) => ({
+        ...r,
+        original_price: Number(r.mrp ?? 0),
+      })) as Row[];
       const ids = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
       if (ids.length) {
         const [{ data: sellers }, { data: profiles }] = await Promise.all([
-          (supabase as any).from("sellers").select("user_id, business_name").in("user_id", ids),
+          (supabase as any).from("sellers").select("id, user_id, business_name").in("user_id", ids),
           (supabase as any).from("profiles").select("id, email").in("id", ids),
         ]);
-        const smap = new Map((sellers ?? []).map((s: any) => [s.user_id, s.business_name]));
-        const pmap = new Map((profiles ?? []).map((p: any) => [p.id, p.email]));
+        const smap = new Map<string, { id: string; name: string }>(
+          (sellers ?? []).map((s: any) => [s.user_id, { id: s.id, name: s.business_name }]),
+        );
+        const pmap = new Map<string, string>((profiles ?? []).map((p: any) => [p.id, p.email]));
         rows.forEach((r) => {
-          r.shop_name = (smap.get(r.user_id) as string | undefined) ?? null;
+          const sellerObj = smap.get(r.user_id);
+          r.shop_name = sellerObj?.name ?? null;
+          r.seller_id = sellerObj?.id ?? null;
           r.seller_email = (pmap.get(r.user_id) as string | undefined) ?? null;
         });
       }
@@ -128,6 +141,7 @@ function AdminProducts() {
   const [filter, setFilter] = useState<"all" | "pending" | "active" | "rejected" | "out">("all");
   const [search, setSearch] = useState("");
   const [rejectTarget, setRejectTarget] = useState<Row | null>(null);
+  const [viewTarget, setViewTarget] = useState<Row | null>(null);
   const [reason, setReason] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
 
@@ -216,74 +230,98 @@ function AdminProducts() {
               {rows.map((p) => (
                 <div
                   key={p.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 sm:px-4"
+                  className="flex flex-col gap-3 p-3 sm:p-4 md:flex-row md:items-center md:justify-between"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className="flex min-w-0 items-center gap-3 cursor-pointer group flex-1"
+                    onClick={() => setViewTarget(p)}
+                  >
                     {p.image_url ? (
                       <img
                         src={p.image_url}
                         alt=""
-                        className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                        className="h-14 w-14 shrink-0 rounded-lg object-cover border transition-transform group-hover:scale-105"
                       />
                     ) : (
-                      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-muted text-xs text-muted-foreground">
+                      <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
                         IMG
                       </div>
                     )}
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold">{p.name}</div>
-                      <div className="mt-0.5 flex items-center gap-1.5">
-                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-medium">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {p.name}
+                        </span>
+                        <Badge variant="outline" className="shrink-0 text-[10px] capitalize">
+                          {p.status || "draft"}
+                        </Badge>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        <Badge variant="secondary" className="h-4 px-1 text-[9px] font-medium">
                           Vendor
                         </Badge>
-                        <span className="truncate text-xs font-medium text-foreground">
+                        <span className="font-medium text-foreground">
                           {p.shop_name || p.seller_email || `#${p.user_id.slice(0, 8)}`}
                         </span>
-                        {p.shop_name && p.seller_email ? (
-                          <span className="truncate text-[11px] text-muted-foreground">
-                            · {p.seller_email}
-                          </span>
+                        {p.seller_email && p.shop_name ? (
+                          <span className="truncate">· {p.seller_email}</span>
                         ) : null}
                       </div>
-                      <div className="truncate text-xs text-muted-foreground">
-                        {p.category || "Uncategorized"} · ₹
-                        {Number(p.selling_price || 0).toLocaleString("en-IN")} · Stock:{" "}
-                        {p.stock ?? 0}
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {p.category || "Uncategorized"} ·{" "}
+                        <span className="font-semibold text-foreground">
+                          ₹{Number(p.selling_price || 0).toLocaleString("en-IN")}
+                        </span>{" "}
+                        · Stock: {p.stock ?? 0}
                       </div>
                     </div>
-                    <Badge variant="outline" className="ml-2 shrink-0 capitalize">
-                      {p.status || "draft"}
-                    </Badge>
                   </div>
-                  <div className="flex flex-wrap gap-1">
+
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0 pt-2 border-t md:border-t-0 md:pt-0">
+                    <Button size="sm" variant="secondary" onClick={() => setViewTarget(p)}>
+                      <Eye className="h-4 w-4" /> View
+                    </Button>
+                    {p.status !== "approved" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                        onClick={() =>
+                          upd.mutate(
+                            { id: p.id, status: "approved" },
+                            { onSuccess: () => toast.success("Approved") },
+                          )
+                        }
+                      >
+                        <CheckCircle2 className="h-4 w-4" /> Approve
+                      </Button>
+                    )}
+                    {p.status !== "rejected" && (
+                      <Button size="sm" variant="outline" onClick={() => openReject(p)}>
+                        <XCircle className="h-4 w-4" /> Reject
+                      </Button>
+                    )}
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="ghost"
                       onClick={() =>
                         upd.mutate(
-                          { id: p.id, status: "approved" },
-                          { onSuccess: () => toast.success("Approved") },
+                          { id: p.id, status: p.status === "inactive" ? "active" : "inactive" },
+                          {
+                            onSuccess: () =>
+                              toast.success(p.status === "inactive" ? "Unhidden" : "Hidden"),
+                          },
                         )
                       }
                     >
-                      <CheckCircle2 className="h-4 w-4" /> Approve
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => openReject(p)}>
-                      <XCircle className="h-4 w-4" /> Reject
+                      <EyeOff className="h-4 w-4" /> {p.status === "inactive" ? "Unhide" : "Hide"}
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        upd.mutate(
-                          { id: p.id, status: "inactive" },
-                          { onSuccess: () => toast.success("Hidden") },
-                        )
-                      }
+                      variant="ghost"
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteTarget(p)}
                     >
-                      <EyeOff className="h-4 w-4" /> Hide
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(p)}>
                       <Trash2 className="h-4 w-4" /> Delete
                     </Button>
                   </div>
@@ -294,6 +332,131 @@ function AdminProducts() {
         </Card>
       )}
 
+      {/* Product Detail Modal */}
+      <Dialog open={!!viewTarget} onOpenChange={(o) => !o && setViewTarget(null)}>
+        <DialogContent className="sm:max-w-xl">
+          {viewTarget && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-2 pr-6">
+                  <DialogTitle className="text-xl font-bold">{viewTarget.name}</DialogTitle>
+                  <Badge variant="outline" className="capitalize text-xs">
+                    {viewTarget.status || "draft"}
+                  </Badge>
+                </div>
+                <DialogDescription>Product details and listing specifications</DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
+                <div className="overflow-hidden rounded-xl border bg-muted">
+                  {viewTarget.image_url ? (
+                    <img
+                      src={viewTarget.image_url}
+                      alt={viewTarget.name}
+                      className="h-44 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-44 place-items-center text-sm text-muted-foreground">
+                      No Image Available
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-primary">
+                      ₹{Number(viewTarget.selling_price || 0).toLocaleString("en-IN")}
+                    </span>
+                    {viewTarget.original_price &&
+                    viewTarget.original_price > viewTarget.selling_price ? (
+                      <span className="text-sm text-muted-foreground line-through">
+                        ₹{Number(viewTarget.original_price).toLocaleString("en-IN")}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/30 p-2.5 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Category:</span>
+                      <div className="font-semibold">{viewTarget.category || "Uncategorized"}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Stock:</span>
+                      <div className="font-semibold">{viewTarget.stock ?? 0} units</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">SKU:</span>
+                      <div className="font-semibold">{viewTarget.sku || "—"}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Vendor:</span>
+                      <div className="font-semibold truncate">
+                        {viewTarget.shop_name || viewTarget.seller_email || "Unknown"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {viewTarget.description && (
+                    <div>
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        Description
+                      </div>
+                      <p className="rounded-lg border bg-card p-3 text-xs leading-relaxed text-foreground whitespace-pre-wrap max-h-36 overflow-y-auto">
+                        {viewTarget.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {viewTarget.rejection_reason && (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+                      <div className="font-semibold mb-0.5">Rejection Reason:</div>
+                      <div>{viewTarget.rejection_reason}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setViewTarget(null)}>
+                  Close
+                </Button>
+                {viewTarget.status !== "approved" && (
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => {
+                      upd.mutate(
+                        { id: viewTarget.id, status: "approved" },
+                        {
+                          onSuccess: () => {
+                            toast.success("Approved");
+                            setViewTarget(null);
+                          },
+                        },
+                      );
+                    }}
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Approve
+                  </Button>
+                )}
+                {viewTarget.status !== "rejected" && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      const target = viewTarget;
+                      setViewTarget(null);
+                      openReject(target);
+                    }}
+                  >
+                    <XCircle className="h-4 w-4" /> Reject
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Modal */}
       <Dialog
         open={!!rejectTarget}
         onOpenChange={(o) => {
@@ -395,6 +558,7 @@ function AdminProducts() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Alert */}
       <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(o) => {

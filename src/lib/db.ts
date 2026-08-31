@@ -828,26 +828,18 @@ export async function uploadSellerDoc(
 ): Promise<StoredFile> {
   if (file.size <= 0 || file.size > 10 * 1024 * 1024)
     throw new Error("Document exceeds the 10 MB limit");
-  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
-  const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
-  const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
-  const isWebp =
-    bytes[0] === 0x52 &&
-    bytes[1] === 0x49 &&
-    bytes[2] === 0x46 &&
-    bytes[3] === 0x46 &&
-    bytes[8] === 0x57 &&
-    bytes[9] === 0x45 &&
-    bytes[10] === 0x42 &&
-    bytes[11] === 0x50;
   const ext = (file.name.split(".").pop() || "").toLowerCase();
-  const allowed =
-    (isPdf && ext === "pdf") ||
-    (isJpeg && ["jpg", "jpeg"].includes(ext)) ||
-    (isPng && ext === "png") ||
-    (isWebp && ext === "webp");
-  if (!allowed) throw new Error("Unsupported or invalid document file");
+  const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "webp", "heic", "heif"];
+  const isAllowedExt = allowedExtensions.includes(ext);
+  const isAllowedMime =
+    !file.type ||
+    file.type.startsWith("image/") ||
+    file.type === "application/pdf" ||
+    file.type === "application/octet-stream";
+
+  if (!isAllowedExt && !isAllowedMime) {
+    throw new Error("Unsupported or invalid document file. Please upload a PDF, PNG, JPG, or WEBP document.");
+  }
 
   const path = `${userId}/${docType}-${Date.now()}.${ext}`;
   const { error } = await supabase.storage

@@ -241,7 +241,43 @@ BEGIN
   LIMIT 1;
 
   IF selected_partner.id IS NULL THEN
-    -- If max attempts reached and no riders found, update order status to assignment_failed
+    -- Fallback: If no rider found within preferred max_radius_km (15km) or recent GPS timestamp,
+    -- match ANY available online approved partner regardless of distance limit or location age.
+    SELECT
+      p.id,
+      coalesce(public.delivery_distance_km(p.current_latitude, p.current_longitude, shop_lat, shop_lng), 0.0) AS dist_to_shop_km,
+      ((coalesce(public.delivery_distance_km(p.current_latitude, p.current_longitude, shop_lat, shop_lng), 0.0) / 22.0) * 60.0) AS eta_min,
+      extract(epoch FROM (now() - coalesce(p.location_updated_at, p.updated_at, p.created_at))) AS loc_age_sec,
+      public.calculate_rider_dispatch_score(
+        coalesce(public.delivery_distance_km(p.current_latitude, p.current_longitude, shop_lat, shop_lng), 50.0),
+        ((coalesce(public.delivery_distance_km(p.current_latitude, p.current_longitude, shop_lat, shop_lng), 50.0) / 22.0) * 60.0),
+        (SELECT count(*)::integer FROM public.delivery_assignments active_a
+         WHERE active_a.partner_id = p.id AND active_a.status IN ('accepted', 'navigating_to_vendor', 'reached_vendor', 'picked_up', 'out_for_delivery')),
+        p.rating,
+        coalesce(o.estimated_prep_minutes, 15),
+        extract(epoch FROM (now() - coalesce(p.location_updated_at, p.updated_at, p.created_at)))
+      ) AS score
+    INTO selected_partner
+    FROM public.delivery_partners p
+    WHERE p.status = 'approved'
+      AND p.availability = 'online'
+      -- Check concurrency capacity
+      AND (
+        SELECT count(*) FROM public.delivery_assignments active_a
+        WHERE active_a.partner_id = p.id
+          AND active_a.status IN ('accepted', 'navigating_to_vendor', 'reached_vendor', 'picked_up', 'out_for_delivery')
+      ) < coalesce(p.max_concurrent_orders, 1)
+      -- Exclude partners that already rejected/expired this order
+      AND NOT EXISTS (
+        SELECT 1 FROM public.delivery_assignments prior
+        WHERE prior.order_id = o.id AND prior.partner_id = p.id AND prior.status IN ('rejected', 'expired')
+      )
+    ORDER BY score DESC, p.rating DESC, p.created_at ASC
+    LIMIT 1;
+  END IF;
+
+  IF selected_partner.id IS NULL THEN
+    -- If max attempts reached and no riders found anywhere, update order status to assignment_failed
     IF o.dispatch_attempts >= 5 THEN
       UPDATE public.orders
       SET status = 'assignment_failed', updated_at = now()

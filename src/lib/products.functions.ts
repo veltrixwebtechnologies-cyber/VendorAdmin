@@ -12,7 +12,7 @@ const productInput = z.object({
   sku: z.string().trim().min(1).max(80),
   category: z.string().trim().min(1).max(80),
   brand: z.string().trim().max(120).optional().default(""),
-  description: z.string().max(4000).optional().default(""),
+  description: z.string().trim().min(1, "Product description is required").max(4000),
   mrp: z.number().min(0),
   price: z.number().min(0),
   stock: z.number().int().min(0),
