@@ -35,13 +35,13 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 function createSupabaseAdminClient() {
   const runtimeEnv = typeof process !== "undefined" ? process.env : undefined;
   const SUPABASE_URL =
-    runtimeEnv?.SUPABASE_URL ||
-    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_SUPABASE_URL : undefined);
+    runtimeEnv?.["SUPABASE_URL"] ||
+    (typeof import.meta !== "undefined" ? import.meta.env?.["VITE_SUPABASE_URL"] : undefined);
   const SUPABASE_SERVICE_ROLE_KEY =
-    runtimeEnv?.SUPABASE_SERVICE_ROLE_KEY ||
-    runtimeEnv?.SUPABASE_PUBLISHABLE_KEY ||
-    runtimeEnv?.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY : undefined);
+    runtimeEnv?.["SUPABASE_SERVICE_ROLE_KEY"] ||
+    runtimeEnv?.["SUPABASE_PUBLISHABLE_KEY"] ||
+    runtimeEnv?.["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+    (typeof import.meta !== "undefined" ? import.meta.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"] : undefined);
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [
