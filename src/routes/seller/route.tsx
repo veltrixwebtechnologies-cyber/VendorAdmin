@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Clock,
   Home,
+  Lock,
   LogOut,
   MessageSquare,
   Package,
@@ -145,6 +146,8 @@ function SellerLayout() {
 
 function SellerSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const sellerQ = useMySeller();
+  const isApproved = sellerQ.data?.status === "approved";
   const isActive = (url: string, exact?: boolean) =>
     exact ? pathname === url : pathname === url || pathname.startsWith(url + "/");
 
@@ -165,12 +168,22 @@ function SellerSidebar() {
             <SidebarMenu>
               {NAV.map((item) => {
                 const Icon = item.icon;
+                const isLocked =
+                  !isApproved &&
+                  item.url !== "/seller" &&
+                  item.url !== "/seller/store" &&
+                  item.url !== "/seller/profile";
                 return (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild isActive={isActive(item.url, item.exact)}>
-                      <Link to={item.url}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url, item.exact)}
+                      className={isLocked ? "opacity-60" : ""}
+                    >
+                      <Link to={isLocked ? "/seller" : item.url}>
                         <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <span className="flex-1">{item.label}</span>
+                        {isLocked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

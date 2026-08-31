@@ -58,13 +58,22 @@ export const Route = createFileRoute("/seller/orders")({
 const STATUS_META: Record<OrderStatus, { label: string; className: string }> = {
   new: { label: "New", className: "bg-primary text-primary-foreground" },
   accepted: { label: "Accepted", className: "bg-accent text-accent-foreground" },
+  preparing: { label: "Preparing", className: "bg-accent text-accent-foreground" },
   packed: { label: "Packed", className: "bg-accent text-accent-foreground" },
-  ready_for_pickup: { label: "Ready for pickup", className: "bg-accent text-accent-foreground" },
-  out_for_delivery: { label: "Out for delivery", className: "bg-accent text-accent-foreground" },
-  shipped: { label: "Out for delivery", className: "bg-accent text-accent-foreground" },
-  delivered: { label: "Delivered", className: "bg-success text-success-foreground" },
+  ready_for_pickup: { label: "Ready for pickup", className: "bg-amber-500 text-white" },
+  assigned: { label: "Rider assigned", className: "bg-sky-600 text-white" },
+  rider_assigned: { label: "Rider assigned", className: "bg-sky-600 text-white" },
+  rider_accepted: { label: "Rider accepted", className: "bg-sky-600 text-white" },
+  rider_at_shop: { label: "Rider at shop", className: "bg-purple-600 text-white" },
+  picked_up: { label: "Picked up", className: "bg-indigo-600 text-white" },
+  out_for_delivery: { label: "Out for delivery", className: "bg-blue-600 text-white" },
+  at_customer: { label: "Rider at customer", className: "bg-blue-600 text-white" },
+  shipped: { label: "Out for delivery", className: "bg-blue-600 text-white" },
+  delivered: { label: "Delivered", className: "bg-emerald-600 text-white" },
   cancelled: { label: "Cancelled", className: "bg-destructive text-destructive-foreground" },
   returned: { label: "Returned", className: "bg-muted text-muted-foreground" },
+  assignment_failed: { label: "Dispatch pending", className: "bg-amber-600 text-white" },
+  delivery_failed: { label: "Delivery failed", className: "bg-destructive text-destructive-foreground" },
 };
 const FLOW: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup"];
 const TABS: Array<{ value: OrderStatus | "all"; label: string }> = [

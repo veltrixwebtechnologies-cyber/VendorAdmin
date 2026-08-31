@@ -13,13 +13,22 @@ export type SellerStatus = "draft" | "pending" | "approved" | "rejected" | "more
 export type OrderStatus =
   | "new"
   | "accepted"
+  | "preparing"
   | "packed"
   | "ready_for_pickup"
+  | "assigned"
+  | "rider_assigned"
+  | "rider_accepted"
+  | "rider_at_shop"
+  | "picked_up"
   | "out_for_delivery"
+  | "at_customer"
   | "shipped"
   | "delivered"
   | "cancelled"
-  | "returned";
+  | "returned"
+  | "assignment_failed"
+  | "delivery_failed";
 export type BusinessType =
   "" | "Individual" | "Sole Proprietorship" | "Partnership" | "Private Limited";
 

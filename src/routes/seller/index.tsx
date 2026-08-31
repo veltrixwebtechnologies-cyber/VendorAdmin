@@ -246,14 +246,37 @@ function StatusBadge({ status }: { status: SellerStatus }) {
 
 function PendingBanner() {
   return (
-    <Card>
-      <CardContent className="flex items-start gap-3 py-4">
-        <Clock className="mt-0.5 h-5 w-5 text-primary" />
+    <Card className="border-2 border-amber-500/40 bg-gradient-to-b from-amber-500/10 via-background to-background p-8 shadow-xl rounded-3xl text-center">
+      <CardContent className="space-y-6 flex flex-col items-center py-4">
+        <div className="grid h-20 w-20 place-items-center rounded-3xl bg-amber-500/20 text-amber-600 dark:text-amber-400 ring-8 ring-amber-500/10">
+          <Clock className="h-10 w-10 animate-pulse" />
+        </div>
         <div>
-          <div className="font-medium">Your application is under review</div>
-          <p className="text-sm text-muted-foreground">
-            An admin is verifying your business details and documents.
+          <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-xs px-3 py-1 font-semibold">
+            Status: Pending Admin Verification
+          </Badge>
+          <h2 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            ⏳ Store Application Under Review
+          </h2>
+          <p className="mt-3 text-base text-muted-foreground leading-relaxed max-w-xl">
+            Your store registration and business documents have been submitted to the LocalShore Admin team for review.
           </p>
+          <div className="mt-5 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-950 dark:text-amber-200 text-sm font-medium leading-relaxed max-w-lg mx-auto">
+            ⌛ <strong>24-Hour Review Period:</strong> Verification typically takes up to 24 hours to review and wait for admin approval. Once approved by the admin, all features (Products, Orders, Inventory, Settlements) will be unlocked automatically.
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-sm pt-2">
+          <Link to="/seller/store" className="w-full">
+            <Button variant="outline" className="w-full font-semibold border-amber-500/40">
+              <Store className="mr-2 h-4 w-4" /> Review Store Profile
+            </Button>
+          </Link>
+          <Link to="/register" search={{ step: 7 }} className="w-full">
+            <Button className="w-full font-semibold shadow-md">
+              <RefreshCw className="mr-2 h-4 w-4" /> Application Details
+            </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>
