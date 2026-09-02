@@ -128,6 +128,8 @@ export interface Order {
   updatedAt: string;
   deliveredAt?: string;
   items: OrderItem[];
+  assignedPartner?: DeliveryPartnerInfo;
+  deliveryAssignment?: DeliveryAssignmentInfo;
 }
 
 export interface Notification {
@@ -275,6 +277,27 @@ function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, 
   return db;
 }
 
+export interface DeliveryPartnerInfo {
+  id: string;
+  fullName: string;
+  mobile: string;
+  status: string;
+  availability: string;
+  rating?: number;
+  vehicleType?: string;
+  vehicleNumber?: string;
+}
+
+export interface DeliveryAssignmentInfo {
+  id: string;
+  status: string;
+  distanceKm?: number;
+  estimatedEarning?: number;
+  expiresAt?: string;
+  respondedAt?: string;
+  partner?: DeliveryPartnerInfo;
+}
+
 function rowToOrder(r: any, items: any[]): Order {
   const w = r.buyer_address ?? "";
   // buyer_address stores "address, city, state - pincode" (we set it that way when seeding).
@@ -286,6 +309,37 @@ function rowToOrder(r: any, items: any[]): Order {
   const cityState = rest.split(" - ")[0]?.trim() ?? "";
   const pincode = rest.split(" - ")[1]?.trim() ?? "";
   const [city = "", state = ""] = cityState.split(",").map((s: string) => s.trim());
+
+  const activeAssignment = Array.isArray(r.delivery_assignments)
+    ? (r.delivery_assignments.find((a: any) => a.status !== "expired" && a.status !== "rejected") ?? r.delivery_assignments[0])
+    : r.delivery_assignments ?? null;
+
+  const partnerRow = r.assigned_partner ?? activeAssignment?.delivery_partners ?? null;
+  const assignedPartner: DeliveryPartnerInfo | undefined = partnerRow
+    ? {
+        id: partnerRow.id,
+        fullName: partnerRow.full_name ?? partnerRow.name ?? "Delivery Partner",
+        mobile: partnerRow.mobile ?? partnerRow.phone ?? "",
+        status: partnerRow.status ?? "approved",
+        availability: partnerRow.availability ?? "online",
+        rating: partnerRow.rating ? Number(partnerRow.rating) : 4.9,
+        vehicleType: partnerRow.vehicle_type ?? "Motorbike",
+        vehicleNumber: partnerRow.vehicle_number ?? "",
+      }
+    : undefined;
+
+  const deliveryAssignment: DeliveryAssignmentInfo | undefined = activeAssignment
+    ? {
+        id: activeAssignment.id,
+        status: activeAssignment.status,
+        distanceKm: activeAssignment.distance_km ? Number(activeAssignment.distance_km) : undefined,
+        estimatedEarning: activeAssignment.estimated_earning ? Number(activeAssignment.estimated_earning) : undefined,
+        expiresAt: activeAssignment.expires_at ?? undefined,
+        respondedAt: activeAssignment.responded_at ?? undefined,
+        partner: assignedPartner,
+      }
+    : undefined;
+
   return {
     id: r.id,
     orderNumber: r.order_number,
@@ -314,6 +368,8 @@ function rowToOrder(r: any, items: any[]): Order {
       qty: it.qty,
       price: Number(it.unit_price),
     })),
+    assignedPartner,
+    deliveryAssignment,
   };
 }
 
@@ -321,7 +377,6 @@ function rowToOrder(r: any, items: any[]): Order {
 
 export function useMySeller() {
   const { user } = useAuth();
-  const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["my-seller", user?.id],
     enabled: !!user,
@@ -345,18 +400,38 @@ export function useMySeller() {
       const { data, error } = result;
       if (error) throw error;
       if (data) return rowToSeller(data);
-      // Auto-create a minimal draft seller
-      const { data: created, error: iErr } = await supabase
-        .from("sellers")
-        .insert({ user_id: user!.id, email: user!.email ?? null })
-        .select("*")
-        .single();
-      if (iErr) throw iErr;
-      qc.invalidateQueries({ queryKey: ["my-seller", user!.id] });
-      return rowToSeller(created);
+      // Return null when seller profile does not exist or was deleted
+      return null;
     },
   });
   return q;
+}
+
+export function useCreateDraftSeller() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not signed in");
+      const { data: existing } = await supabase
+        .from("sellers")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (existing) return rowToSeller(existing);
+
+      const { data: created, error } = await supabase
+        .from("sellers")
+        .insert({ user_id: user.id, email: user.email ?? null })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return rowToSeller(created);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-seller"] });
+    },
+  });
 }
 
 export function useUpdateMySeller() {
@@ -495,6 +570,56 @@ export function useReviewSeller() {
   });
 }
 
+export function useDeleteSeller() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sellerId: string) => {
+      // Clean up all seller child/related tables
+      await supabase.from("seller_documents").delete().eq("seller_id", sellerId);
+      await (supabase as any).from("shop_hours").delete().eq("seller_id", sellerId);
+      await (supabase as any).from("shop_overrides").delete().eq("seller_id", sellerId);
+      await (supabase as any).from("shop_holidays").delete().eq("seller_id", sellerId);
+      await (supabase as any).from("shop_availability_log").delete().eq("seller_id", sellerId);
+      await supabase.from("products").delete().eq("seller_id", sellerId);
+      // Delete primary seller entry
+      const { error } = await supabase.from("sellers").delete().eq("id", sellerId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-seller"] });
+      qc.invalidateQueries({ queryKey: ["admin-sellers"] });
+      qc.invalidateQueries({ queryKey: ["admin-seller"] });
+      qc.invalidateQueries({ queryKey: ["shop-hours"] });
+      qc.invalidateQueries({ queryKey: ["shop-status"] });
+    },
+  });
+}
+
+export function useDeleteMyAccount() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sellerId: string) => {
+      // Clean up seller related tables
+      await supabase.from("seller_documents").delete().eq("seller_id", sellerId);
+      await (supabase as any).from("shop_hours").delete().eq("seller_id", sellerId);
+      await (supabase as any).from("shop_overrides").delete().eq("seller_id", sellerId);
+      await (supabase as any).from("shop_holidays").delete().eq("seller_id", sellerId);
+      await (supabase as any).from("shop_availability_log").delete().eq("seller_id", sellerId);
+      await supabase.from("products").delete().eq("seller_id", sellerId);
+      const { error } = await supabase.from("sellers").delete().eq("id", sellerId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-seller", user?.id] });
+      qc.invalidateQueries({ queryKey: ["my-seller"] });
+      qc.invalidateQueries({ queryKey: ["admin-sellers"] });
+      qc.invalidateQueries({ queryKey: ["shop-hours"] });
+      qc.invalidateQueries({ queryKey: ["shop-status"] });
+    },
+  });
+}
+
 /* ------------ Admin role ------------ */
 
 export function useIsAdmin() {
@@ -558,12 +683,21 @@ export function useMyOrders() {
       if (sellerError) throw sellerError;
       if (!seller) return [];
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("orders")
-        .select("*, order_items(*)")
+        .select("*, order_items(*), delivery_assignments(*, delivery_partners(*))")
         .eq("seller_id", seller.id)
         .order("placed_at", { ascending: false });
-      if (error) throw error;
+
+      if (error) {
+        const fallback = await supabase
+          .from("orders")
+          .select("*, order_items(*)")
+          .eq("seller_id", seller.id)
+          .order("placed_at", { ascending: false });
+        data = fallback.data as any;
+        if (fallback.error) throw fallback.error;
+      }
       return (data ?? []).map((r: any) => rowToOrder(r, r.order_items));
     },
     refetchInterval: 5_000,

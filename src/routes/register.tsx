@@ -35,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendSellerEmailOtp, verifySellerEmailOtp } from "@/lib/seller-otp.functions";
 import {
   useMySeller,
+  useCreateDraftSeller,
   useSubmitMySeller,
   useUpdateMySeller,
   uploadSellerDoc,
@@ -74,11 +75,18 @@ function RegisterPage() {
   const search = useSearch({ from: "/register" });
   const [step, setStep] = useState<number>(search.step ?? 1);
   const sellerQ = useMySeller();
+  const createDraft = useCreateDraftSeller();
 
   useEffect(() => {
     if (!loading && !user)
       navigate({ to: "/auth", search: { redirect: "/register" }, replace: true });
   }, [loading, user, navigate]);
+
+  useEffect(() => {
+    if (!loading && user && !sellerQ.isLoading && !sellerQ.data && !createDraft.isPending) {
+      createDraft.mutate();
+    }
+  }, [loading, user, sellerQ.isLoading, sellerQ.data, createDraft]);
 
   useEffect(() => {
     if (search.step && search.step !== step) setStep(search.step);
@@ -89,7 +97,7 @@ function RegisterPage() {
     navigate({ to: "/register", search: { step: n } });
   };
 
-  if (loading || sellerQ.isLoading || !sellerQ.data) {
+  if (loading || sellerQ.isLoading || !sellerQ.data || createDraft.isPending) {
     return (
       <div className="grid min-h-screen place-items-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />

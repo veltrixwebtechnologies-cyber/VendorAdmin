@@ -92,10 +92,40 @@ function SellerLayout() {
     }
   }, [sellerQ.data, sellerQ.isLoading, pathname, navigate]);
 
-  if (loading || !user) {
+  if (loading || !user || sellerQ.isLoading) {
     return (
       <div className="grid min-h-svh place-items-center bg-background text-sm text-muted-foreground">
         Loading your dashboard…
+      </div>
+    );
+  }
+
+  if (!sellerQ.data) {
+    return (
+      <div className="grid min-h-svh place-items-center bg-background p-4 text-center">
+        <div className="max-w-md space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+            <Store className="h-6 w-6" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground">No Shop Profile Found</h2>
+          <p className="text-sm text-muted-foreground">
+            Your seller shop profile or account does not exist or has been deleted.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3 pt-2">
+            <Link to="/register">
+              <Button>Create New Shop</Button>
+            </Link>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await signOut();
+                navigate({ to: "/auth", replace: true });
+              }}
+            >
+              Sign Out
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

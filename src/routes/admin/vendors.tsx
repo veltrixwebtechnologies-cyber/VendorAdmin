@@ -1,11 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight, Search, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useAllSellers, type Seller, type SellerStatus } from "@/lib/db";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useAllSellers, useDeleteSeller, type Seller, type SellerStatus } from "@/lib/db";
 
 export const Route = createFileRoute("/admin/vendors")({
   head: () => ({ meta: [{ title: "Vendors — Admin" }, { name: "robots", content: "noindex" }] }),
@@ -31,9 +39,11 @@ function statusVariant(s: SellerStatus): "default" | "outline" | "secondary" | "
 function AdminVendors() {
   const q = useAllSellers();
   const sellers = q.data ?? [];
+  const deleteSeller = useDeleteSeller();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<Seller | null>(null);
   const perPage = 10;
 
   const rows = useMemo(() => {
@@ -59,6 +69,17 @@ function AdminVendors() {
       if (f.key !== "all") c[f.key] = sellers.filter((x) => x.status === f.key).length;
     return c;
   }, [sellers]);
+
+  const handleDeleteSeller = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteSeller.mutateAsync(deleteTarget.id);
+      toast.success(`Shop "${deleteTarget.business.shopName || "Shop"}" deleted successfully.`);
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete shop.");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -135,11 +156,22 @@ function AdminVendors() {
                     </div>
                   </div>
                 </div>
-                <Link to="/admin/$sellerId" params={{ sellerId: v.id }}>
-                  <Button size="sm" variant="outline" className="gap-1">
-                    Review <ChevronRight className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <Link to="/admin/$sellerId" params={{ sellerId: v.id }}>
+                    <Button size="sm" variant="outline" className="gap-1">
+                      Review <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                    title="Delete shop"
+                    onClick={() => setDeleteTarget(v)}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
-                </Link>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -166,6 +198,39 @@ function AdminVendors() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteTarget !== null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" /> Delete Shop
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-foreground">
+              Are you sure you want to delete <strong className="font-bold underline">{deleteTarget?.business.shopName || "Unnamed shop"}</strong>?
+            </p>
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+              <strong>Warning:</strong> Deleting this shop will permanently remove all shop details, documents, catalog items, and application records. This action cannot be undone.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteSeller}
+              disabled={deleteSeller.isPending}
+              className="gap-1.5"
+            >
+              {deleteSeller.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirm Deletion
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

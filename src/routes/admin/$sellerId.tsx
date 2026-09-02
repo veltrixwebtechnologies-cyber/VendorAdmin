@@ -12,6 +12,11 @@ import {
   ShoppingCart,
   Wallet,
   TrendingUp,
+  Trash2,
+  Maximize2,
+  SlidersHorizontal,
+  ZoomIn,
+  RotateCcw,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -29,7 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 import { supabase } from "@/integrations/supabase/client";
-import { signedDocUrl, useReviewSeller, useSellerById } from "@/lib/db";
+import { signedDocUrl, useDeleteSeller, useReviewSeller, useSellerById } from "@/lib/db";
 
 export const Route = createFileRoute("/admin/$sellerId")({
   head: () => ({
@@ -56,8 +61,9 @@ function AdminSellerDetail() {
   const q = useSellerById(sellerId);
   const seller = q.data;
   const review = useReviewSeller();
+  const deleteSeller = useDeleteSeller();
   const navigate = useNavigate();
-  const [dialog, setDialog] = useState<"reject" | "info" | null>(null);
+  const [dialog, setDialog] = useState<"reject" | "info" | "delete" | null>(null);
   const [note, setNote] = useState("");
 
   const [docs, setDocs] = useState<DocRow[]>([]);
@@ -225,54 +231,108 @@ function AdminSellerDetail() {
       </Tabs>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Decision</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base">Decision & Management</CardTitle>
+          <span className="text-xs text-muted-foreground">Admin actions</span>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button onClick={() => doAction("approve")} disabled={review.isPending}>
-            <CheckCircle2 className="h-4 w-4" /> Approve
-          </Button>
-          <Button variant="outline" onClick={() => setDialog("info")}>
-            <MessageCircleQuestion className="h-4 w-4" /> Request more info
-          </Button>
-          <Button variant="destructive" onClick={() => setDialog("reject")}>
-            <XCircle className="h-4 w-4" /> Reject
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => doAction("approve")} disabled={review.isPending}>
+              <CheckCircle2 className="h-4 w-4" /> Approve
+            </Button>
+            <Button variant="outline" onClick={() => setDialog("info")}>
+              <MessageCircleQuestion className="h-4 w-4" /> Request more info
+            </Button>
+            <Button variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => setDialog("reject")}>
+              <XCircle className="h-4 w-4" /> Reject
+            </Button>
+          </div>
+          <Button
+            variant="destructive"
+            onClick={() => setDialog("delete")}
+            disabled={deleteSeller.isPending}
+            className="gap-1.5 ml-auto"
+          >
+            <Trash2 className="h-4 w-4" /> Delete Shop
           </Button>
         </CardContent>
       </Card>
 
       <Dialog open={dialog !== null} onOpenChange={(o) => !o && setDialog(null)}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {dialog === "reject" ? "Reject application" : "Request more information"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label>{dialog === "reject" ? "Reason for rejection" : "Message to the seller"}</Label>
-            <Textarea
-              rows={4}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={
-                dialog === "reject"
-                  ? "e.g. Documents are unclear. Please re-upload a legible PAN."
-                  : "e.g. Please upload a recent GST certificate."
-              }
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDialog(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant={dialog === "reject" ? "destructive" : "default"}
-              onClick={submitDialog}
-              disabled={review.isPending}
-            >
-              Send
-            </Button>
-          </DialogFooter>
+          {dialog === "delete" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-destructive flex items-center gap-2">
+                  <Trash2 className="h-5 w-5" /> Delete Shop
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                <p className="text-sm text-foreground">
+                  Are you sure you want to delete <strong className="font-bold underline">{seller.business.shopName || "Unnamed shop"}</strong>?
+                </p>
+                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                  <strong>Warning:</strong> This will permanently delete the shop profile, uploaded documents, catalog listings, and seller records. This action cannot be undone.
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDialog(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    try {
+                      await deleteSeller.mutateAsync(seller.id);
+                      toast.success(`Shop "${seller.business.shopName || "Shop"}" has been deleted.`);
+                      setDialog(null);
+                      navigate({ to: "/admin/vendors" });
+                    } catch (err: any) {
+                      toast.error(err?.message || "Failed to delete shop.");
+                    }
+                  }}
+                  disabled={deleteSeller.isPending}
+                  className="gap-1.5"
+                >
+                  {deleteSeller.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Confirm Deletion
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {dialog === "reject" ? "Reject application" : "Request more information"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label>{dialog === "reject" ? "Reason for rejection" : "Message to the seller"}</Label>
+                <Textarea
+                  rows={4}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={
+                    dialog === "reject"
+                      ? "e.g. Documents are unclear. Please re-upload a legible PAN."
+                      : "e.g. Please upload a recent GST certificate."
+                  }
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setDialog(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant={dialog === "reject" ? "destructive" : "default"}
+                  onClick={submitDialog}
+                  disabled={review.isPending}
+                >
+                  Send
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
@@ -281,6 +341,10 @@ function AdminSellerDetail() {
 
 function StorefrontPreview({ docs, shopName }: { docs: DocRow[]; shopName: string }) {
   const [images, setImages] = useState<{ logo?: string; banner?: string }>({});
+  const [fitMode, setFitMode] = useState<"cover" | "contain" | "fill">("cover");
+  const [heightClass, setHeightClass] = useState<string>("h-40 sm:h-52");
+  const [positionMode, setPositionMode] = useState<"center" | "top" | "bottom">("center");
+  const [lightbox, setLightbox] = useState<{ url: string; title: string } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -301,39 +365,187 @@ function StorefrontPreview({ docs, shopName }: { docs: DocRow[]; shopName: strin
     };
   }, [docs]);
 
+  const fitClass =
+    fitMode === "cover"
+      ? "object-cover"
+      : fitMode === "contain"
+      ? "object-contain"
+      : "object-fill";
+
+  const posClass =
+    positionMode === "top"
+      ? "object-top"
+      : positionMode === "bottom"
+      ? "object-bottom"
+      : "object-center";
+
   return (
-    <Card className="overflow-hidden">
-      <div className="relative h-40 bg-muted sm:h-52">
+    <Card className="overflow-hidden border shadow-xs">
+      {/* Adjustable Controls Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2 text-xs">
+        <div className="flex items-center gap-2 font-medium">
+          <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
+          <span>Adjust Image Display</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Fit Controls */}
+          <div className="flex items-center rounded-md border bg-background p-0.5 shadow-2xs">
+            <span className="px-1.5 text-[11px] text-muted-foreground">Fit:</span>
+            {(["cover", "contain", "fill"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setFitMode(m)}
+                className={`px-2 py-0.5 text-[11px] font-medium capitalize rounded transition-colors ${
+                  fitMode === m
+                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
+          {/* Position Controls */}
+          <div className="flex items-center rounded-md border bg-background p-0.5 shadow-2xs">
+            <span className="px-1.5 text-[11px] text-muted-foreground">Pos:</span>
+            {(["top", "center", "bottom"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPositionMode(p)}
+                className={`px-2 py-0.5 text-[11px] font-medium capitalize rounded transition-colors ${
+                  positionMode === p
+                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
+          {/* Height Controls */}
+          <div className="flex items-center rounded-md border bg-background p-0.5 shadow-2xs">
+            <span className="px-1.5 text-[11px] text-muted-foreground">Height:</span>
+            {[
+              { label: "Sm", class: "h-28 sm:h-36" },
+              { label: "Md", class: "h-40 sm:h-52" },
+              { label: "Lg", class: "h-56 sm:h-72" },
+            ].map((h) => (
+              <button
+                key={h.label}
+                type="button"
+                onClick={() => setHeightClass(h.class)}
+                className={`px-2 py-0.5 text-[11px] font-medium rounded transition-colors ${
+                  heightClass === h.class
+                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {h.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Reset button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            title="Reset display controls"
+            onClick={() => {
+              setFitMode("cover");
+              setHeightClass("h-40 sm:h-52");
+              setPositionMode("center");
+            }}
+          >
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Media Canvas */}
+      <div className={`relative ${heightClass} bg-slate-950/90 dark:bg-slate-900 transition-all duration-200`}>
         {images.banner ? (
-          <img
-            src={images.banner}
-            alt={`${shopName} storefront`}
-            className="h-full w-full object-cover"
-          />
+          <div
+            className="group relative h-full w-full cursor-pointer overflow-hidden"
+            onClick={() => setLightbox({ url: images.banner!, title: `${shopName} Shop Banner` })}
+          >
+            <img
+              src={images.banner}
+              alt={`${shopName} storefront`}
+              className={`h-full w-full ${fitClass} ${posClass} transition-all duration-200`}
+            />
+            <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center gap-2 text-white text-xs font-semibold">
+              <ZoomIn className="h-4 w-4" /> Click to Inspect Banner
+            </div>
+          </div>
         ) : (
           <div className="grid h-full place-items-center text-sm text-muted-foreground">
             Shop banner missing
           </div>
         )}
-        <div className="absolute bottom-3 left-4 flex items-end gap-3">
-          <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-lg border-2 border-background bg-card shadow">
+        <div className="absolute bottom-3 left-4 flex items-end gap-3 z-10">
+          <div
+            className="group relative grid h-16 w-16 place-items-center overflow-hidden rounded-lg border-2 border-background bg-card shadow-md cursor-pointer"
+            onClick={() =>
+              images.logo && setLightbox({ url: images.logo, title: `${shopName} Shop Logo` })
+            }
+          >
             {images.logo ? (
-              <img
-                src={images.logo}
-                alt={`${shopName} logo`}
-                className="h-full w-full object-cover"
-              />
+              <>
+                <img
+                  src={images.logo}
+                  alt={`${shopName} logo`}
+                  className={`h-full w-full ${fitClass} ${posClass}`}
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center text-white">
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </div>
+              </>
             ) : (
               <span className="text-xl font-bold text-primary">
                 {shopName.slice(0, 1).toUpperCase()}
               </span>
             )}
           </div>
-          <span className="rounded-md bg-background/90 px-2 py-1 text-sm font-semibold shadow-sm backdrop-blur">
+          <span className="rounded-md bg-background/90 px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur border">
             Customer storefront preview
           </span>
         </div>
       </div>
+
+      {/* Lightbox Dialog */}
+      <Dialog open={lightbox !== null} onOpenChange={(open) => !open && setLightbox(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between pr-4">
+              <span>{lightbox?.title}</span>
+              {lightbox?.url && (
+                <a
+                  href={lightbox.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-primary hover:underline flex items-center gap-1 font-normal"
+                >
+                  Open Original <Maximize2 className="h-3 w-3" />
+                </a>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid place-items-center overflow-hidden rounded-lg bg-black/95 p-4 min-h-[300px]">
+            {lightbox?.url && (
+              <img
+                src={lightbox.url}
+                alt={lightbox.title}
+                className="max-h-[70vh] w-auto max-w-full object-contain rounded"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

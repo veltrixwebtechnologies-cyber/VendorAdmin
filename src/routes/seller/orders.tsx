@@ -285,6 +285,70 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                 </div>
               </section>
 
+              {/* Delivery Partner & Dispatch Status Section */}
+              <section className="rounded-lg border border-primary/20 bg-primary/5 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase text-primary">
+                    <Truck className="h-4 w-4 text-primary" /> Delivery Partner Status
+                  </div>
+                  {order.status === "ready_for_pickup" && (
+                    <Badge variant="outline" className="bg-amber-100 text-amber-800 text-[10px]">
+                      Ready for Pickup
+                    </Badge>
+                  )}
+                </div>
+
+                {order.assignedPartner ? (
+                  <div className="space-y-2 pt-1 text-sm">
+                    <div className="flex items-center justify-between bg-background p-2.5 rounded-md border border-border">
+                      <div>
+                        <div className="font-semibold text-foreground flex items-center gap-1.5">
+                          <span>{order.assignedPartner.fullName}</span>
+                          {order.assignedPartner.rating && (
+                            <span className="text-xs text-amber-500 font-medium">★ {order.assignedPartner.rating}</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {order.assignedPartner.vehicleType} • {order.assignedPartner.vehicleNumber || "Verified Rider"}
+                        </div>
+                      </div>
+                      {order.assignedPartner.mobile && (
+                        <a
+                          href={`tel:${order.assignedPartner.mobile}`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1.5 rounded-md hover:bg-emerald-100 transition-colors"
+                        >
+                          <Phone className="h-3.5 w-3.5" /> Call Partner
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground flex items-center justify-between px-1">
+                      <span>Assignment Status:</span>
+                      <span className="font-semibold capitalize text-foreground">
+                        {order.deliveryAssignment?.status?.replace(/_/g, " ") ?? "Assigned"}
+                      </span>
+                    </div>
+                  </div>
+                ) : order.deliveryAssignment && ["pending", "requested"].includes(order.deliveryAssignment.status) ? (
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 rounded-md border border-amber-200 dark:border-amber-800 text-xs space-y-1">
+                    <div className="font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Dispatch Request Sent
+                    </div>
+                    <p className="text-amber-700 dark:text-amber-400">
+                      Broadcasting order to nearby active delivery partners.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-background rounded-md border text-xs space-y-1.5">
+                    <div className="text-muted-foreground">
+                      {order.status === "ready_for_pickup"
+                        ? "No partner has accepted yet. Click below to retry dispatch."
+                        : "Delivery partner will be dispatched when order is packed and ready."}
+                    </div>
+                  </div>
+                )}
+              </section>
+
               {order.awb && (
                 <section className="rounded-lg border border-border p-3">
                   <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
