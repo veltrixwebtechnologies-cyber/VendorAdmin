@@ -16,6 +16,7 @@ const OTP_LENGTH = 8;
 
 const searchSchema = z.object({
   redirect: z.string().optional().catch(undefined),
+  reset: z.string().optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/auth")({
@@ -37,13 +38,14 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { redirect } = useSearch({ from: "/auth" });
+  const { redirect, reset } = useSearch({ from: "/auth" });
+  const resetMode = reset === "1";
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && !resetMode) {
       navigate({ to: (redirect as any) || "/seller", replace: true });
     }
-  }, [user, loading, navigate, redirect]);
+  }, [user, loading, navigate, redirect, resetMode]);
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-slate-50 px-4 py-10">
@@ -82,7 +84,7 @@ function AuthPage() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="signin" className="mt-0">
-              <SignInForm />
+              {resetMode ? <ResetPasswordForm /> : <SignInForm />}
             </TabsContent>
             <TabsContent value="signup" className="mt-0">
               <SignUpForm />
@@ -111,6 +113,7 @@ function SignInForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [forgotPassword, setForgotPassword] = useState(false);
   const navigate = useNavigate();
   const { redirect } = useSearch({ from: "/auth" });
 
@@ -159,6 +162,60 @@ function SignInForm() {
     }
   }
 
+  async function sendReset(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error("Enter your email address first.");
+      return;
+    }
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth?reset=1`,
+      });
+      if (error) throw error;
+      toast.success("Password reset link sent. Check your inbox or spam folder.");
+      setForgotPassword(false);
+    } catch (error) {
+      console.error("[auth] password reset failed", error);
+      toast.error(error instanceof Error ? error.message : "Could not send reset link.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (forgotPassword) {
+    return (
+      <form onSubmit={sendReset} className="space-y-4 animate-fade-in">
+        <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 text-xs text-slate-600">
+          Enter your account email and we’ll send you a secure password reset link.
+        </div>
+        <div>
+          <Label htmlFor="reset-email">Email</Label>
+          <Input
+            id="reset-email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <Button type="submit" className="w-full" disabled={busy}>
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />} Send reset link
+        </Button>
+        <button
+          type="button"
+          className="w-full text-center text-xs font-medium text-slate-500 hover:text-slate-900"
+          onClick={() => setForgotPassword(false)}
+        >
+          Back to sign in
+        </button>
+      </form>
+    );
+  }
+
   return (
     <form onSubmit={submit} className="space-y-4">
       <div>
@@ -194,8 +251,78 @@ function SignInForm() {
           </button>
         </div>
       </div>
+      <div className="-mt-1 text-right">
+        <button
+          type="button"
+          className="text-xs font-medium text-slate-500 hover:text-primary hover:underline"
+          onClick={() => setForgotPassword(true)}
+        >
+          Forgot password?
+        </button>
+      </div>
       <Button type="submit" className="w-full" disabled={busy}>
         {busy && <Loader2 className="h-4 w-4 animate-spin" />} Sign in
+      </Button>
+    </form>
+  );
+}
+
+function ResetPasswordForm() {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password.length < 8) return toast.error("Password must be at least 8 characters.");
+    if (password !== confirmPassword) return toast.error("Passwords do not match.");
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      toast.success("Password updated. You can now sign in.");
+      await supabase.auth.signOut();
+      await navigate({ to: "/auth", replace: true });
+    } catch (error) {
+      console.error("[auth] password update failed", error);
+      toast.error(error instanceof Error ? error.message : "Could not update password.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4 animate-fade-in">
+      <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 text-xs text-slate-600">
+        Choose a new password for your Seller Hub account.
+      </div>
+      <div>
+        <Label htmlFor="new-password">New password</Label>
+        <Input
+          id="new-password"
+          type="password"
+          autoComplete="new-password"
+          minLength={8}
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+      <div>
+        <Label htmlFor="confirm-password">Confirm password</Label>
+        <Input
+          id="confirm-password"
+          type="password"
+          autoComplete="new-password"
+          minLength={8}
+          required
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={busy}>
+        {busy && <Loader2 className="h-4 w-4 animate-spin" />} Update password
       </Button>
     </form>
   );
