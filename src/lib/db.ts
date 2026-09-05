@@ -82,6 +82,9 @@ export interface Seller {
     pickupCity: string;
     pickupState: string;
     pickupPincode: string;
+    shopCoordinates: { lat: number; lng: number } | null;
+    pickupCoordinates: { lat: number; lng: number } | null;
+    locationConfirmationRequired: boolean;
   };
   bank: {
     holderName: string;
@@ -155,6 +158,29 @@ export interface Settlement {
   utr?: string;
 }
 
+function isValidCoordinate(lat: unknown, lng: unknown): lat is number {
+  return (
+    typeof lat === "number" &&
+    typeof lng === "number" &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180 &&
+    !(lat === 0 && lng === 0)
+  );
+}
+
+function normalizeCoordinate(value: unknown): { lat: number; lng: number } | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const lat = record.lat;
+  const lng = record.lng;
+  if (typeof lat === "number" && typeof lng === "number" && isValidCoordinate(lat, lng)) {
+    return { lat, lng };
+  }
+  return null;
+}
+
 export function getDataErrorMessage(error: unknown, fallback = "Please try again.") {
   if (error instanceof Error && error.message) return error.message;
   if (error && typeof error === "object") {
@@ -176,6 +202,10 @@ function rowToSeller(r: any): Seller {
     r.wizard_data && typeof r.wizard_data === "object" && !Array.isArray(r.wizard_data)
       ? r.wizard_data
       : {};
+  const shopCoordinates =
+    normalizeCoordinate(w.shopCoordinates) ?? normalizeCoordinate({ lat: r.lat, lng: r.lng });
+  const pickupCoordinates =
+    normalizeCoordinate(w.pickupCoordinates) ?? ((w.pickupSame ?? true) ? shopCoordinates : null);
   return {
     id: r.id,
     userId: r.user_id,
@@ -208,6 +238,9 @@ function rowToSeller(r: any): Seller {
       pickupCity: w.pickupCity ?? "",
       pickupState: w.pickupState ?? "",
       pickupPincode: w.pickupPincode ?? "",
+      shopCoordinates,
+      pickupCoordinates,
+      locationConfirmationRequired: !!w.locationConfirmationRequired,
     },
     bank: {
       holderName: r.bank_account_name ?? "",
@@ -255,6 +288,34 @@ function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, 
     w.pickupCity = patch.address.pickupCity;
     w.pickupState = patch.address.pickupState;
     w.pickupPincode = patch.address.pickupPincode;
+    if (patch.address.shopCoordinates !== undefined)
+      w.shopCoordinates = patch.address.shopCoordinates;
+    if (patch.address.pickupCoordinates !== undefined)
+      w.pickupCoordinates = patch.address.pickupCoordinates;
+    if (patch.address.locationConfirmationRequired !== undefined) {
+      w.locationConfirmationRequired = patch.address.locationConfirmationRequired;
+    }
+    const isPickupSame = patch.address.pickupSame ?? w.pickupSame ?? true;
+    const shopCoords = patch.address.shopCoordinates ?? normalizeCoordinate(w.shopCoordinates);
+    const pickupCoords =
+      patch.address.pickupCoordinates ?? normalizeCoordinate(w.pickupCoordinates);
+
+    const effectiveCoords = isPickupSame ? (shopCoords ?? pickupCoords) : pickupCoords;
+
+    if (
+      effectiveCoords &&
+      typeof effectiveCoords.lat === "number" &&
+      typeof effectiveCoords.lng === "number" &&
+      isValidCoordinate(effectiveCoords.lat, effectiveCoords.lng)
+    ) {
+      db.lat = effectiveCoords.lat;
+      db.lng = effectiveCoords.lng;
+      w.locationConfirmationRequired = false;
+    } else {
+      db.lat = null;
+      db.lng = null;
+      w.locationConfirmationRequired = true;
+    }
   }
   if (patch.bank) {
     db.bank_account_name = patch.bank.holderName;
@@ -311,8 +372,9 @@ function rowToOrder(r: any, items: any[]): Order {
   const [city = "", state = ""] = cityState.split(",").map((s: string) => s.trim());
 
   const activeAssignment = Array.isArray(r.delivery_assignments)
-    ? (r.delivery_assignments.find((a: any) => a.status !== "expired" && a.status !== "rejected") ?? r.delivery_assignments[0])
-    : r.delivery_assignments ?? null;
+    ? (r.delivery_assignments.find((a: any) => a.status !== "expired" && a.status !== "rejected") ??
+      r.delivery_assignments[0])
+    : (r.delivery_assignments ?? null);
 
   const partnerRow = r.assigned_partner ?? activeAssignment?.delivery_partners ?? null;
   const assignedPartner: DeliveryPartnerInfo | undefined = partnerRow
@@ -333,7 +395,9 @@ function rowToOrder(r: any, items: any[]): Order {
         id: activeAssignment.id,
         status: activeAssignment.status,
         distanceKm: activeAssignment.distance_km ? Number(activeAssignment.distance_km) : undefined,
-        estimatedEarning: activeAssignment.estimated_earning ? Number(activeAssignment.estimated_earning) : undefined,
+        estimatedEarning: activeAssignment.estimated_earning
+          ? Number(activeAssignment.estimated_earning)
+          : undefined,
         expiresAt: activeAssignment.expires_at ?? undefined,
         respondedAt: activeAssignment.responded_at ?? undefined,
         partner: assignedPartner,
@@ -683,13 +747,14 @@ export function useMyOrders() {
       if (sellerError) throw sellerError;
       if (!seller) return [];
 
-      let { data, error } = await supabase
+      const { data: mainData, error: mainError } = await supabase
         .from("orders")
         .select("*, order_items(*), delivery_assignments(*, delivery_partners(*))")
         .eq("seller_id", seller.id)
         .order("placed_at", { ascending: false });
 
-      if (error) {
+      let data = mainData;
+      if (mainError) {
         const fallback = await supabase
           .from("orders")
           .select("*, order_items(*)")
@@ -712,9 +777,13 @@ export function useMyOrders() {
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, () => {
         void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_assignments" }, () => {
-        void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "delivery_assignments" },
+        () => {
+          void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+        },
+      )
       .subscribe();
 
     return () => {
@@ -974,7 +1043,9 @@ export async function uploadSellerDoc(
     file.type === "application/octet-stream";
 
   if (!isAllowedExt && !isAllowedMime) {
-    throw new Error("Unsupported or invalid document file. Please upload a PDF, PNG, JPG, or WEBP document.");
+    throw new Error(
+      "Unsupported or invalid document file. Please upload a PDF, PNG, JPG, or WEBP document.",
+    );
   }
 
   const path = `${userId}/${docType}-${Date.now()}.${ext}`;

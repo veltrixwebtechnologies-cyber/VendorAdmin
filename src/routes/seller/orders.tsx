@@ -73,7 +73,10 @@ const STATUS_META: Record<OrderStatus, { label: string; className: string }> = {
   cancelled: { label: "Cancelled", className: "bg-destructive text-destructive-foreground" },
   returned: { label: "Returned", className: "bg-muted text-muted-foreground" },
   assignment_failed: { label: "Dispatch pending", className: "bg-amber-600 text-white" },
-  delivery_failed: { label: "Delivery failed", className: "bg-destructive text-destructive-foreground" },
+  delivery_failed: {
+    label: "Delivery failed",
+    className: "bg-destructive text-destructive-foreground",
+  },
 };
 const FLOW: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup"];
 const TABS: Array<{ value: OrderStatus | "all"; label: string }> = [
@@ -305,11 +308,14 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                           <span>{order.assignedPartner.fullName}</span>
                           {order.assignedPartner.rating && (
-                            <span className="text-xs text-amber-500 font-medium">★ {order.assignedPartner.rating}</span>
+                            <span className="text-xs text-amber-500 font-medium">
+                              ★ {order.assignedPartner.rating}
+                            </span>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {order.assignedPartner.vehicleType} • {order.assignedPartner.vehicleNumber || "Verified Rider"}
+                          {order.assignedPartner.vehicleType} •{" "}
+                          {order.assignedPartner.vehicleNumber || "Verified Rider"}
                         </div>
                       </div>
                       {order.assignedPartner.mobile && (
@@ -329,7 +335,8 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                       </span>
                     </div>
                   </div>
-                ) : order.deliveryAssignment && ["pending", "requested"].includes(order.deliveryAssignment.status) ? (
+                ) : order.deliveryAssignment &&
+                  ["pending", "requested"].includes(order.deliveryAssignment.status) ? (
                   <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 rounded-md border border-amber-200 dark:border-amber-800 text-xs space-y-1">
                     <div className="font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" /> Dispatch Request Sent

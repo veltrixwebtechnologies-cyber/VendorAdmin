@@ -11,7 +11,13 @@ import { useAuth } from "@/lib/auth";
 
 export const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 export const DAY_FULL = [
-  "Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday",
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
 ] as const;
 
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -21,8 +27,8 @@ export interface ShopHour {
   sellerId: string;
   dayOfWeek: DayOfWeek;
   isOpen: boolean;
-  openTime: string;   // "HH:MM"
-  closeTime: string;  // "HH:MM"
+  openTime: string; // "HH:MM"
+  closeTime: string; // "HH:MM"
   breakStart: string | null;
   breakEnd: string | null;
   updatedAt: string;
@@ -44,7 +50,7 @@ export interface ShopHoliday {
   id: string;
   sellerId: string;
   name: string;
-  startDate: string;  // "YYYY-MM-DD"
+  startDate: string; // "YYYY-MM-DD"
   endDate: string;
   specialOpen: string | null;
   specialClose: string | null;
@@ -52,12 +58,7 @@ export interface ShopHoliday {
   createdAt: string;
 }
 
-export type ShopStatusKind =
-  | "open"
-  | "closed"
-  | "closed_override"
-  | "open_override"
-  | "holiday";
+export type ShopStatusKind = "open" | "closed" | "closed_override" | "open_override" | "holiday";
 
 export interface ShopStatus {
   status: ShopStatusKind;
@@ -82,53 +83,53 @@ export interface AvailabilityLogEntry {
 
 function rowToHour(r: any): ShopHour {
   return {
-    id:          r.id,
-    sellerId:    r.seller_id,
-    dayOfWeek:   r.day_of_week as DayOfWeek,
-    isOpen:      r.is_open,
-    openTime:    (r.open_time  ?? "09:00").slice(0, 5),
-    closeTime:   (r.close_time ?? "21:00").slice(0, 5),
-    breakStart:  r.break_start ? r.break_start.slice(0, 5) : null,
-    breakEnd:    r.break_end   ? r.break_end.slice(0, 5)   : null,
-    updatedAt:   r.updated_at,
+    id: r.id,
+    sellerId: r.seller_id,
+    dayOfWeek: r.day_of_week as DayOfWeek,
+    isOpen: r.is_open,
+    openTime: (r.open_time ?? "09:00").slice(0, 5),
+    closeTime: (r.close_time ?? "21:00").slice(0, 5),
+    breakStart: r.break_start ? r.break_start.slice(0, 5) : null,
+    breakEnd: r.break_end ? r.break_end.slice(0, 5) : null,
+    updatedAt: r.updated_at,
   };
 }
 
 function rowToOverride(r: any): ShopOverride {
   return {
-    id:             r.id,
-    sellerId:       r.seller_id,
-    kind:           r.kind,
-    reason:         r.reason,
+    id: r.id,
+    sellerId: r.seller_id,
+    kind: r.kind,
+    reason: r.reason,
     effectiveUntil: r.effective_until,
-    createdAt:      r.created_at,
-    revertedAt:     r.reverted_at,
+    createdAt: r.created_at,
+    revertedAt: r.reverted_at,
   };
 }
 
 function rowToHoliday(r: any): ShopHoliday {
   return {
-    id:           r.id,
-    sellerId:     r.seller_id,
-    name:         r.name,
-    startDate:    r.start_date,
-    endDate:      r.end_date,
-    specialOpen:  r.special_open  ? r.special_open.slice(0, 5)  : null,
+    id: r.id,
+    sellerId: r.seller_id,
+    name: r.name,
+    startDate: r.start_date,
+    endDate: r.end_date,
+    specialOpen: r.special_open ? r.special_open.slice(0, 5) : null,
     specialClose: r.special_close ? r.special_close.slice(0, 5) : null,
-    isClosed:     r.is_closed,
-    createdAt:    r.created_at,
+    isClosed: r.is_closed,
+    createdAt: r.created_at,
   };
 }
 
 function dbToStatus(r: any): ShopStatus {
   return {
-    status:         r.status,
-    isOpen:         r.is_open,
-    label:          r.label,
-    opensAt:        r.opens_at,
-    closesAt:       r.closes_at,
+    status: r.status,
+    isOpen: r.is_open,
+    label: r.label,
+    opensAt: r.opens_at,
+    closesAt: r.closes_at,
     overrideReason: r.override_reason,
-    checkedAt:      r.checked_at,
+    checkedAt: r.checked_at,
   };
 }
 
@@ -136,12 +137,12 @@ function dbToStatus(r: any): ShopStatus {
 export function defaultWeeklyHours(sellerId: string): Omit<ShopHour, "id" | "updatedAt">[] {
   return Array.from({ length: 7 }, (_, i) => ({
     sellerId,
-    dayOfWeek:  i as DayOfWeek,
-    isOpen:     i !== 0,          // closed Sunday by default
-    openTime:   "09:00",
-    closeTime:  "21:00",
+    dayOfWeek: i as DayOfWeek,
+    isOpen: i !== 0, // closed Sunday by default
+    openTime: "09:00",
+    closeTime: "21:00",
     breakStart: null,
-    breakEnd:   null,
+    breakEnd: null,
   }));
 }
 
@@ -150,9 +151,9 @@ export function defaultWeeklyHours(sellerId: string): Omit<ShopHour, "id" | "upd
 export function useShopStatus(sellerId: string | null | undefined) {
   return useQuery({
     queryKey: ["shop-status", sellerId],
-    enabled:  !!sellerId,
-    refetchInterval: 60_000,            // refresh every minute
-    staleTime:       30_000,
+    enabled: !!sellerId,
+    refetchInterval: 60_000, // refresh every minute
+    staleTime: 30_000,
     queryFn: async (): Promise<ShopStatus> => {
       const { data, error } = await (supabase as any).rpc("get_shop_status", {
         _seller_id: sellerId,
@@ -167,7 +168,7 @@ export function useShopStatus(sellerId: string | null | undefined) {
 export function useShopsStatus(sellerIds: string[]) {
   return useQuery({
     queryKey: ["shops-status", sellerIds.join(",")],
-    enabled:  sellerIds.length > 0,
+    enabled: sellerIds.length > 0,
     staleTime: 60_000,
     refetchInterval: 120_000,
     queryFn: async (): Promise<Map<string, ShopStatus>> => {
@@ -189,7 +190,7 @@ export function useShopsStatus(sellerIds: string[]) {
 export function useMyShopHours(sellerId: string | null | undefined) {
   return useQuery({
     queryKey: ["shop-hours", sellerId],
-    enabled:  !!sellerId,
+    enabled: !!sellerId,
     queryFn: async (): Promise<ShopHour[]> => {
       const { data, error } = await (supabase as any)
         .from("shop_hours")
@@ -202,17 +203,19 @@ export function useMyShopHours(sellerId: string | null | undefined) {
       const byDay = new Map<DayOfWeek, ShopHour>(rows.map((r) => [r.dayOfWeek, r]));
       return Array.from({ length: 7 }, (_, i): ShopHour => {
         const dow = i as DayOfWeek;
-        return byDay.get(dow) ?? {
-          id:          `virtual-${dow}`,
-          sellerId:    sellerId!,
-          dayOfWeek:   dow,
-          isOpen:      dow !== 0,
-          openTime:    "09:00",
-          closeTime:   "21:00",
-          breakStart:  null,
-          breakEnd:    null,
-          updatedAt:   "",
-        };
+        return (
+          byDay.get(dow) ?? {
+            id: `virtual-${dow}`,
+            sellerId: sellerId!,
+            dayOfWeek: dow,
+            isOpen: dow !== 0,
+            openTime: "09:00",
+            closeTime: "21:00",
+            breakStart: null,
+            breakEnd: null,
+            updatedAt: "",
+          }
+        );
       });
     },
   });
@@ -222,27 +225,27 @@ export function useUpsertShopHour() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: {
-      sellerId:    string;
-      dayOfWeek:   DayOfWeek;
-      isOpen:      boolean;
-      openTime:    string;
-      closeTime:   string;
+      sellerId: string;
+      dayOfWeek: DayOfWeek;
+      isOpen: boolean;
+      openTime: string;
+      closeTime: string;
       breakStart?: string | null;
-      breakEnd?:   string | null;
+      breakEnd?: string | null;
     }) => {
       const { error } = await (supabase as any).rpc("upsert_shop_hours", {
-        _seller_id:   v.sellerId,
+        _seller_id: v.sellerId,
         _day_of_week: v.dayOfWeek,
-        _is_open:     v.isOpen,
-        _open_time:   v.openTime,
-        _close_time:  v.closeTime,
+        _is_open: v.isOpen,
+        _open_time: v.openTime,
+        _close_time: v.closeTime,
         _break_start: v.breakStart ?? null,
-        _break_end:   v.breakEnd   ?? null,
+        _break_end: v.breakEnd ?? null,
       });
       if (error) throw error;
     },
     onSuccess: (_d, v) => {
-      qc.invalidateQueries({ queryKey: ["shop-hours",  v.sellerId] });
+      qc.invalidateQueries({ queryKey: ["shop-hours", v.sellerId] });
       qc.invalidateQueries({ queryKey: ["shop-status", v.sellerId] });
     },
   });
@@ -255,19 +258,19 @@ export function useSaveAllShopHours() {
     mutationFn: async (v: { sellerId: string; hours: Omit<ShopHour, "id" | "updatedAt">[] }) => {
       for (const h of v.hours) {
         const { error } = await (supabase as any).rpc("upsert_shop_hours", {
-          _seller_id:   v.sellerId,
+          _seller_id: v.sellerId,
           _day_of_week: h.dayOfWeek,
-          _is_open:     h.isOpen,
-          _open_time:   h.openTime,
-          _close_time:  h.closeTime,
+          _is_open: h.isOpen,
+          _open_time: h.openTime,
+          _close_time: h.closeTime,
           _break_start: h.breakStart ?? null,
-          _break_end:   h.breakEnd   ?? null,
+          _break_end: h.breakEnd ?? null,
         });
         if (error) throw error;
       }
     },
     onSuccess: (_d, v) => {
-      qc.invalidateQueries({ queryKey: ["shop-hours",  v.sellerId] });
+      qc.invalidateQueries({ queryKey: ["shop-hours", v.sellerId] });
       qc.invalidateQueries({ queryKey: ["shop-status", v.sellerId] });
     },
   });
@@ -276,7 +279,7 @@ export function useSaveAllShopHours() {
 /* ── Seller timezone ─────────────────────────────────────────────────────────── */
 
 export function useUpdateShopTimezone() {
-  const qc   = useQueryClient();
+  const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (v: { sellerId: string; timezone: string }) => {
@@ -298,7 +301,7 @@ export function useUpdateShopTimezone() {
 export function useActiveOverride(sellerId: string | null | undefined) {
   return useQuery({
     queryKey: ["shop-override", sellerId],
-    enabled:  !!sellerId,
+    enabled: !!sellerId,
     refetchInterval: 60_000,
     queryFn: async (): Promise<ShopOverride | null> => {
       const { data, error } = await (supabase as any)
@@ -319,15 +322,15 @@ export function useSetShopOverride() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: {
-      sellerId:       string;
-      kind:           OverrideKind;
-      reason?:        string;
+      sellerId: string;
+      kind: OverrideKind;
+      reason?: string;
       effectiveUntil?: string | null;
     }) => {
       const { data, error } = await (supabase as any).rpc("set_shop_override", {
-        _seller_id:       v.sellerId,
-        _kind:            v.kind,
-        _reason:          v.reason ?? null,
+        _seller_id: v.sellerId,
+        _kind: v.kind,
+        _reason: v.reason ?? null,
         _effective_until: v.effectiveUntil ?? null,
       });
       if (error) throw error;
@@ -335,7 +338,7 @@ export function useSetShopOverride() {
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["shop-override", v.sellerId] });
-      qc.invalidateQueries({ queryKey: ["shop-status",   v.sellerId] });
+      qc.invalidateQueries({ queryKey: ["shop-status", v.sellerId] });
       qc.invalidateQueries({ queryKey: ["shop-avail-log"] });
     },
   });
@@ -352,7 +355,7 @@ export function useRevertShopOverride() {
     },
     onSuccess: (_d, sellerId) => {
       qc.invalidateQueries({ queryKey: ["shop-override", sellerId] });
-      qc.invalidateQueries({ queryKey: ["shop-status",   sellerId] });
+      qc.invalidateQueries({ queryKey: ["shop-status", sellerId] });
       qc.invalidateQueries({ queryKey: ["shop-avail-log"] });
     },
   });
@@ -363,7 +366,7 @@ export function useRevertShopOverride() {
 export function useShopHolidays(sellerId: string | null | undefined) {
   return useQuery({
     queryKey: ["shop-holidays", sellerId],
-    enabled:  !!sellerId,
+    enabled: !!sellerId,
     queryFn: async (): Promise<ShopHoliday[]> => {
       const { data, error } = await (supabase as any)
         .from("shop_holidays")
@@ -381,23 +384,23 @@ export function useAddShopHoliday() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: {
-      sellerId:     string;
-      name:         string;
-      startDate:    string;
-      endDate:      string;
-      isClosed:     boolean;
-      specialOpen?:  string | null;
+      sellerId: string;
+      name: string;
+      startDate: string;
+      endDate: string;
+      isClosed: boolean;
+      specialOpen?: string | null;
       specialClose?: string | null;
     }) => {
       const { data, error } = await (supabase as any)
         .from("shop_holidays")
         .insert({
-          seller_id:    v.sellerId,
-          name:         v.name,
-          start_date:   v.startDate,
-          end_date:     v.endDate,
-          is_closed:    v.isClosed,
-          special_open:  v.specialOpen  ?? null,
+          seller_id: v.sellerId,
+          name: v.name,
+          start_date: v.startDate,
+          end_date: v.endDate,
+          is_closed: v.isClosed,
+          special_open: v.specialOpen ?? null,
           special_close: v.specialClose ?? null,
         })
         .select("*")
@@ -406,14 +409,14 @@ export function useAddShopHoliday() {
       // Log
       await (supabase as any).from("shop_availability_log").insert({
         seller_id: v.sellerId,
-        action:    "add_holiday",
-        payload:   { name: v.name, start: v.startDate, end: v.endDate },
+        action: "add_holiday",
+        payload: { name: v.name, start: v.startDate, end: v.endDate },
       });
       return rowToHoliday(data);
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["shop-holidays", v.sellerId] });
-      qc.invalidateQueries({ queryKey: ["shop-status",   v.sellerId] });
+      qc.invalidateQueries({ queryKey: ["shop-status", v.sellerId] });
     },
   });
 }
@@ -422,20 +425,17 @@ export function useDeleteShopHoliday() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: { id: string; sellerId: string }) => {
-      const { error } = await (supabase as any)
-        .from("shop_holidays")
-        .delete()
-        .eq("id", v.id);
+      const { error } = await (supabase as any).from("shop_holidays").delete().eq("id", v.id);
       if (error) throw error;
       await (supabase as any).from("shop_availability_log").insert({
         seller_id: v.sellerId,
-        action:    "del_holiday",
-        payload:   { id: v.id },
+        action: "del_holiday",
+        payload: { id: v.id },
       });
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["shop-holidays", v.sellerId] });
-      qc.invalidateQueries({ queryKey: ["shop-status",   v.sellerId] });
+      qc.invalidateQueries({ queryKey: ["shop-status", v.sellerId] });
     },
   });
 }
@@ -445,7 +445,7 @@ export function useDeleteShopHoliday() {
 export function useAvailabilityLog(sellerId: string | null | undefined) {
   return useQuery({
     queryKey: ["shop-avail-log", sellerId],
-    enabled:  !!sellerId,
+    enabled: !!sellerId,
     queryFn: async (): Promise<AvailabilityLogEntry[]> => {
       const { data, error } = await (supabase as any)
         .from("shop_availability_log")
@@ -455,11 +455,11 @@ export function useAvailabilityLog(sellerId: string | null | undefined) {
         .limit(100);
       if (error) throw error;
       return (data ?? []).map((r: any) => ({
-        id:        r.id,
-        sellerId:  r.seller_id,
-        actorId:   r.actor_id,
-        action:    r.action,
-        payload:   r.payload ?? {},
+        id: r.id,
+        sellerId: r.seller_id,
+        actorId: r.actor_id,
+        action: r.action,
+        payload: r.payload ?? {},
         createdAt: r.created_at,
       }));
     },
@@ -472,8 +472,7 @@ export function validateTimeRange(open: string, close: string): string | null {
   if (!open || !close) return "Open and close times are required.";
   const [oh, om] = open.split(":").map(Number);
   const [ch, cm] = close.split(":").map(Number);
-  if (isNaN(oh) || isNaN(om) || isNaN(ch) || isNaN(cm))
-    return "Invalid time format. Use HH:MM.";
+  if (isNaN(oh) || isNaN(om) || isNaN(ch) || isNaN(cm)) return "Invalid time format. Use HH:MM.";
   // Overnight is fine (close < open); only invalid if equal
   if (oh === ch && om === cm) return "Open and close times cannot be the same.";
   return null;
@@ -487,15 +486,15 @@ export function isOvernightSchedule(open: string, close: string): boolean {
 
 /* ── Common timezones for India + global fallback list ─────────────────────── */
 export const TIMEZONES = [
-  { value: "Asia/Kolkata",         label: "India Standard Time (IST, UTC+5:30)" },
-  { value: "Asia/Colombo",         label: "Sri Lanka (UTC+5:30)" },
-  { value: "Asia/Dubai",           label: "UAE (UTC+4)" },
-  { value: "Asia/Singapore",       label: "Singapore (UTC+8)" },
-  { value: "Asia/Tokyo",           label: "Japan (UTC+9)" },
-  { value: "Europe/London",        label: "UK (UTC±0 / BST)" },
-  { value: "Europe/Berlin",        label: "Central Europe (UTC+1 / CEST)" },
-  { value: "America/New_York",     label: "US Eastern (UTC-5 / EDT)" },
-  { value: "America/Chicago",      label: "US Central (UTC-6 / CDT)" },
-  { value: "America/Los_Angeles",  label: "US Pacific (UTC-8 / PDT)" },
-  { value: "Australia/Sydney",     label: "Australia Eastern (UTC+10 / AEDT)" },
+  { value: "Asia/Kolkata", label: "India Standard Time (IST, UTC+5:30)" },
+  { value: "Asia/Colombo", label: "Sri Lanka (UTC+5:30)" },
+  { value: "Asia/Dubai", label: "UAE (UTC+4)" },
+  { value: "Asia/Singapore", label: "Singapore (UTC+8)" },
+  { value: "Asia/Tokyo", label: "Japan (UTC+9)" },
+  { value: "Europe/London", label: "UK (UTC±0 / BST)" },
+  { value: "Europe/Berlin", label: "Central Europe (UTC+1 / CEST)" },
+  { value: "America/New_York", label: "US Eastern (UTC-5 / EDT)" },
+  { value: "America/Chicago", label: "US Central (UTC-6 / CDT)" },
+  { value: "America/Los_Angeles", label: "US Pacific (UTC-8 / PDT)" },
+  { value: "Australia/Sydney", label: "Australia Eastern (UTC+10 / AEDT)" },
 ];
