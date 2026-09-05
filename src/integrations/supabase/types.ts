@@ -637,6 +637,8 @@ export type Database = {
           gstin: string | null;
           hsn_default: string | null;
           id: string;
+          lat: number | null;
+          lng: number | null;
           pan: string | null;
           phone: string | null;
           pincode: string | null;
@@ -667,6 +669,8 @@ export type Database = {
           gstin?: string | null;
           hsn_default?: string | null;
           id?: string;
+          lat?: number | null;
+          lng?: number | null;
           pan?: string | null;
           phone?: string | null;
           pincode?: string | null;
@@ -697,6 +701,8 @@ export type Database = {
           gstin?: string | null;
           hsn_default?: string | null;
           id?: string;
+          lat?: number | null;
+          lng?: number | null;
           pan?: string | null;
           phone?: string | null;
           pincode?: string | null;

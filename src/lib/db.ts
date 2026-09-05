@@ -1,3 +1,4 @@
+import { parseCoordinates } from "./coordinates";
 /* ============================================================
  * Central Supabase data layer for Seller Hub.
  * All CRUD hooks + mutations live here, backed by RLS.
@@ -77,6 +78,8 @@ export interface Seller {
     state: string;
     pincode: string;
     landmark: string;
+    pickupLat?: number | null;
+    pickupLng?: number | null;
     pickupSame: boolean;
     pickupAddress: string;
     pickupCity: string;
@@ -171,7 +174,7 @@ export function getDataErrorMessage(error: unknown, fallback = "Please try again
 
 /* ------------ Mappers ------------ */
 
-function rowToSeller(r: any): Seller {
+export function rowToSeller(r: any): Seller {
   const w: Record<string, any> =
     r.wizard_data && typeof r.wizard_data === "object" && !Array.isArray(r.wizard_data)
       ? r.wizard_data
@@ -203,6 +206,8 @@ function rowToSeller(r: any): Seller {
       state: r.state ?? "",
       pincode: r.pincode ?? "",
       landmark: r.address_line2 ?? "",
+      pickupLat: (w.pickupSame === false ? parseCoordinates(w.pickupLat, w.pickupLng) : parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))?.lat ?? null,
+      pickupLng: (w.pickupSame === false ? parseCoordinates(w.pickupLat, w.pickupLng) : parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))?.lng ?? null,
       pickupSame: w.pickupSame ?? true,
       pickupAddress: w.pickupAddress ?? "",
       pickupCity: w.pickupCity ?? "",
@@ -226,7 +231,7 @@ function rowToSeller(r: any): Seller {
 }
 
 /** Convert a client-side Partial<Seller> to a DB update patch. */
-function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, any> = {}) {
+export function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, any> = {}) {
   const db: Record<string, any> = {};
   const w: Record<string, any> = { ...existingWizard };
 
@@ -245,6 +250,11 @@ function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, 
     w.description = patch.business.description;
   }
   if (patch.address) {
+    const pin = parseCoordinates(patch.address.pickupLat, patch.address.pickupLng);
+    db.lat = pin?.lat ?? null;
+    db.lng = pin?.lng ?? null;
+    w.lat = w.pickupLat = pin?.lat ?? null;
+    w.lng = w.pickupLng = pin?.lng ?? null;
     db.address_line1 = patch.address.shopAddress;
     db.address_line2 = patch.address.landmark;
     db.city = patch.address.city;
@@ -470,15 +480,18 @@ export function useSubmitMySeller() {
   return useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Not signed in");
-      const { data: cur } = await supabase
+      const { data: cur, error: readError } = await supabase
         .from("sellers")
-        .select("wizard_data")
+        .select("wizard_data,lat,lng")
         .eq("user_id", user.id)
         .maybeSingle();
+      if (readError) throw readError;
       const curWizard =
         cur?.wizard_data && typeof cur.wizard_data === "object" && !Array.isArray(cur.wizard_data)
           ? (cur.wizard_data as Record<string, any>)
           : {};
+      const pin = curWizard.pickupSame === false ? parseCoordinates(curWizard.pickupLat, curWizard.pickupLng) : parseCoordinates(cur?.lat, cur?.lng);
+      if (!pin) throw new Error("Set the exact pickup pin in the address step before submitting.");
       const w = { ...curWizard, submittedAt: new Date().toISOString() };
       const { error } = await supabase
         .from("sellers")
