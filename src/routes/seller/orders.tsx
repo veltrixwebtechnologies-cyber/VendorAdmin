@@ -1,5 +1,6 @@
+
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight,
   Loader2,
@@ -227,16 +228,25 @@ function VendorLiveLocationControl({
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const updateLive = useVendorUpdateLiveLocation();
   const stopLive = useVendorStopLiveLocation();
-  const watchIdRef = useState<{ id: number | null }>({ id: null })[0];
-  const lastTimeRef = useState<{ time: number }>({ time: 0 })[0];
+  const watchIdRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
 
   useEffect(() => {
     // Automatically stop sharing if order moves to picked_up or delivered
-    if (["picked_up", "going_to_customer", "arrived_at_customer", "delivered", "cancelled", "cancelled_by_vendor"].includes(orderStatus)) {
+    if (
+      [
+        "picked_up",
+        "going_to_customer",
+        "arrived_at_customer",
+        "delivered",
+        "cancelled",
+        "cancelled_by_vendor",
+      ].includes(orderStatus)
+    ) {
       if (isSharing) {
-        if (watchIdRef.id !== null) {
-          navigator.geolocation.clearWatch(watchIdRef.id);
-          watchIdRef.id = null;
+        if (watchIdRef.current !== null) {
+          navigator.geolocation.clearWatch(watchIdRef.current);
+          watchIdRef.current = null;
         }
         setIsSharing(false);
       }
@@ -245,18 +255,18 @@ function VendorLiveLocationControl({
 
   useEffect(() => {
     return () => {
-      if (watchIdRef.id !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.id);
-        watchIdRef.id = null;
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
       }
     };
   }, []);
 
   const toggleSharing = async () => {
     if (isSharing) {
-      if (watchIdRef.id !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.id);
-        watchIdRef.id = null;
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
       }
       try {
         await stopLive.mutateAsync({ id: orderId });
@@ -266,7 +276,7 @@ function VendorLiveLocationControl({
       }
       setIsSharing(false);
     } else {
-      if (!("geolocation" in navigator)) {
+      if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
         toast.error("Geolocation is not supported by your browser");
         return;
       }
@@ -278,8 +288,8 @@ function VendorLiveLocationControl({
         async (pos) => {
           const now = Date.now();
           // Throttle updates to once every 3 seconds minimum
-          if (now - lastTimeRef.time < 3000) return;
-          lastTimeRef.time = now;
+          if (now - lastTimeRef.current < 3000) return;
+          lastTimeRef.current = now;
 
           try {
             await updateLive.mutateAsync({
@@ -303,9 +313,9 @@ function VendorLiveLocationControl({
           enableHighAccuracy: true,
           maximumAge: 3000,
           timeout: 15000,
-        }
+        },
       );
-      watchIdRef.id = wid;
+      watchIdRef.current = wid;
     }
   };
 
