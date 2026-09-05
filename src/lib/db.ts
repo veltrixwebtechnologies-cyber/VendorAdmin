@@ -881,23 +881,12 @@ export function useVendorAcceptOrder() {
           error.message?.includes("Could not find the function") ||
           error.message?.includes("schema cache")
         ) {
-          const { data: updated, error: updateError } = await supabase
-            .from("orders")
-            .update({ status: "vendor_accepted" as any, updated_at: new Date().toISOString() })
-            .eq("id", v.id)
-            .select("*")
-            .single();
-          if (updateError) {
-            const { data: fallbackUpdated, error: fallbackError } = await supabase
-              .from("orders")
-              .update({ status: "accepted" as any, updated_at: new Date().toISOString() })
-              .eq("id", v.id)
-              .select("*")
-              .single();
-            if (fallbackError) throw fallbackError;
-            return fallbackUpdated;
-          }
-          return updated;
+          const { data: advData, error: advError } = await (supabase as any).rpc(
+            "advance_seller_order",
+            { _order_id: v.id },
+          );
+          if (advError) throw advError;
+          return advData;
         }
         throw error;
       }
@@ -924,23 +913,12 @@ export function useVendorRejectOrder() {
           error.message?.includes("Could not find the function") ||
           error.message?.includes("schema cache")
         ) {
-          const { data: updated, error: updateError } = await supabase
-            .from("orders")
-            .update({ status: "cancelled_by_vendor" as any, updated_at: new Date().toISOString() })
-            .eq("id", v.id)
-            .select("*")
-            .single();
-          if (updateError) {
-            const { data: fallbackUpdated, error: fallbackError } = await supabase
-              .from("orders")
-              .update({ status: "cancelled" as any, updated_at: new Date().toISOString() })
-              .eq("id", v.id)
-              .select("*")
-              .single();
-            if (fallbackError) throw fallbackError;
-            return fallbackUpdated;
-          }
-          return updated;
+          const { data: cancelData, error: cancelError } = await (supabase as any).rpc(
+            "cancel_seller_order",
+            { _order_id: v.id, _reason: v.reason ?? "Cancelled by vendor" },
+          );
+          if (cancelError) throw cancelError;
+          return cancelData;
         }
         throw error;
       }
@@ -966,14 +944,16 @@ export function useVendorMarkReady() {
           error.message?.includes("Could not find the function") ||
           error.message?.includes("schema cache")
         ) {
-          const { data: updated, error: updateError } = await supabase
-            .from("orders")
-            .update({ status: "ready_for_pickup" as any, updated_at: new Date().toISOString() })
-            .eq("id", v.id)
-            .select("*")
-            .single();
-          if (updateError) throw updateError;
-          return { success: true, status: "ready_for_pickup", dispatched_count: 0 };
+          const { data: advData, error: advError } = await (supabase as any).rpc(
+            "advance_seller_order",
+            { _order_id: v.id },
+          );
+          if (advError) throw advError;
+          return {
+            success: true,
+            status: advData?.status ?? "ready_for_pickup",
+            dispatched_count: advData?.dispatched ?? 0,
+          };
         }
         throw error;
       }
