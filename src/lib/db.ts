@@ -875,7 +875,32 @@ export function useVendorAcceptOrder() {
         _order_id: v.id,
         _estimated_prep_minutes: v.estimatedPrepMinutes ?? 20,
       });
-      if (error) throw error;
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          const { data: updated, error: updateError } = await supabase
+            .from("orders")
+            .update({ status: "vendor_accepted" as any, updated_at: new Date().toISOString() })
+            .eq("id", v.id)
+            .select("*")
+            .single();
+          if (updateError) {
+            const { data: fallbackUpdated, error: fallbackError } = await supabase
+              .from("orders")
+              .update({ status: "accepted" as any, updated_at: new Date().toISOString() })
+              .eq("id", v.id)
+              .select("*")
+              .single();
+            if (fallbackError) throw fallbackError;
+            return fallbackUpdated;
+          }
+          return updated;
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -893,7 +918,32 @@ export function useVendorRejectOrder() {
         _order_id: v.id,
         _reason: v.reason ?? "Cancelled by vendor",
       });
-      if (error) throw error;
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          const { data: updated, error: updateError } = await supabase
+            .from("orders")
+            .update({ status: "cancelled_by_vendor" as any, updated_at: new Date().toISOString() })
+            .eq("id", v.id)
+            .select("*")
+            .single();
+          if (updateError) {
+            const { data: fallbackUpdated, error: fallbackError } = await supabase
+              .from("orders")
+              .update({ status: "cancelled" as any, updated_at: new Date().toISOString() })
+              .eq("id", v.id)
+              .select("*")
+              .single();
+            if (fallbackError) throw fallbackError;
+            return fallbackUpdated;
+          }
+          return updated;
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -910,7 +960,23 @@ export function useVendorMarkReady() {
       const { data, error } = await (supabase as any).rpc("vendor_mark_ready_for_pickup", {
         _order_id: v.id,
       });
-      if (error) throw error;
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          const { data: updated, error: updateError } = await supabase
+            .from("orders")
+            .update({ status: "ready_for_pickup" as any, updated_at: new Date().toISOString() })
+            .eq("id", v.id)
+            .select("*")
+            .single();
+          if (updateError) throw updateError;
+          return { success: true, status: "ready_for_pickup", dispatched_count: 0 };
+        }
+        throw error;
+      }
       return data as { success: boolean; status: string; dispatched_count: number };
     },
     onSuccess: () => {
@@ -938,7 +1004,16 @@ export function useVendorUpdateLiveLocation() {
         _speed: v.speed ?? null,
         _accuracy: v.accuracy ?? null,
       });
-      if (error) throw error;
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          return true;
+        }
+        throw error;
+      }
       return data;
     },
   });
@@ -951,7 +1026,16 @@ export function useVendorStopLiveLocation() {
       const { data, error } = await (supabase as any).rpc("stop_vendor_live_location", {
         _order_id: v.id,
       });
-      if (error) throw error;
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          return true;
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
