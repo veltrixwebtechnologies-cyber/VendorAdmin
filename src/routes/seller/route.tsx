@@ -81,16 +81,18 @@ function SellerLayout() {
   useEffect(() => {
     // Store Setup is the onboarding entry point. Other seller operations stay
     // locked until an admin approves the application.
-    if (
-      !sellerQ.isLoading &&
-      sellerQ.data &&
-      sellerQ.data.status !== "approved" &&
-      pathname !== "/seller" &&
-      pathname !== "/seller/store"
-    ) {
-      navigate({ to: "/register", replace: true });
+    if (!loading && user && !sellerQ.isLoading) {
+      if (!sellerQ.data) {
+        navigate({ to: "/register", replace: true });
+      } else if (
+        sellerQ.data.status !== "approved" &&
+        pathname !== "/seller" &&
+        pathname !== "/seller/store"
+      ) {
+        navigate({ to: "/register", replace: true });
+      }
     }
-  }, [sellerQ.data, sellerQ.isLoading, pathname, navigate]);
+  }, [user, loading, sellerQ.data, sellerQ.isLoading, pathname, navigate]);
 
   if (loading || !user || sellerQ.isLoading) {
     return (

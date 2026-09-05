@@ -463,24 +463,13 @@ export function useMySeller() {
   const q = useQuery({
     queryKey: ["my-seller", user?.id],
     enabled: !!user,
-    retry: false,
+    retry: 2,
     queryFn: async () => {
-      const request = supabase.from("sellers").select("*").eq("user_id", user!.id).maybeSingle();
-      const result = await Promise.race([
-        request,
-        new Promise<never>((_, reject) =>
-          globalThis.setTimeout(
-            () =>
-              reject(
-                new Error(
-                  "Seller profile request timed out. Check your Supabase connection and try again.",
-                ),
-              ),
-            5_000,
-          ),
-        ),
-      ]);
-      const { data, error } = result;
+      const { data, error } = await supabase
+        .from("sellers")
+        .select("*")
+        .eq("user_id", user!.id)
+        .maybeSingle();
       if (error) throw error;
       if (data) return rowToSeller(data);
       // Return null when seller profile does not exist or was deleted
