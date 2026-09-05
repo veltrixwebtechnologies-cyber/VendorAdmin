@@ -700,7 +700,6 @@ export function useMyOrders() {
       }
       return (data ?? []).map((r: any) => rowToOrder(r, r.order_items));
     },
-    refetchInterval: 5_000,
   });
 
   useEffect(() => {
@@ -711,6 +710,9 @@ export function useMyOrders() {
         void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, () => {
+        void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_assignments" }, () => {
         void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
       })
       .subscribe();

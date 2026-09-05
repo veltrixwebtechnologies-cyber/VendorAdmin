@@ -53,13 +53,13 @@
   --radius: 0.75rem;
 
   /* Palette */
-  --background: oklch(1 0 0);
+  --background: oklch(0.97 0.008 85);
   --foreground: oklch(0.22 0.08 295);
 
-  --card: oklch(0.98 0.01 300);
+  --card: oklch(0.988 0.005 85);
   --card-foreground: oklch(0.22 0.08 295);
 
-  --popover: oklch(1 0 0);
+  --popover: oklch(0.988 0.005 85);
   --popover-foreground: oklch(0.22 0.08 295);
 
   --primary: oklch(0.46 0.24 330);
