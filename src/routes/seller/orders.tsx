@@ -39,6 +39,11 @@ import {
   useAdvanceOrder,
   useCancelOrder,
   useMyOrders,
+  useVendorAcceptOrder,
+  useVendorRejectOrder,
+  useVendorMarkReady,
+  useVendorUpdateLiveLocation,
+  useVendorStopLiveLocation,
   type Order,
   type OrderStatus,
 } from "@/lib/db";
@@ -56,16 +61,23 @@ export const Route = createFileRoute("/seller/orders")({
 });
 
 const STATUS_META: Record<OrderStatus, { label: string; className: string }> = {
-  new: { label: "New", className: "bg-primary text-primary-foreground" },
+  new: { label: "New (Action Required)", className: "bg-amber-600 text-white animate-pulse" },
   accepted: { label: "Accepted", className: "bg-accent text-accent-foreground" },
+  vendor_accepted: { label: "Accepted (Preparing)", className: "bg-emerald-600 text-white" },
+  cancelled_by_vendor: { label: "Cancelled by Vendor", className: "bg-destructive text-destructive-foreground" },
   preparing: { label: "Preparing", className: "bg-accent text-accent-foreground" },
   packed: { label: "Packed", className: "bg-accent text-accent-foreground" },
   ready_for_pickup: { label: "Ready for pickup", className: "bg-amber-500 text-white" },
   assigned: { label: "Rider assigned", className: "bg-sky-600 text-white" },
+  delivery_partner_assigned: { label: "Rider assigned", className: "bg-sky-600 text-white" },
+  going_to_vendor: { label: "Rider going to shop", className: "bg-indigo-600 text-white" },
+  arrived_at_vendor: { label: "Rider arrived at shop", className: "bg-purple-600 text-white" },
   rider_assigned: { label: "Rider assigned", className: "bg-sky-600 text-white" },
   rider_accepted: { label: "Rider accepted", className: "bg-sky-600 text-white" },
   rider_at_shop: { label: "Rider at shop", className: "bg-purple-600 text-white" },
   picked_up: { label: "Picked up", className: "bg-indigo-600 text-white" },
+  going_to_customer: { label: "Heading to customer", className: "bg-blue-600 text-white" },
+  arrived_at_customer: { label: "Arrived at customer", className: "bg-blue-600 text-white" },
   out_for_delivery: { label: "Out for delivery", className: "bg-blue-600 text-white" },
   at_customer: { label: "Rider at customer", className: "bg-blue-600 text-white" },
   shipped: { label: "Out for delivery", className: "bg-blue-600 text-white" },
@@ -78,12 +90,11 @@ const STATUS_META: Record<OrderStatus, { label: string; className: string }> = {
     className: "bg-destructive text-destructive-foreground",
   },
 };
-const FLOW: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup"];
+const FLOW: OrderStatus[] = ["new", "vendor_accepted", "ready_for_pickup"];
 const TABS: Array<{ value: OrderStatus | "all"; label: string }> = [
   { value: "all", label: "All" },
   { value: "new", label: "New" },
-  { value: "accepted", label: "Accepted" },
-  { value: "packed", label: "Packed" },
+  { value: "vendor_accepted", label: "Accepted" },
   { value: "ready_for_pickup", label: "Ready for pickup" },
   { value: "out_for_delivery", label: "Out for delivery" },
   { value: "delivered", label: "Delivered" },
@@ -203,11 +214,157 @@ function OrdersPage() {
   );
 }
 
+function VendorLiveLocationControl({
+  orderId,
+  assignedPartnerName,
+  orderStatus,
+}: {
+  orderId: string;
+  assignedPartnerName?: string;
+  orderStatus: OrderStatus;
+}) {
+  const [isSharing, setIsSharing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const updateLive = useVendorUpdateLiveLocation();
+  const stopLive = useVendorStopLiveLocation();
+  const watchIdRef = useState<{ id: number | null }>({ id: null })[0];
+  const lastTimeRef = useState<{ time: number }>({ time: 0 })[0];
+
+  useEffect(() => {
+    // Automatically stop sharing if order moves to picked_up or delivered
+    if (["picked_up", "going_to_customer", "arrived_at_customer", "delivered", "cancelled", "cancelled_by_vendor"].includes(orderStatus)) {
+      if (isSharing) {
+        if (watchIdRef.id !== null) {
+          navigator.geolocation.clearWatch(watchIdRef.id);
+          watchIdRef.id = null;
+        }
+        setIsSharing(false);
+      }
+    }
+  }, [orderStatus, isSharing]);
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.id !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.id);
+        watchIdRef.id = null;
+      }
+    };
+  }, []);
+
+  const toggleSharing = async () => {
+    if (isSharing) {
+      if (watchIdRef.id !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.id);
+        watchIdRef.id = null;
+      }
+      try {
+        await stopLive.mutateAsync({ id: orderId });
+        toast.info("Live location sharing stopped");
+      } catch (e: any) {
+        toast.error(e?.message ?? "Failed to stop live location");
+      }
+      setIsSharing(false);
+    } else {
+      if (!("geolocation" in navigator)) {
+        toast.error("Geolocation is not supported by your browser");
+        return;
+      }
+
+      setIsSharing(true);
+      toast.success("Sharing live location with delivery partner...");
+
+      const wid = navigator.geolocation.watchPosition(
+        async (pos) => {
+          const now = Date.now();
+          // Throttle updates to once every 3 seconds minimum
+          if (now - lastTimeRef.time < 3000) return;
+          lastTimeRef.time = now;
+
+          try {
+            await updateLive.mutateAsync({
+              id: orderId,
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              heading: pos.coords.heading ?? undefined,
+              speed: pos.coords.speed ?? undefined,
+              accuracy: pos.coords.accuracy ?? undefined,
+            });
+            setLastUpdate(new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" }));
+          } catch (e: any) {
+            console.error("Live location update error:", e);
+          }
+        },
+        (err) => {
+          toast.error(`GPS Error: ${err.message}`);
+          setIsSharing(false);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 3000,
+          timeout: 15000,
+        }
+      );
+      watchIdRef.id = wid;
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 dark:border-indigo-900 dark:bg-indigo-950/30 p-3 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-semibold uppercase text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+          <MapPin className="h-4 w-4 text-indigo-600 dark:text-indigo-400 animate-bounce" />
+          Live Location Sharing
+        </div>
+        {isSharing ? (
+          <Badge className="bg-emerald-600 text-white gap-1 animate-pulse">
+            <span className="h-2 w-2 rounded-full bg-white animate-ping" /> Sharing
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-muted-foreground text-[10px]">
+            Inactive
+          </Badge>
+        )}
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        {assignedPartnerName
+          ? `Share your current GPS location to guide ${assignedPartnerName} directly to your pickup point.`
+          : "Share your live location to help the assigned delivery partner find your shop entrance."}
+      </p>
+
+      {isSharing && lastUpdate && (
+        <div className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400">
+          Last broadcast: {lastUpdate}
+        </div>
+      )}
+
+      <Button
+        type="button"
+        size="sm"
+        variant={isSharing ? "destructive" : "default"}
+        className={`w-full text-xs font-semibold ${
+          !isSharing ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20" : ""
+        }`}
+        onClick={toggleSharing}
+        disabled={updateLive.isPending || stopLive.isPending}
+      >
+        <MapPin className="mr-1.5 h-3.5 w-3.5" />
+        {isSharing ? "Stop Sharing Live Location" : "📍 Share Live Location"}
+      </Button>
+    </div>
+  );
+}
+
 function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: () => void }) {
   const [cancelOpen, setCancelOpen] = useState(false);
-  const advance = useAdvanceOrder();
-  const cancel = useCancelOrder();
-  const nextStatus = order ? nextStep(order.status) : null;
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [prepMinutes, setPrepMinutes] = useState(20);
+
+  const acceptOrder = useVendorAcceptOrder();
+  const rejectOrder = useVendorRejectOrder();
+  const markReady = useVendorMarkReady();
+  const cancelOrder = useCancelOrder();
 
   return (
     <Sheet open={!!order} onOpenChange={(o) => !o && onClose()}>
@@ -349,82 +506,142 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                   <div className="p-2.5 bg-background rounded-md border text-xs space-y-1.5">
                     <div className="text-muted-foreground">
                       {order.status === "ready_for_pickup"
-                        ? "No partner has accepted yet. Click below to retry dispatch."
-                        : "Delivery partner will be dispatched when order is packed and ready."}
+                        ? "No partner has accepted yet. Delivery dispatch is active."
+                        : order.status === "new"
+                        ? "Accept the order to begin preparation."
+                        : "Click 'Ready for Pickup' below when order is prepared to dispatch a delivery partner."}
                     </div>
                   </div>
                 )}
               </section>
 
-              {order.awb && (
-                <section className="rounded-lg border border-border p-3">
-                  <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
-                    <Truck className="h-3.5 w-3.5" /> Shipping
-                  </div>
-                  <div className="text-sm">{order.courier}</div>
-                  <div className="font-mono text-xs text-muted-foreground">AWB: {order.awb}</div>
-                </section>
+              {/* Vendor Live Location Control Component */}
+              {(order.status === "ready_for_pickup" ||
+                order.assignedPartner ||
+                ["assigned", "delivery_partner_assigned", "going_to_vendor", "arrived_at_vendor"].includes(order.status)) && (
+                <VendorLiveLocationControl
+                  orderId={order.id}
+                  assignedPartnerName={order.assignedPartner?.fullName}
+                  orderStatus={order.status}
+                />
               )}
 
-              {order.status !== "delivered" &&
-                order.status !== "cancelled" &&
-                order.status !== "returned" && (
-                  <div className="flex flex-wrap gap-2">
-                    {nextStatus && (
+              {/* Workflow Action Buttons */}
+              <div className="space-y-3 pt-2">
+                {/* 1. New Order Approval Flow */}
+                {order.status === "new" && (
+                  <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/30 p-3.5">
+                    <div className="text-xs font-semibold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                      <Package className="h-4 w-4 text-amber-600" /> New Order Approval
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground font-medium">
+                        Estimated Preparation Time
+                      </label>
+                      <div className="flex gap-2">
+                        {[15, 20, 30, 45].map((mins) => (
+                          <Button
+                            key={mins}
+                            type="button"
+                            size="sm"
+                            variant={prepMinutes === mins ? "default" : "outline"}
+                            className="flex-1 text-xs"
+                            onClick={() => setPrepMinutes(mins)}
+                          >
+                            {mins} mins
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
                       <Button
+                        type="button"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-md"
+                        disabled={acceptOrder.isPending}
                         onClick={async () => {
                           try {
-                            const result = await advance.mutateAsync({ id: order.id });
-                            toast.success(
-                              result.dispatched > 0
-                                ? `Marked as ${result.status}. Delivery request sent.`
-                                : `Marked as ${result.status}. Waiting for an eligible partner with a fresh location.`,
-                            );
+                            await acceptOrder.mutateAsync({
+                              id: order.id,
+                              estimatedPrepMinutes: prepMinutes,
+                            });
+                            toast.success("Order accepted! Start preparing items.");
                           } catch (e: any) {
-                            toast.error(e?.message ?? "Failed");
+                            toast.error(e?.message ?? "Failed to accept order");
                           }
                         }}
-                        disabled={advance.isPending}
                       >
-                        <Package className="h-4 w-4" />{" "}
-                        {order.status === "ready_for_pickup"
-                          ? "Retry delivery request"
-                          : `Mark as ${nextStatus}`}
+                        {acceptOrder.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Accept Order"}
                       </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      onClick={() => setCancelOpen(true)}
-                      disabled={advance.isPending}
-                    >
-                      <XCircle className="h-4 w-4" /> Cancel order
-                    </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        className="flex-1 font-semibold"
+                        disabled={rejectOrder.isPending}
+                        onClick={() => setRejectOpen(true)}
+                      >
+                        Reject Order
+                      </Button>
+                    </div>
                   </div>
                 )}
+
+                {/* 2. Ready for Pickup Flow */}
+                {(order.status === "vendor_accepted" ||
+                  order.status === "accepted" ||
+                  order.status === "preparing" ||
+                  order.status === "packed") && (
+                  <Button
+                    type="button"
+                    className="w-full h-12 text-base font-semibold bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20"
+                    disabled={markReady.isPending}
+                    onClick={async () => {
+                      try {
+                        const res = await markReady.mutateAsync({ id: order.id });
+                        toast.success(
+                          res.dispatched_count > 0
+                            ? "Order is Ready for Pickup! Searching for nearby delivery partners."
+                            : "Order is Ready for Pickup! Delivery request broadcasted."
+                        );
+                      } catch (e: any) {
+                        toast.error(e?.message ?? "Failed to mark order ready");
+                      }
+                    }}
+                  >
+                    {markReady.isPending ? (
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                      "✅ Ready for Pickup"
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
 
-            <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+            {/* Reject Confirmation Dialog */}
+            <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+                  <AlertDialogTitle>Reject this customer order?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    The buyer will be notified. Cancellations may impact your seller rating.
+                    The buyer will be notified immediately. Order items will be returned to stock.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Keep order</AlertDialogCancel>
+                  <AlertDialogCancel>Back</AlertDialogCancel>
                   <AlertDialogAction
+                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
                     onClick={async () => {
                       try {
-                        await cancel.mutateAsync({ id: order.id, reason: "Cancelled by seller" });
-                        toast.success("Order cancelled");
-                        setCancelOpen(false);
+                        await rejectOrder.mutateAsync({ id: order.id, reason: "Cancelled by vendor" });
+                        toast.success("Order rejected");
+                        setRejectOpen(false);
                       } catch (e: any) {
                         toast.error(e?.message ?? "Failed");
                       }
                     }}
                   >
-                    Cancel order
+                    Reject Order
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -434,11 +651,4 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
       </SheetContent>
     </Sheet>
   );
-}
-
-function nextStep(status: OrderStatus): OrderStatus | null {
-  if (status === "ready_for_pickup") return "ready_for_pickup";
-  const idx = FLOW.indexOf(status);
-  if (idx < 0 || idx >= FLOW.length - 1) return null;
-  return FLOW[idx + 1];
 }

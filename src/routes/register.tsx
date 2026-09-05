@@ -1,3 +1,5 @@
+import { PickupPinEditor } from "@/components/PickupPinEditor";
+import { parseCoordinates } from "@/lib/coordinates";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
@@ -275,7 +277,7 @@ function OnboardingChecklist({
         step: 3,
         group: "Store & Pickup",
         label: "Pickup address",
-        done: !!(ad.pickupSame || ad.pickupAddress),
+        done: !!(ad.pickupSame || ad.pickupAddress) && !!parseCoordinates(ad.pickupLat, ad.pickupLng),
       },
       { step: 4, group: "Bank", label: "Bank account", done: !!(bk.accountNumber && bk.ifsc) },
       { step: 5, group: "Tax & Legal", label: "PAN added", done: !!tx.pan },
@@ -752,6 +754,8 @@ const addressSchema = z
     state: z.string().trim().min(2, "Required"),
     pincode: z.string().regex(/^\d{6}$/, "6-digit pincode"),
     landmark: z.string().max(80).optional().or(z.literal("")),
+    pickupLat: z.number().min(-90).max(90).nullable().optional(),
+    pickupLng: z.number().min(-180).max(180).nullable().optional(),
     pickupSame: z.boolean(),
     pickupAddress: z.string().optional().or(z.literal("")),
     pickupCity: z.string().optional().or(z.literal("")),
@@ -774,39 +778,25 @@ function StepAddress({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const [v, setV] = useState(seller.address);
-  useAutosave(seller, "address", v);
+  const [v, setV] = useState(() => {
+    const pin =
+      parseCoordinates(seller.address.pickupLat, seller.address.pickupLng) ??
+      parseCoordinates(seller.address.shopCoordinates?.lat, seller.address.shopCoordinates?.lng) ??
+      parseCoordinates(seller.address.pickupCoordinates?.lat, seller.address.pickupCoordinates?.lng);
+    return {
+      ...seller.address,
+      pickupLat: pin?.lat ?? null,
+      pickupLng: pin?.lng ?? null,
+    };
+  });
+  const addressChanged = (patch: Partial<Seller["address"]>) =>
+    setV((current) => ({ ...current, ...patch }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const update = useUpdateMySeller();
   const submit = async () => {
     const p = addressSchema.safeParse(v);
-    if (!p.success) {
-      const errs: Record<string, string> = {};
-      p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
-      return setErrors(errs);
-    }
-    const shopQuery = [v.shopAddress, v.city, v.state, v.pincode].filter(Boolean).join(", ");
-    const pickupQuery = v.pickupSame
-      ? shopQuery
-      : [v.pickupAddress, v.pickupCity, v.pickupState, v.pickupPincode].filter(Boolean).join(", ");
-    const shopCoordinates = await geocodeSellerAddress(shopQuery);
-    const pickupCoordinates = v.pickupSame
-      ? shopCoordinates
-      : await geocodeSellerAddress(pickupQuery);
-    const locationConfirmationRequired = !shopCoordinates || !pickupCoordinates;
-
-    await update.mutateAsync({
-      address: {
-        ...v,
-        shopCoordinates,
-        pickupCoordinates,
-        locationConfirmationRequired,
-      },
-    });
-
-    if (locationConfirmationRequired) {
-      toast.error("Pickup coordinates need confirmation before the seller can go live.");
-    }
+    if (!parseCoordinates(v.pickupLat, v.pickupLng)) return setErrors({ pickupPin: "Choose the exact pickup entrance on the map." });
+    await update.mutateAsync({ address: v });
     onNext();
   };
   return (
@@ -817,20 +807,20 @@ function StepAddress({
             <Textarea
               rows={2}
               value={v.shopAddress}
-              onChange={(e) => setV({ ...v, shopAddress: e.target.value })}
+              onChange={(e) => addressChanged({ shopAddress: e.target.value })}
             />
           </Field>
         </div>
         <Field label="City" error={errors.city}>
-          <Input value={v.city} onChange={(e) => setV({ ...v, city: e.target.value })} />
+          <Input value={v.city} onChange={(e) => addressChanged({ city: e.target.value })} />
         </Field>
         <Field label="State" error={errors.state}>
-          <Input value={v.state} onChange={(e) => setV({ ...v, state: e.target.value })} />
+          <Input value={v.state} onChange={(e) => addressChanged({ state: e.target.value })} />
         </Field>
         <Field label="Pincode" error={errors.pincode}>
           <Input
             value={v.pincode}
-            onChange={(e) => setV({ ...v, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+            onChange={(e) => addressChanged({ pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
           />
         </Field>
         <Field label="Landmark (optional)">
@@ -841,7 +831,7 @@ function StepAddress({
           <Checkbox
             id="pickupSame"
             checked={v.pickupSame}
-            onCheckedChange={(x) => setV({ ...v, pickupSame: Boolean(x) })}
+            onCheckedChange={(x) => addressChanged({ pickupSame: Boolean(x) })}
           />
           <Label htmlFor="pickupSame" className="cursor-pointer">
             Pickup address is same as shop address
@@ -862,32 +852,36 @@ function StepAddress({
                 <Textarea
                   rows={2}
                   value={v.pickupAddress}
-                  onChange={(e) => setV({ ...v, pickupAddress: e.target.value })}
+                  onChange={(e) => addressChanged({ pickupAddress: e.target.value })}
                 />
               </Field>
             </div>
             <Field label="City">
               <Input
                 value={v.pickupCity}
-                onChange={(e) => setV({ ...v, pickupCity: e.target.value })}
+                onChange={(e) => addressChanged({ pickupCity: e.target.value })}
               />
             </Field>
             <Field label="State">
               <Input
                 value={v.pickupState}
-                onChange={(e) => setV({ ...v, pickupState: e.target.value })}
+                onChange={(e) => addressChanged({ pickupState: e.target.value })}
               />
             </Field>
             <Field label="Pincode">
               <Input
                 value={v.pickupPincode}
                 onChange={(e) =>
-                  setV({ ...v, pickupPincode: e.target.value.replace(/\D/g, "").slice(0, 6) })
+                  addressChanged({ pickupPincode: e.target.value.replace(/\D/g, "").slice(0, 6) })
                 }
               />
             </Field>
           </>
         )}
+      </div>
+      <div className="mt-4">
+        <PickupPinEditor value={parseCoordinates(v.pickupLat, v.pickupLng)} onChange={pin => setV(current => ({ ...current, pickupLat: pin.lat, pickupLng: pin.lng }))} />
+        {errors.pickupPin && <p role="alert" className="text-sm text-destructive mt-2">{errors.pickupPin}</p>}
       </div>
       <StepFooter>
         <Button variant="ghost" onClick={onBack}>
@@ -1238,9 +1232,10 @@ function StepReview({
       {
         step: 6,
         title: "Documents",
-        rows: Object.entries(seller.documents).map(([k, v]) => [k, v?.name || "—"]) as Array<
-          [string, string]
-        >,
+        rows: Object.entries(seller.documents).map(([k, v]) => [
+          DOC_FIELDS.find((f) => f.key === k)?.label || k,
+          v?.name || "—",
+        ]) as Array<[string, string]>,
       },
     ],
     [seller],

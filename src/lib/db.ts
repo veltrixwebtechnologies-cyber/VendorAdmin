@@ -1,3 +1,4 @@
+import { parseCoordinates } from "./coordinates";
 /* ============================================================
  * Central Supabase data layer for Seller Hub.
  * All CRUD hooks + mutations live here, backed by RLS.
@@ -13,10 +14,17 @@ export type SellerStatus = "draft" | "pending" | "approved" | "rejected" | "more
 export type OrderStatus =
   | "new"
   | "accepted"
+  | "vendor_accepted"
+  | "cancelled_by_vendor"
   | "preparing"
   | "packed"
   | "ready_for_pickup"
   | "assigned"
+  | "delivery_partner_assigned"
+  | "going_to_vendor"
+  | "arrived_at_vendor"
+  | "going_to_customer"
+  | "arrived_at_customer"
   | "rider_assigned"
   | "rider_accepted"
   | "rider_at_shop"
@@ -77,6 +85,8 @@ export interface Seller {
     state: string;
     pincode: string;
     landmark: string;
+    pickupLat?: number | null;
+    pickupLng?: number | null;
     pickupSame: boolean;
     pickupAddress: string;
     pickupCity: string;
@@ -197,7 +207,7 @@ export function getDataErrorMessage(error: unknown, fallback = "Please try again
 
 /* ------------ Mappers ------------ */
 
-function rowToSeller(r: any): Seller {
+export function rowToSeller(r: any): Seller {
   const w: Record<string, any> =
     r.wizard_data && typeof r.wizard_data === "object" && !Array.isArray(r.wizard_data)
       ? r.wizard_data
@@ -233,6 +243,8 @@ function rowToSeller(r: any): Seller {
       state: r.state ?? "",
       pincode: r.pincode ?? "",
       landmark: r.address_line2 ?? "",
+      pickupLat: (w.pickupSame === false ? parseCoordinates(w.pickupLat, w.pickupLng) : parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))?.lat ?? null,
+      pickupLng: (w.pickupSame === false ? parseCoordinates(w.pickupLat, w.pickupLng) : parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))?.lng ?? null,
       pickupSame: w.pickupSame ?? true,
       pickupAddress: w.pickupAddress ?? "",
       pickupCity: w.pickupCity ?? "",
@@ -259,7 +271,7 @@ function rowToSeller(r: any): Seller {
 }
 
 /** Convert a client-side Partial<Seller> to a DB update patch. */
-function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, any> = {}) {
+export function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, any> = {}) {
   const db: Record<string, any> = {};
   const w: Record<string, any> = { ...existingWizard };
 
@@ -278,6 +290,7 @@ function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, 
     w.description = patch.business.description;
   }
   if (patch.address) {
+    const pin = parseCoordinates(patch.address.pickupLat, patch.address.pickupLng);
     db.address_line1 = patch.address.shopAddress;
     db.address_line2 = patch.address.landmark;
     db.city = patch.address.city;
@@ -300,7 +313,7 @@ function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, 
     const pickupCoords =
       patch.address.pickupCoordinates ?? normalizeCoordinate(w.pickupCoordinates);
 
-    const effectiveCoords = isPickupSame ? (shopCoords ?? pickupCoords) : pickupCoords;
+    const effectiveCoords = pin ?? (isPickupSame ? (shopCoords ?? pickupCoords) : pickupCoords);
 
     if (
       effectiveCoords &&
@@ -310,10 +323,16 @@ function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<string, 
     ) {
       db.lat = effectiveCoords.lat;
       db.lng = effectiveCoords.lng;
+      w.lat = w.pickupLat = effectiveCoords.lat;
+      w.lng = w.pickupLng = effectiveCoords.lng;
+      w.shopCoordinates = effectiveCoords;
+      w.pickupCoordinates = effectiveCoords;
       w.locationConfirmationRequired = false;
     } else {
       db.lat = null;
       db.lng = null;
+      w.lat = w.pickupLat = null;
+      w.lng = w.pickupLng = null;
       w.locationConfirmationRequired = true;
     }
   }
@@ -534,19 +553,39 @@ export function useSubmitMySeller() {
   return useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Not signed in");
-      const { data: cur } = await supabase
+      const { data: cur, error: readError } = await supabase
         .from("sellers")
-        .select("wizard_data")
+        .select("wizard_data,lat,lng")
         .eq("user_id", user.id)
         .maybeSingle();
+      if (readError) throw readError;
       const curWizard =
         cur?.wizard_data && typeof cur.wizard_data === "object" && !Array.isArray(cur.wizard_data)
           ? (cur.wizard_data as Record<string, any>)
           : {};
-      const w = { ...curWizard, submittedAt: new Date().toISOString() };
+      const pin =
+        parseCoordinates(curWizard.pickupLat, curWizard.pickupLng) ??
+        parseCoordinates(cur?.lat, cur?.lng) ??
+        parseCoordinates(curWizard.lat, curWizard.lng) ??
+        normalizeCoordinate(curWizard.pickupCoordinates) ??
+        normalizeCoordinate(curWizard.shopCoordinates);
+
+      if (!pin) throw new Error("Set the exact pickup pin in the address step before submitting.");
+
+      const w = {
+        ...curWizard,
+        lat: pin.lat,
+        lng: pin.lng,
+        pickupLat: pin.lat,
+        pickupLng: pin.lng,
+        shopCoordinates: pin,
+        pickupCoordinates: pin,
+        locationConfirmationRequired: false,
+        submittedAt: new Date().toISOString(),
+      };
       const { error } = await supabase
         .from("sellers")
-        .update({ status: "pending", admin_notes: null, wizard_data: w })
+        .update({ lat: pin.lat, lng: pin.lng, status: "pending", admin_notes: null, wizard_data: w })
         .eq("user_id", user.id);
       if (error) throw error;
     },
@@ -835,6 +874,99 @@ export function useCancelOrder() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-orders"] });
       qc.invalidateQueries({ queryKey: ["my-notifications"] });
+    },
+  });
+}
+
+export function useVendorAcceptOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: string; estimatedPrepMinutes?: number }) => {
+      const { data, error } = await (supabase as any).rpc("vendor_accept_order", {
+        _order_id: v.id,
+        _estimated_prep_minutes: v.estimatedPrepMinutes ?? 20,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-notifications"] });
+    },
+  });
+}
+
+export function useVendorRejectOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: string; reason?: string }) => {
+      const { data, error } = await (supabase as any).rpc("vendor_reject_order", {
+        _order_id: v.id,
+        _reason: v.reason ?? "Cancelled by vendor",
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-notifications"] });
+    },
+  });
+}
+
+export function useVendorMarkReady() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: string }) => {
+      const { data, error } = await (supabase as any).rpc("vendor_mark_ready_for_pickup", {
+        _order_id: v.id,
+      });
+      if (error) throw error;
+      return data as { success: boolean; status: string; dispatched_count: number };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-notifications"] });
+    },
+  });
+}
+
+export function useVendorUpdateLiveLocation() {
+  return useMutation({
+    mutationFn: async (v: {
+      id: string;
+      lat: number;
+      lng: number;
+      heading?: number;
+      speed?: number;
+      accuracy?: number;
+    }) => {
+      const { data, error } = await (supabase as any).rpc("update_vendor_live_location", {
+        _order_id: v.id,
+        _lat: v.lat,
+        _lng: v.lng,
+        _heading: v.heading ?? null,
+        _speed: v.speed ?? null,
+        _accuracy: v.accuracy ?? null,
+      });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useVendorStopLiveLocation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: string }) => {
+      const { data, error } = await (supabase as any).rpc("stop_vendor_live_location", {
+        _order_id: v.id,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
     },
   });
 }
