@@ -633,7 +633,6 @@ export type Database = {
           country: string | null;
           created_at: string;
           email: string | null;
-          lat: number | null;
           full_name: string | null;
           gstin: string | null;
           hsn_default: string | null;
@@ -642,7 +641,6 @@ export type Database = {
           lng: number | null;
           pan: string | null;
           phone: string | null;
-          lng: number | null;
           pincode: string | null;
           reviewed_at: string | null;
           reviewed_by: string | null;
@@ -667,7 +665,6 @@ export type Database = {
           country?: string | null;
           created_at?: string;
           email?: string | null;
-          lat?: number | null;
           full_name?: string | null;
           gstin?: string | null;
           hsn_default?: string | null;
@@ -676,7 +673,6 @@ export type Database = {
           lng?: number | null;
           pan?: string | null;
           phone?: string | null;
-          lng?: number | null;
           pincode?: string | null;
           reviewed_at?: string | null;
           reviewed_by?: string | null;
@@ -701,7 +697,6 @@ export type Database = {
           country?: string | null;
           created_at?: string;
           email?: string | null;
-          lat?: number | null;
           full_name?: string | null;
           gstin?: string | null;
           hsn_default?: string | null;
@@ -710,7 +705,6 @@ export type Database = {
           lng?: number | null;
           pan?: string | null;
           phone?: string | null;
-          lng?: number | null;
           pincode?: string | null;
           reviewed_at?: string | null;
           reviewed_by?: string | null;

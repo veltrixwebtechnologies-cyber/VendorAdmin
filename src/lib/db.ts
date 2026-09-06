@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 /* ------------ Types ------------ */
 
@@ -574,7 +575,7 @@ export function useSubmitMySeller() {
       };
       const { error } = await supabase
         .from("sellers")
-        .update({ lat: pin.lat, lng: pin.lng, status: "pending", admin_notes: null, wizard_data: w })
+        .update({ lat: pin.lat, lng: pin.lng, status: "pending", admin_notes: null, wizard_data: w as any })
         .eq("user_id", user.id);
       if (error) throw error;
     },
@@ -799,7 +800,34 @@ export function useMyOrders() {
     if (!user) return;
     const channel = supabase
       .channel(`seller-orders-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (payload: any) => {
+        const newOrder = payload.new;
+        const orderNum = newOrder?.order_number || "New Order";
+        const totalAmt = newOrder?.total ? `₹${newOrder.total}` : "";
+
+        playOrderNotificationSound();
+
+        toast.success(`🔔 NEW ORDER RECEIVED! #${orderNum} (${totalAmt})`, {
+          duration: 15000,
+          description: "A customer just placed an order with your store! Click to view.",
+          action: {
+            label: "View Orders",
+            onClick: () => {
+              if (typeof window !== "undefined") {
+                window.location.href = "/seller/orders";
+              }
+            },
+          },
+        });
+
+        triggerDesktopOrderNotification(
+          `🔔 New Order #${orderNum}!`,
+          `Customer order of ${totalAmt} received. Click to open seller portal.`,
+        );
+
+        void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, () => {
         void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, () => {
@@ -820,6 +848,106 @@ export function useMyOrders() {
   }, [qc, user]);
 
   return query;
+}
+
+export function playOrderNotificationSound() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+
+    // 4-note ascending chime: C5 (523Hz), E5 (659Hz), G5 (784Hz), C6 (1046Hz)
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.12 + 0.38);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.12);
+      osc.stop(ctx.currentTime + idx * 0.12 + 0.38);
+    });
+  } catch (err) {
+    console.warn("Audio chime playback blocked:", err);
+  }
+}
+
+export function triggerDesktopOrderNotification(title: string, body: string) {
+  if (typeof window === "undefined" || !("Notification" in window)) return;
+  try {
+    if (Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/favicon.ico" });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          new Notification(title, { body, icon: "/favicon.ico" });
+        }
+      });
+    }
+  } catch (err) {
+    console.warn("Desktop notification trigger skipped:", err);
+  }
+}
+
+export function useOrderNotificationListener() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!user) return;
+
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "default"
+    ) {
+      Notification.requestPermission().catch(() => {});
+    }
+
+    const channel = supabase
+      .channel(`seller-global-orders-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload: any) => {
+          const newOrder = payload.new;
+          const orderNum = newOrder?.order_number || "New Order";
+          const totalAmt = newOrder?.total ? `₹${newOrder.total}` : "";
+
+          playOrderNotificationSound();
+
+          toast.success(`🔔 NEW ORDER RECEIVED! #${orderNum} (${totalAmt})`, {
+            duration: 15000,
+            description: "A customer placed a new order with your store. Click to view orders.",
+            action: {
+              label: "View Order",
+              onClick: () => {
+                if (typeof window !== "undefined") {
+                  window.location.href = "/seller/orders";
+                }
+              },
+            },
+          });
+
+          triggerDesktopOrderNotification(
+            `🔔 New Order #${orderNum}!`,
+            `Customer order of ${totalAmt} received. Click to open seller portal.`,
+          );
+
+          void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+          void qc.invalidateQueries({ queryKey: ["my-notifications", user.id] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user, qc]);
 }
 
 export function useAdvanceOrder() {

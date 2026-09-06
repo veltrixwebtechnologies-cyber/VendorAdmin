@@ -33,7 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { useAuth, signOut } from "@/lib/auth";
-import { useMySeller } from "@/lib/db";
+import { useMySeller, useOrderNotificationListener } from "@/lib/db";
 
 export const Route = createFileRoute("/seller")({
   head: () => ({
@@ -67,6 +67,7 @@ const NAV = [
 function SellerLayout() {
   const { user, loading } = useAuth();
   const sellerQ = useMySeller();
+  useOrderNotificationListener();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const initialPath = useRef(pathname);
