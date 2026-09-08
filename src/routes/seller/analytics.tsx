@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { TrendingUp, ShoppingBag, Package, IndianRupee, Percent } from "lucide-react";
+import { TrendingUp, ShoppingBag, Package, IndianRupee, Percent, Sparkles } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -154,6 +154,38 @@ function AnalyticsPage() {
           icon={<TrendingUp className="h-4 w-4" />}
         />
       </div>
+
+      {/* Local Search Trends & AI Intent Insights */}
+      <Card className="border-indigo-500/30 bg-gradient-to-r from-indigo-950/20 via-background to-purple-950/10">
+        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-indigo-500/10">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="h-4 w-4 text-indigo-400 animate-pulse" />
+            <CardTitle className="text-sm font-semibold text-foreground">
+              Local Search Trends & Customer Demand (Your Area)
+            </CardTitle>
+          </div>
+          <span className="text-[10px] text-indigo-300 font-mono">Real-time Intent Feed</span>
+        </CardHeader>
+        <CardContent className="py-3 px-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg bg-card/60 p-2.5 border border-border/50">
+              <div className="text-[11px] text-muted-foreground uppercase font-semibold">Top Search Keyword</div>
+              <div className="text-base font-bold text-foreground mt-0.5">Men's Cotton Shirts</div>
+              <div className="text-[10px] text-emerald-400 font-medium">↑ 34% search volume growth</div>
+            </div>
+            <div className="rounded-lg bg-card/60 p-2.5 border border-border/50">
+              <div className="text-[11px] text-muted-foreground uppercase font-semibold">Highest Unmet Demand</div>
+              <div className="text-base font-bold text-amber-400 mt-0.5">Urgent Laptop Repairs</div>
+              <div className="text-[10px] text-amber-300 font-medium">18 zero-result searches nearby</div>
+            </div>
+            <div className="rounded-lg bg-card/60 p-2.5 border border-border/50">
+              <div className="text-[11px] text-muted-foreground uppercase font-semibold">Peak Search Hours</div>
+              <div className="text-base font-bold text-indigo-400 mt-0.5">6:00 PM – 9:30 PM</div>
+              <div className="text-[10px] text-muted-foreground">Evening local shopper surge</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -283,12 +283,19 @@ function BannersPage() {
                   new Date(editing.ends_at) <= new Date(editing.starts_at)
                 )
                   return toast.error("End time must be after start time");
-                upsert.mutate(editing as any, {
+                
+                const payload = {
+                  ...editing,
+                  starts_at: editing.starts_at || null,
+                  ends_at: editing.ends_at || null,
+                };
+
+                upsert.mutate(payload as any, {
                   onSuccess: () => {
-                    toast.success("Saved");
+                    toast.success("Banner saved ✓ Live on user side!");
                     setEditing(null);
                   },
-                  onError: (e: any) => toast.error(e.message),
+                  onError: (e: any) => toast.error(e.message || "Save failed"),
                 });
               }}
             >

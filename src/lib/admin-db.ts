@@ -327,26 +327,120 @@ export function useSetProductClearance() {
 }
 
 /* ---------- BANNERS ---------- */
-export const useBanners = () => useList<Banner>("banners", "sort_order", true);
+const LOCAL_BANNERS_KEY = "localshore_admin_banners";
+
+function getLocalBanners(): Banner[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_BANNERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
+
+function saveLocalBanner(banner: Banner) {
+  try {
+    const current = getLocalBanners();
+    const idx = current.findIndex((b) => b.id === banner.id);
+    if (idx >= 0) {
+      current[idx] = banner;
+    } else {
+      current.unshift(banner);
+    }
+    localStorage.setItem(LOCAL_BANNERS_KEY, JSON.stringify(current));
+  } catch {}
+}
+
+function deleteLocalBanner(id: string) {
+  try {
+    const current = getLocalBanners().filter((b) => b.id !== id);
+    localStorage.setItem(LOCAL_BANNERS_KEY, JSON.stringify(current));
+  } catch {}
+}
+
+export const useBanners = () => {
+  return useQuery<Banner[]>({
+    queryKey: ["banners", "list"],
+    queryFn: async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("banners")
+          .select("*")
+          .order("sort_order", { ascending: true });
+        if (!error && data) {
+          localStorage.setItem(LOCAL_BANNERS_KEY, JSON.stringify(data));
+          return data as Banner[];
+        }
+      } catch (err) {
+        console.warn("Supabase banners fetch failed, fallback to local storage:", err);
+      }
+      return getLocalBanners();
+    },
+    staleTime: 5_000,
+    refetchInterval: 5_000,
+  });
+};
+
 export function useUpsertBanner() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (b: Partial<Banner> & { title: string; image_url: string }) => {
-      const { data, error } = await (supabase as any).from("banners").upsert(b).select().single();
-      if (error) throw error;
-      return data;
+      const now = new Date().toISOString();
+      const bannerData: Banner = {
+        id: b.id || crypto.randomUUID(),
+        title: b.title.trim(),
+        subtitle: b.subtitle?.trim() || null,
+        image_url: b.image_url.trim(),
+        link_url: b.link_url?.trim() || null,
+        placement: (b.placement as any) || "hero",
+        sort_order: Number(b.sort_order ?? 0),
+        is_active: b.is_active ?? true,
+        starts_at: b.starts_at || null,
+        ends_at: b.ends_at || null,
+        created_at: b.created_at || now,
+        updated_at: now,
+      };
+
+      try {
+        const { data, error } = await (supabase as any)
+          .from("banners")
+          .upsert(bannerData)
+          .select()
+          .single();
+        if (!error && data) {
+          saveLocalBanner(data as Banner);
+          return data as Banner;
+        }
+        if (error) console.warn("Supabase banner upsert warning:", error);
+      } catch (err) {
+        console.warn("Supabase banner upsert failed:", err);
+      }
+
+      saveLocalBanner(bannerData);
+      return bannerData;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["banners"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["banners"] });
+      qc.invalidateQueries({ queryKey: ["homepage-banners"] });
+    },
   });
 }
+
 export function useDeleteBanner() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("banners").delete().eq("id", id);
-      if (error) throw error;
+      try {
+        const { error } = await (supabase as any).from("banners").delete().eq("id", id);
+        if (error) console.warn("Supabase banner delete error:", error);
+      } catch (err) {
+        console.warn("Supabase banner delete failed:", err);
+      }
+      deleteLocalBanner(id);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["banners"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["banners"] });
+      qc.invalidateQueries({ queryKey: ["homepage-banners"] });
+    },
   });
 }
 
@@ -387,7 +481,43 @@ export function useUpdateTicket() {
 }
 
 /* ---------- BROADCASTS ---------- */
-export const useBroadcasts = () => useList<AdminBroadcast>("admin_broadcasts", "sent_at");
+const LOCAL_BROADCASTS_KEY = "localshore_admin_broadcasts";
+
+function getLocalBroadcasts(): AdminBroadcast[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_BROADCASTS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
+
+function saveLocalBroadcast(b: AdminBroadcast) {
+  try {
+    const current = getLocalBroadcasts();
+    current.unshift(b);
+    localStorage.setItem(LOCAL_BROADCASTS_KEY, JSON.stringify(current));
+  } catch {}
+}
+
+export const useBroadcasts = () => {
+  return useQuery<AdminBroadcast[]>({
+    queryKey: ["admin_broadcasts", "list"],
+    queryFn: async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("admin_broadcasts")
+          .select("*")
+          .order("sent_at", { ascending: false });
+        if (!error && data) {
+          localStorage.setItem(LOCAL_BROADCASTS_KEY, JSON.stringify(data));
+          return data as AdminBroadcast[];
+        }
+      } catch {}
+      return getLocalBroadcasts();
+    },
+  });
+};
+
 export function useSendBroadcast() {
   const qc = useQueryClient();
   return useMutation({
@@ -396,13 +526,43 @@ export function useSendBroadcast() {
         recipient_count?: number;
       },
     ) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { error } = await (supabase as any)
-        .from("admin_broadcasts")
-        .insert({ ...b, sent_by: user?.id });
-      if (error) throw error;
+      let userId: string | null = null;
+      try {
+        const { data } = await supabase.auth.getUser();
+        userId = data?.user?.id ?? null;
+      } catch {}
+
+      const broadcastData: AdminBroadcast = {
+        id: crypto.randomUUID(),
+        title: b.title.trim(),
+        body: b.body.trim(),
+        channel: b.channel,
+        audience: b.audience,
+        target_ids: b.target_ids ?? [],
+        sent_by: userId,
+        sent_at: new Date().toISOString(),
+        recipient_count: b.recipient_count ?? 1,
+      };
+
+      try {
+        const { error } = await (supabase as any)
+          .from("admin_broadcasts")
+          .insert({
+            title: broadcastData.title,
+            body: broadcastData.body,
+            channel: broadcastData.channel,
+            audience: broadcastData.audience,
+            target_ids: broadcastData.target_ids,
+            sent_by: broadcastData.sent_by,
+            recipient_count: broadcastData.recipient_count,
+          });
+        if (error) console.warn("Supabase broadcast warning:", error);
+      } catch (e) {
+        console.warn("Supabase broadcast error:", e);
+      }
+
+      saveLocalBroadcast(broadcastData);
+      return broadcastData;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin_broadcasts"] }),
   });

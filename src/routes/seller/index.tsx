@@ -133,14 +133,14 @@ function ApprovedStats() {
   const products = productsQ.data ?? [];
 
   const stats = useMemo(() => {
-    const active = products.filter((p) => p.status === "active").length;
+    const active = products.filter((p) => ["active", "approved"].includes(p.status)).length;
     const lowStock = products.filter((p) => p.stock > 0 && p.stock <= p.lowStockAt).length;
     const outOfStock = products.filter((p) => p.stock === 0).length;
-    const newOrders = orders.filter((o) => o.status === "new").length;
+    const newOrders = orders.filter((o) => ["new", "pending"].includes(o.status)).length;
     const inProgress = orders.filter((o) =>
-      ["accepted", "packed", "ready_for_pickup", "out_for_delivery", "shipped"].includes(o.status),
+      ["accepted", "vendor_accepted", "preparing", "packed", "ready_for_pickup", "out_for_delivery", "shipped"].includes(o.status),
     ).length;
-    const revenue = orders.filter((o) => o.status === "delivered").reduce((s, o) => s + o.total, 0);
+    const revenue = orders.filter((o) => ["delivered", "completed"].includes(o.status)).reduce((s, o) => s + o.total, 0);
     return { active, lowStock, outOfStock, newOrders, inProgress, revenue };
   }, [products, orders]);
 

@@ -24,6 +24,7 @@ import { Route as AdminDispatchRouteImport } from './routes/admin/dispatch'
 import { Route as AdminInventoryRouteImport } from './routes/admin/inventory'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminMerchandisingRouteImport } from './routes/admin/merchandising'
+import { Route as AdminMlControlCenterRouteImport } from './routes/admin/ml-control-center'
 import { Route as AdminNotificationsRouteImport } from './routes/admin/notifications'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminPaymentsRouteImport } from './routes/admin/payments'
@@ -121,6 +122,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const AdminMerchandisingRoute = AdminMerchandisingRouteImport.update({
   id: '/merchandising',
   path: '/merchandising',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminMlControlCenterRoute = AdminMlControlCenterRouteImport.update({
+  id: '/ml-control-center',
+  path: '/ml-control-center',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/merchandising': typeof AdminMerchandisingRoute
+  '/admin/ml-control-center': typeof AdminMlControlCenterRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -292,6 +299,7 @@ export interface FileRoutesByTo {
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/merchandising': typeof AdminMerchandisingRoute
+  '/admin/ml-control-center': typeof AdminMlControlCenterRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -333,6 +341,7 @@ export interface FileRoutesById {
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/merchandising': typeof AdminMerchandisingRoute
+  '/admin/ml-control-center': typeof AdminMlControlCenterRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -375,6 +384,7 @@ export interface FileRouteTypes {
     | '/admin/inventory'
     | '/admin/login'
     | '/admin/merchandising'
+    | '/admin/ml-control-center'
     | '/admin/notifications'
     | '/admin/orders'
     | '/admin/payments'
@@ -413,6 +423,7 @@ export interface FileRouteTypes {
     | '/admin/inventory'
     | '/admin/login'
     | '/admin/merchandising'
+    | '/admin/ml-control-center'
     | '/admin/notifications'
     | '/admin/orders'
     | '/admin/payments'
@@ -453,6 +464,7 @@ export interface FileRouteTypes {
     | '/admin/inventory'
     | '/admin/login'
     | '/admin/merchandising'
+    | '/admin/ml-control-center'
     | '/admin/notifications'
     | '/admin/orders'
     | '/admin/payments'
@@ -593,6 +605,13 @@ declare module '@tanstack/react-router' {
       path: '/merchandising'
       fullPath: '/admin/merchandising'
       preLoaderRoute: typeof AdminMerchandisingRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/ml-control-center': {
+      id: '/admin/ml-control-center'
+      path: '/ml-control-center'
+      fullPath: '/admin/ml-control-center'
+      preLoaderRoute: typeof AdminMlControlCenterRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/notifications': {
@@ -768,6 +787,7 @@ interface AdminRouteRouteChildren {
   AdminInventoryRoute: typeof AdminInventoryRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMerchandisingRoute: typeof AdminMerchandisingRoute
+  AdminMlControlCenterRoute: typeof AdminMlControlCenterRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
@@ -791,6 +811,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminInventoryRoute: AdminInventoryRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminMerchandisingRoute: AdminMerchandisingRoute,
+  AdminMlControlCenterRoute: AdminMlControlCenterRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
