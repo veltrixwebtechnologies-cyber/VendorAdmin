@@ -327,6 +327,101 @@ export function useSetProductClearance() {
 }
 
 /* ---------- BANNERS ---------- */
+export interface AppDownloadBannerConfig {
+  is_active: boolean;
+  badge1_text: string;
+  badge2_text: string;
+  headline_prefix: string;
+  headline_highlight: string;
+  headline_suffix: string;
+  description: string;
+  button_text: string;
+  google_play_rating: string;
+  google_play_downloads: string;
+  app_store_rating: string;
+  app_store_downloads: string;
+  qr_label: string;
+}
+
+export const DEFAULT_APP_BANNER_CONFIG: AppDownloadBannerConfig = {
+  is_active: true,
+  badge1_text: "Special App Offer",
+  badge2_text: "Exclusive Deals",
+  headline_prefix: "Grab ",
+  headline_highlight: "10% OFF",
+  headline_suffix: " now",
+  description:
+    "Download the LocalShore App to unlock instant local shop discounts, 15-minute express delivery, and live order GPS tracking!",
+  button_text: "Get App Link",
+  google_play_rating: "4.8",
+  google_play_downloads: "50 Lakh+",
+  app_store_rating: "4.9",
+  app_store_downloads: "10 Lakh+",
+  qr_label: "SCAN TO DOWNLOAD",
+};
+
+export const APP_BANNER_CONFIG_KEY = "localshore_app_download_banner_config";
+
+export function getAppBannerConfig(): AppDownloadBannerConfig {
+  try {
+    const raw = localStorage.getItem(APP_BANNER_CONFIG_KEY);
+    if (raw) return { ...DEFAULT_APP_BANNER_CONFIG, ...JSON.parse(raw) };
+  } catch {}
+  return DEFAULT_APP_BANNER_CONFIG;
+}
+
+export function useAppBannerConfig() {
+  return useQuery<AppDownloadBannerConfig>({
+    queryKey: ["app_download_banner_config"],
+    queryFn: async () => {
+      try {
+        const { data } = await (supabase as any)
+          .from("banners")
+          .select("*")
+          .eq("id", "app-download-banner-global-config")
+          .maybeSingle();
+        if (data && data.image_url) {
+          const parsed = JSON.parse(data.image_url);
+          const merged = { ...DEFAULT_APP_BANNER_CONFIG, ...parsed, is_active: data.is_active ?? true };
+          localStorage.setItem(APP_BANNER_CONFIG_KEY, JSON.stringify(merged));
+          return merged;
+        }
+      } catch {}
+      return getAppBannerConfig();
+    },
+    staleTime: 5000,
+  });
+}
+
+export function useSaveAppBannerConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (config: AppDownloadBannerConfig) => {
+      localStorage.setItem(APP_BANNER_CONFIG_KEY, JSON.stringify(config));
+      window.dispatchEvent(new Event("localshore_banner_updated"));
+
+      try {
+        await (supabase as any).from("banners").upsert({
+          id: "app-download-banner-global-config",
+          title: config.headline_prefix + config.headline_highlight + config.headline_suffix,
+          subtitle: config.description,
+          image_url: JSON.stringify(config),
+          placement: "promo",
+          is_active: config.is_active,
+          sort_order: 99,
+        });
+      } catch (err) {
+        console.warn("Supabase app banner config save warning:", err);
+      }
+
+      return config;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["app_download_banner_config"] });
+    },
+  });
+}
+
 const LOCAL_BANNERS_KEY = "localshore_admin_banners";
 
 function getLocalBanners(): Banner[] {
