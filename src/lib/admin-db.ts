@@ -329,6 +329,7 @@ export function useSetProductClearance() {
 /* ---------- BANNERS ---------- */
 export interface AppDownloadBannerConfig {
   is_active: boolean;
+  theme_variant?: "dark-navy" | "signature-orchid" | "auto";
   badge1_text: string;
   badge2_text: string;
   headline_prefix: string;
@@ -345,6 +346,7 @@ export interface AppDownloadBannerConfig {
 
 export const DEFAULT_APP_BANNER_CONFIG: AppDownloadBannerConfig = {
   is_active: true,
+  theme_variant: "dark-navy",
   badge1_text: "Special App Offer",
   badge2_text: "Exclusive Deals",
   headline_prefix: "Grab ",

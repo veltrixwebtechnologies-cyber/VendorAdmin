@@ -171,6 +171,23 @@ function AppBannerConfigEditor() {
                 />
               </div>
 
+              <div>
+                <Label className="font-bold">Theme Style Variant</Label>
+                <Select
+                  value={form.theme_variant || "dark-navy"}
+                  onValueChange={(val: any) => setForm({ ...form, theme_variant: val })}
+                >
+                  <SelectTrigger className="w-full mt-1">
+                    <SelectValue placeholder="Select theme style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dark-navy">Dark Navy & Gold Luxury (Image Match)</SelectItem>
+                    <SelectItem value="signature-orchid">LocalShore Signature Orchid & Gold</SelectItem>
+                    <SelectItem value="auto">Auto / Adaptive Theme</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Badge 1 Text</Label>
