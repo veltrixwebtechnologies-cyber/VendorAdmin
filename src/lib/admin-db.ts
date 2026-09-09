@@ -377,16 +377,19 @@ export function useAppBannerConfig() {
     queryKey: ["app_download_banner_config"],
     queryFn: async () => {
       try {
-        const { data } = await (supabase as any)
+        const { data, error } = await (supabase as any)
           .from("banners")
           .select("*")
-          .eq("id", "app-download-banner-global-config")
+          .eq("placement", "promo")
+          .limit(1)
           .maybeSingle();
-        if (data && data.image_url) {
-          const parsed = JSON.parse(data.image_url);
-          const merged = { ...DEFAULT_APP_BANNER_CONFIG, ...parsed, is_active: data.is_active ?? true };
-          localStorage.setItem(APP_BANNER_CONFIG_KEY, JSON.stringify(merged));
-          return merged;
+        if (!error && data && data.image_url) {
+          try {
+            const parsed = JSON.parse(data.image_url);
+            const merged = { ...DEFAULT_APP_BANNER_CONFIG, ...parsed, is_active: data.is_active ?? true };
+            localStorage.setItem(APP_BANNER_CONFIG_KEY, JSON.stringify(merged));
+            return merged;
+          } catch {}
         }
       } catch {}
       return getAppBannerConfig();
@@ -404,7 +407,6 @@ export function useSaveAppBannerConfig() {
 
       try {
         await (supabase as any).from("banners").upsert({
-          id: "app-download-banner-global-config",
           title: config.headline_prefix + config.headline_highlight + config.headline_suffix,
           subtitle: config.description,
           image_url: JSON.stringify(config),
