@@ -472,6 +472,7 @@ type ProductFormData = {
   stock: number;
   lowStockAt: number;
   imageUrl: string;
+  attributes?: Record<string, any>;
 };
 
 function normalize(f: ProductFormData) {
@@ -497,8 +498,38 @@ function ProductFormDialog({
     if (open) setForm(initial ? extract(initial) : blank());
   }, [open, initial]);
 
+  const applicableDefsQ = useQuery({
+    queryKey: ["seller-applicable-defs", form.category],
+    enabled: !!form.category,
+    queryFn: async () => {
+      try {
+        const { data, error } = await (supabase as any).rpc("get_applicable_filters", {
+          p_category_slug: form.category.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        });
+        if (!error && Array.isArray(data) && data.length > 0) {
+          return data;
+        }
+      } catch (e) {
+        // Fallback to local taxonomy definitions below
+      }
+      return getFallbackFilterDefs(form.category);
+    },
+  });
+
+  const filterDefs = applicableDefsQ.data ?? [];
+
   function set<K extends keyof ProductFormData>(k: K, v: ProductFormData[K]) {
     setForm((f) => ({ ...f, [k]: v }));
+  }
+
+  function setAttributeValue(key: string, val: any) {
+    setForm((f) => ({
+      ...f,
+      attributes: {
+        ...f.attributes,
+        [key]: val,
+      },
+    }));
   }
 
   function submit() {
@@ -508,12 +539,49 @@ function ProductFormDialog({
     if (form.mrp < form.price) return toast.error("MRP cannot be lower than price");
     if (!form.category) return toast.error("Choose a category");
     if (!form.description.trim()) return toast.error("Product description is required");
-    void onSubmit(form);
+
+    // Validate required & normalize filter definitions
+    const normalizedAttributes: Record<string, any> = { ...(form.attributes || {}) };
+
+    for (const def of filterDefs) {
+      const val = normalizedAttributes[def.key];
+
+      if (def.is_required) {
+        if (
+          val === undefined ||
+          val === null ||
+          (Array.isArray(val) && val.length === 0) ||
+          (typeof val === "string" && !val.trim())
+        ) {
+          return toast.error(`Attribute "${def.label}" is required for this product type`);
+        }
+      }
+
+      // Strict numeric attribute normalization (convert "6.7" -> 6.7 JSON number)
+      if (def.type === "number" || def.type === "range") {
+        if (val !== undefined && val !== null && val !== "") {
+          const strVal = String(val).trim();
+          if (strVal !== "") {
+            const numVal = Number(strVal);
+            if (isNaN(numVal) || !/^-?\d+(\.\d+)?$/.test(strVal)) {
+              return toast.error(`Attribute "${def.label}" must be a valid number`);
+            }
+            normalizedAttributes[def.key] = numVal;
+          } else {
+            delete normalizedAttributes[def.key];
+          }
+        } else {
+          delete normalizedAttributes[def.key];
+        }
+      }
+    }
+
+    void onSubmit({ ...form, attributes: normalizedAttributes });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initial ? "Edit product" : "Add new product"}</DialogTitle>
           <DialogDescription>
@@ -602,9 +670,92 @@ function ProductFormDialog({
               onChange={(e) => set("description", e.target.value)}
             />
           </div>
+
+          {/* Dynamic Attribute Fields based on filter_definitions */}
+          {filterDefs.length > 0 && (
+            <div className="sm:col-span-2 space-y-4 border-t pt-4 mt-2">
+              <h4 className="text-sm font-bold text-foreground">
+                Category Attributes & Specifications
+              </h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {filterDefs.map((def: any) => {
+                  if (def.key === "brand" || def.key === "price" || def.key === "rating") return null;
+
+                  const val = form.attributes[def.key];
+                  const options = def.options || [];
+
+                  return (
+                    <div key={def.id} className="space-y-1.5">
+                      <Label className="text-xs font-semibold flex items-center justify-between">
+                        <span>
+                          {def.label} {def.unit ? `(${def.unit})` : ""}
+                        </span>
+                        {def.is_required && (
+                          <span className="text-[10px] text-destructive font-bold">Required</span>
+                        )}
+                      </Label>
+
+                      {def.type === "multi_select" || def.type === "color" ? (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {options.map((opt: any) => {
+                            const selected = Array.isArray(val) && val.includes(opt.value);
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => {
+                                  const current = Array.isArray(val) ? val : [];
+                                  const next = selected
+                                    ? current.filter((v: string) => v !== opt.value)
+                                    : [...current, opt.value];
+                                  setAttributeValue(def.key, next);
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                                  selected
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : def.type === "single_select" ? (
+                        <Select
+                          value={typeof val === "string" ? val : ""}
+                          onValueChange={(v) => setAttributeValue(def.key, v)}
+                        >
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder={`Select ${def.label}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {options.map((opt: any) => (
+                              <SelectItem key={opt.id} value={opt.value} className="text-xs">
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          type={def.type === "number" || def.type === "range" ? "number" : "text"}
+                          step={def.type === "number" || def.type === "range" ? "any" : undefined}
+                          value={val !== undefined && val !== null ? (typeof val === "string" ? val : Array.isArray(val) ? val.join(", ") : String(val)) : ""}
+                          onChange={(e) => setAttributeValue(def.key, e.target.value)}
+                          placeholder={`Enter ${def.label}`}
+                          className="h-9 text-xs"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancel
           </Button>
@@ -630,6 +781,7 @@ function blank(): ProductFormData {
     stock: 0,
     lowStockAt: 5,
     imageUrl: "",
+    attributes: {},
   };
 }
 
@@ -645,6 +797,7 @@ function extract(p: ProductDto): ProductFormData {
     stock: p.stock,
     lowStockAt: p.lowStockAt,
     imageUrl: p.imagePath ?? "",
+    attributes: p.attributes || {},
   };
 }
 
@@ -669,17 +822,11 @@ function ProductThumb({ src, alt }: { src?: string; alt: string }) {
   );
 }
 
-/**
- * Uploads to the private `product-images` Supabase bucket under
- * `${userId}/${uuid}.${ext}`, stores the storage path in `value`, and shows
- * a signed URL preview.
- */
 function ImagePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string>("");
 
-  // Resolve current value to a preview URL.
   useEffect(() => {
     let cancelled = false;
     async function resolve() {
@@ -786,4 +933,234 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (v: string)
       </div>
     </div>
   );
+}
+
+function getFallbackFilterDefs(category: string) {
+  const cat = (category || "").toLowerCase();
+
+  if (cat.includes("fashion") || cat.includes("boutique") || cat.includes("clothing")) {
+    return [
+      {
+        id: "f_size",
+        key: "size",
+        label: "Size",
+        type: "multi_select",
+        options: [
+          { id: "s1", label: "XS", value: "XS" },
+          { id: "s2", label: "S", value: "S" },
+          { id: "s3", label: "M", value: "M" },
+          { id: "s4", label: "L", value: "L" },
+          { id: "s5", label: "XL", value: "XL" },
+          { id: "s6", label: "XXL", value: "XXL" },
+          { id: "s7", label: "3XL", value: "3XL" },
+        ],
+      },
+      {
+        id: "f_color",
+        key: "color",
+        label: "Color",
+        type: "multi_select",
+        options: [
+          { id: "c1", label: "Black", value: "Black" },
+          { id: "c2", label: "White", value: "White" },
+          { id: "c3", label: "Blue", value: "Blue" },
+          { id: "c4", label: "Red", value: "Red" },
+          { id: "c5", label: "Green", value: "Green" },
+          { id: "c6", label: "Yellow", value: "Yellow" },
+          { id: "c7", label: "Pink", value: "Pink" },
+          { id: "c8", label: "Beige", value: "Beige" },
+        ],
+      },
+      {
+        id: "f_fabric",
+        key: "fabric",
+        label: "Fabric / Material",
+        type: "multi_select",
+        options: [
+          { id: "fb1", label: "Cotton", value: "Cotton" },
+          { id: "fb2", label: "Linen", value: "Linen" },
+          { id: "fb3", label: "Silk", value: "Silk" },
+          { id: "fb4", label: "Denim", value: "Denim" },
+          { id: "fb5", label: "Polyester", value: "Polyester" },
+          { id: "fb6", label: "Rayon", value: "Rayon" },
+        ],
+      },
+      {
+        id: "f_fit",
+        key: "fit",
+        label: "Fit",
+        type: "single_select",
+        options: [
+          { id: "fit1", label: "Regular Fit", value: "Regular" },
+          { id: "fit2", label: "Slim Fit", value: "Slim" },
+          { id: "fit3", label: "Oversized", value: "Oversized" },
+          { id: "fit4", label: "Relaxed Fit", value: "Relaxed" },
+        ],
+      },
+    ];
+  }
+
+  if (cat.includes("footwear")) {
+    return [
+      {
+        id: "fw_size",
+        key: "shoe_size",
+        label: "Shoe Size (UK)",
+        type: "multi_select",
+        options: [
+          { id: "fs1", label: "UK 6", value: "UK 6" },
+          { id: "fs2", label: "UK 7", value: "UK 7" },
+          { id: "fs3", label: "UK 8", value: "UK 8" },
+          { id: "fs4", label: "UK 9", value: "UK 9" },
+          { id: "fs5", label: "UK 10", value: "UK 10" },
+          { id: "fs6", label: "UK 11", value: "UK 11" },
+        ],
+      },
+      {
+        id: "fw_color",
+        key: "color",
+        label: "Color",
+        type: "multi_select",
+        options: [
+          { id: "fc1", label: "Black", value: "Black" },
+          { id: "fc2", label: "White", value: "White" },
+          { id: "fc3", label: "Brown", value: "Brown" },
+          { id: "fc4", label: "Tan", value: "Tan" },
+          { id: "fc5", label: "Grey", value: "Grey" },
+        ],
+      },
+    ];
+  }
+
+  if (cat.includes("electronic") || cat.includes("mobile")) {
+    return [
+      {
+        id: "el_ram",
+        key: "ram",
+        label: "RAM",
+        type: "multi_select",
+        options: [
+          { id: "r1", label: "4 GB", value: "4 GB" },
+          { id: "r2", label: "6 GB", value: "6 GB" },
+          { id: "r3", label: "8 GB", value: "8 GB" },
+          { id: "r4", label: "12 GB", value: "12 GB" },
+          { id: "r5", label: "16 GB", value: "16 GB" },
+        ],
+      },
+      {
+        id: "el_storage",
+        key: "storage",
+        label: "Internal Storage",
+        type: "multi_select",
+        options: [
+          { id: "st1", label: "64 GB", value: "64 GB" },
+          { id: "st2", label: "128 GB", value: "128 GB" },
+          { id: "st3", label: "256 GB", value: "256 GB" },
+          { id: "st4", label: "512 GB", value: "512 GB" },
+          { id: "st5", label: "1 TB", value: "1 TB" },
+        ],
+      },
+      {
+        id: "el_os",
+        key: "os",
+        label: "Operating System",
+        type: "single_select",
+        options: [
+          { id: "os1", label: "Android", value: "Android" },
+          { id: "os2", label: "iOS", value: "iOS" },
+          { id: "os3", label: "Windows", value: "Windows" },
+        ],
+      },
+    ];
+  }
+
+  if (cat.includes("kirana") || cat.includes("grocery") || cat.includes("supermarket")) {
+    return [
+      {
+        id: "gr_dietary",
+        key: "dietary",
+        label: "Dietary & Prep",
+        type: "multi_select",
+        options: [
+          { id: "d1", label: "Vegetarian", value: "veg" },
+          { id: "d2", label: "Vegan", value: "vegan" },
+          { id: "d3", label: "Organic", value: "organic" },
+          { id: "d4", label: "Sugar-Free", value: "sugar_free" },
+          { id: "d5", label: "Gluten-Free", value: "gluten_free" },
+        ],
+      },
+      {
+        id: "gr_pack",
+        key: "pack_size",
+        label: "Pack Size / Weight",
+        type: "single_select",
+        options: [
+          { id: "ps1", label: "250g", value: "250g" },
+          { id: "ps2", label: "500g", value: "500g" },
+          { id: "ps3", label: "1 kg", value: "1kg" },
+          { id: "ps4", label: "5 kg", value: "5kg" },
+          { id: "ps5", label: "10 kg", value: "10kg" },
+        ],
+      },
+    ];
+  }
+
+  if (cat.includes("meat") || cat.includes("fish")) {
+    return [
+      {
+        id: "mf_cut",
+        key: "cut_type",
+        label: "Cut & Cleaning Option",
+        type: "multi_select",
+        options: [
+          { id: "ct1", label: "Curry Cut", value: "curry_cut" },
+          { id: "ct2", label: "Biryani Cut", value: "biryani_cut" },
+          { id: "ct3", label: "Boneless", value: "boneless" },
+          { id: "ct4", label: "Skinless", value: "skinless" },
+          { id: "ct5", label: "Fillet", value: "fillet" },
+          { id: "ct6", label: "Whole Cleaned", value: "whole_cleaned" },
+        ],
+      },
+      {
+        id: "mf_freshness",
+        key: "freshness",
+        label: "Freshness State",
+        type: "single_select",
+        options: [
+          { id: "fr1", label: "Fresh Catch Daily", value: "fresh" },
+          { id: "fr2", label: "Frozen / Chilled", value: "frozen" },
+        ],
+      },
+    ];
+  }
+
+  if (cat.includes("bakery") || cat.includes("sweet")) {
+    return [
+      {
+        id: "bk_egg",
+        key: "dietary_egg",
+        label: "Egg / Eggless",
+        type: "single_select",
+        options: [
+          { id: "eg1", label: "Eggless (100% Veg)", value: "eggless" },
+          { id: "eg2", label: "Contains Egg", value: "egg" },
+        ],
+      },
+      {
+        id: "bk_flavor",
+        key: "cake_flavor",
+        label: "Flavor",
+        type: "multi_select",
+        options: [
+          { id: "fl1", label: "Chocolate / Truffle", value: "chocolate" },
+          { id: "fl2", label: "Black Forest", value: "black_forest" },
+          { id: "fl3", label: "Butterscotch", value: "butterscotch" },
+          { id: "fl4", label: "Red Velvet", value: "red_velvet" },
+          { id: "fl5", label: "Vanilla", value: "vanilla" },
+        ],
+      },
+    ];
+  }
+
+  return [];
 }

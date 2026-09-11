@@ -18,6 +18,7 @@ const productInput = z.object({
   stock: z.number().int().min(0),
   lowStockAt: z.number().int().min(0).default(5),
   imageUrl: z.string().max(500).optional().nullable(),
+  attributes: z.record(z.any()).optional().default({}),
 });
 
 export type ProductInput = z.infer<typeof productInput>;
@@ -68,6 +69,7 @@ function toDto(row: any, signedUrl: string | null) {
     status: row.status as string,
     imageUrl: signedUrl,
     imagePath: (row.image_url ?? null) as string | null,
+    attributes: (row.attributes ?? {}) as Record<string, any>,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -116,6 +118,7 @@ export const createProductFn = createServerFn({ method: "POST" })
         stock: data.stock,
         low_stock_threshold: data.lowStockAt,
         image_url: data.imageUrl || null,
+        attributes: data.attributes || {},
         status: "pending",
       })
       .select("*")
@@ -146,6 +149,7 @@ export const updateProductFn = createServerFn({ method: "POST" })
     if (p.stock !== undefined) patch.stock = p.stock;
     if (p.lowStockAt !== undefined) patch.low_stock_threshold = p.lowStockAt;
     if (p.imageUrl !== undefined) patch.image_url = p.imageUrl || null;
+    if (p.attributes !== undefined) patch.attributes = p.attributes || {};
 
     const { data: row, error } = await supabase
       .from("products")
@@ -198,6 +202,7 @@ export const bulkCreateProductsFn = createServerFn({ method: "POST" })
       stock: r.stock,
       low_stock_threshold: r.lowStockAt,
       image_url: r.imageUrl || null,
+      attributes: r.attributes || {},
       status: "pending",
     }));
     const { error, count } = await supabase.from("products").insert(rows, { count: "exact" });
