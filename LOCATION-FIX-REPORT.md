@@ -1,5 +1,9 @@
 # Location integration and fixes — 12 September 2026
 
+## Latest follow-up: shared-discussion review
+
+The multi-reading acquisition, accuracy-circle, entrance-dragging, and checkout address-update fixes are documented in [GPS-REFINEMENT-REPORT.md](GPS-REFINEMENT-REPORT.md). This adds a three-second refinement window after the first qualifying reading and keeps the strict 25-metre acceptance rule. All 65 map tests and all three TypeScript checks/production builds pass.
+
 ## Current policy: precise device readings only
 
 This section supersedes the earlier 100-metre threshold and approximate-area option described below. Automatic GPS use now requires a fresh reading with reported accuracy at most 25 metres across customer checkout/maps, delivery navigation/uploads, and vendor GPS pin/live-sharing flows. High-accuracy requests remain enabled, and the delivery refresh no longer downgrades its retry to low accuracy.

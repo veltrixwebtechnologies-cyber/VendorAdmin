@@ -1,3 +1,4 @@
+import { acquireCurrentPosition, accuracyLabel } from "@/lib/acquire-location";
 import { useEffect, useRef, useState } from "react";
 import { parseCoordinates, usableGPS, type Coordinates } from "@/lib/coordinates";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,13 @@ export function PickupPinEditor({
 }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<import("leaflet").Map | null>(null);
-  const marker = useRef<import("leaflet").CircleMarker | null>(null);
+  const marker = useRef<import("leaflet").Marker | null>(null);
   const leaflet = useRef<typeof import("leaflet") | null>(null);
   const change = useRef(onChange);
   const requestRevision = useRef(0);
+  const acquisition = useRef<AbortController | null>(null);
+  const accuracyCircle = useRef<import("leaflet").Circle | null>(null);
+  const [gpsFix, setGpsFix] = useState<(Coordinates & { accuracy: number }) | null>(null);
   change.current = onChange;
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
@@ -38,7 +42,10 @@ export function PickupPinEditor({
       }).addTo(instance);
       instance.on("click", (event) => {
         requestRevision.current++;
+        acquisition.current?.abort();
+        setGpsFix(null);
         setLocating(false);
+        setMessage("Check the manually selected pickup entrance before saving.");
         change.current({ lat: event.latlng.lat, lng: event.latlng.lng });
       });
       observer = new ResizeObserver(() => instance.invalidateSize());
@@ -51,6 +58,7 @@ export function PickupPinEditor({
     return () => {
       alive = false;
       requestRevision.current++;
+      acquisition.current?.abort();
       observer?.disconnect();
       map.current?.remove();
       map.current = null;
@@ -59,45 +67,103 @@ export function PickupPinEditor({
   }, []);
   useEffect(() => {
     requestRevision.current++;
+    acquisition.current?.abort();
     setLocating(false);
+    setGpsFix((current) =>
+      current && value && current.lat === value.lat && current.lng === value.lng ? current : null,
+    );
+  }, [value?.lat, value?.lng]);
+  useEffect(() => {
     if (!ready || !map.current || !leaflet.current) return;
     if (marker.current) {
       marker.current.remove();
       marker.current = null;
     }
     if (value) {
-      marker.current = leaflet.current
-        .circleMarker([value.lat, value.lng], { radius: 9, color: "#7c3aed", fillOpacity: 1 })
+      const pinMarker = leaflet.current
+        .marker([value.lat, value.lng], {
+          draggable: true,
+          icon: leaflet.current.divIcon({
+            className: "pickup-entrance-pin",
+            html: '<div style="width:18px;height:18px;border-radius:50%;background:#7c3aed;border:3px solid white;box-shadow:0 1px 5px #333"></div>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
+          }),
+        })
         .addTo(map.current);
+      pinMarker.on("dragstart", () => {
+        requestRevision.current++;
+        acquisition.current?.abort();
+        setLocating(false);
+        setGpsFix(null);
+      });
+      pinMarker.on("dragend", () => {
+        const pin = pinMarker.getLatLng();
+        change.current({ lat: pin.lat, lng: pin.lng });
+        setMessage("Check the manually selected pickup entrance before saving.");
+      });
+      marker.current = pinMarker;
       map.current.setView([value.lat, value.lng], 17);
     }
   }, [ready, value?.lat, value?.lng]);
-  const locate = () => {
-    if (!navigator.geolocation) {
-      setMessage("Location is unavailable in this browser.");
+  useEffect(() => {
+    accuracyCircle.current?.remove();
+    accuracyCircle.current = null;
+    if (
+      !ready ||
+      !map.current ||
+      !leaflet.current ||
+      !value ||
+      !gpsFix ||
+      gpsFix.lat !== value.lat ||
+      gpsFix.lng !== value.lng
+    )
       return;
-    }
+    accuracyCircle.current = leaflet.current
+      .circle([gpsFix.lat, gpsFix.lng], {
+        className: "gps-accuracy-circle",
+        radius: gpsFix.accuracy,
+        color: "#7c3aed",
+        weight: 1,
+        fillOpacity: 0.12,
+        interactive: false,
+      })
+      .addTo(map.current);
+    return () => {
+      accuracyCircle.current?.remove();
+      accuracyCircle.current = null;
+    };
+  }, [ready, value?.lat, value?.lng, gpsFix]);
+
+  const locate = () => {
+    acquisition.current?.abort();
+    const controller = new AbortController();
+    acquisition.current = controller;
     setLocating(true);
+    setMessage("Waiting for precise device location…");
     const request = ++requestRevision.current;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (request !== requestRevision.current) return;
-        setLocating(false);
+    void acquireCurrentPosition({
+      signal: controller.signal,
+      onProgress: (message) => {
+        if (request === requestRevision.current) setMessage(message);
+      },
+    })
+      .then((position) => {
+        if (request !== requestRevision.current || controller.signal.aborted) return;
         const pin = parseCoordinates(position.coords.latitude, position.coords.longitude);
-        if (!pin || !usableGPS(position)) {
-          setMessage("Location is too approximate. Tap the exact pickup entrance on the map.");
-          return;
-        }
-        change.current(pin);
-        setMessage("Check that the pin is at the pickup entrance before saving.");
-      },
-      () => {
-        if (request !== requestRevision.current) return;
+        if (!pin || !usableGPS(position)) return;
         setLocating(false);
-        setMessage("Allow location access or choose the pickup entrance manually.");
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
-    );
+        setGpsFix({ ...pin, accuracy: position.coords.accuracy });
+        change.current(pin);
+        setMessage(
+          `Device accuracy ±${accuracyLabel(position.coords.accuracy)}. Check the pickup entrance before saving.`,
+        );
+      })
+      .catch((error) => {
+        if (request !== requestRevision.current || controller.signal.aborted) return;
+        setLocating(false);
+        setMessage(error instanceof Error ? error.message : "Precise location unavailable. Retry.");
+      });
   };
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -105,7 +171,8 @@ export function PickupPinEditor({
     <section className="space-y-3 rounded-xl border p-4">
       <h3 className="font-semibold">Exact pickup entrance</h3>
       <p className="text-sm text-muted-foreground">
-        Tap the map where the rider should collect orders. Changing the address clears its pin.
+        Tap the map or drag the pin where the rider should collect orders. Changing the address
+        clears its pin.
       </p>
       <Button type="button" variant="outline" disabled={locating} onClick={locate}>
         {locating ? "Locating…" : "Use my current location"}
@@ -141,6 +208,10 @@ export function PickupPinEditor({
             onClick={() => {
               const pin = parseCoordinates(latitude, longitude);
               if (pin) {
+                requestRevision.current++;
+                acquisition.current?.abort();
+                setLocating(false);
+                setGpsFix(null);
                 change.current(pin);
                 setMessage("");
               } else setMessage("Enter valid latitude and longitude.");
