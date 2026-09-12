@@ -209,10 +209,15 @@ function AdminVendors() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <p className="text-sm text-foreground">
-              Are you sure you want to delete <strong className="font-bold underline">{deleteTarget?.business.shopName || "Unnamed shop"}</strong>?
+              Are you sure you want to delete{" "}
+              <strong className="font-bold underline">
+                {deleteTarget?.business.shopName || "Unnamed shop"}
+              </strong>
+              ?
             </p>
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-              <strong>Warning:</strong> Deleting this shop will permanently remove all shop details, documents, catalog items, and application records. This action cannot be undone.
+              <strong>Warning:</strong> Deleting this shop will permanently remove all shop details,
+              documents, catalog items, and application records. This action cannot be undone.
             </div>
           </div>
           <DialogFooter>

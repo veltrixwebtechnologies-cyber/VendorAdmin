@@ -58,6 +58,25 @@ const STEPS = [
 ] as const;
 const searchSchema = z.object({ step: z.coerce.number().min(1).max(7).optional() });
 
+async function geocodeSellerAddress(query: string): Promise<{ lat: number; lng: number } | null> {
+  const cleanQuery = query.trim();
+  if (!cleanQuery) return null;
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(cleanQuery)}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    const lat = Number(data[0]?.lat);
+    const lng = Number(data[0]?.lon);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  } catch {
+    return null;
+  }
+}
+
 export const Route = createFileRoute("/register")({
   validateSearch: searchSchema,
   head: () => ({
@@ -258,7 +277,8 @@ function OnboardingChecklist({
         step: 3,
         group: "Store & Pickup",
         label: "Pickup address",
-        done: !!(ad.pickupSame || ad.pickupAddress) && !!parseCoordinates(ad.pickupLat, ad.pickupLng),
+        done:
+          !!(ad.pickupSame || ad.pickupAddress) && !!parseCoordinates(ad.pickupLat, ad.pickupLng),
       },
       { step: 4, group: "Bank", label: "Bank account", done: !!(bk.accountNumber && bk.ifsc) },
       { step: 5, group: "Tax & Legal", label: "PAN added", done: !!tx.pan },
@@ -478,7 +498,9 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
       }
 
       if (verified) {
-        await update.mutateAsync({ account: { ...seller.account, ...values, emailVerified: true } });
+        await update.mutateAsync({
+          account: { ...seller.account, ...values, emailVerified: true },
+        });
         toast.success("Email verified!");
       }
     } catch (e) {
@@ -759,7 +781,15 @@ function StepAddress({
 }) {
   const [v, setV] = useState(seller.address);
   // Save the address and its confirmed pickup pin together on Save & Continue.
-  const addressChanged = (patch: Partial<Seller["address"]>) => setV(current => ({ ...current, ...patch, pickupLat: null, pickupLng: null }));
+  const addressChanged = (patch: Partial<Seller["address"]>) =>
+    setV((current) => ({
+      ...current,
+      ...patch,
+      pickupLat: null,
+      pickupLng: null,
+      pickupCoordinates: null,
+      locationConfirmationRequired: true,
+    }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const update = useUpdateMySeller();
   const submit = async () => {
@@ -769,7 +799,8 @@ function StepAddress({
       p.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
       return setErrors(errs);
     }
-    if (!parseCoordinates(v.pickupLat, v.pickupLng)) return setErrors({ pickupPin: "Choose the exact pickup entrance on the map." });
+    if (!parseCoordinates(v.pickupLat, v.pickupLng))
+      return setErrors({ pickupPin: "Choose the exact pickup entrance on the map." });
     await update.mutateAsync({ address: v });
     onNext();
   };
@@ -794,7 +825,9 @@ function StepAddress({
         <Field label="Pincode" error={errors.pincode}>
           <Input
             value={v.pincode}
-            onChange={(e) => addressChanged({ pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+            onChange={(e) =>
+              addressChanged({ pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })
+            }
           />
         </Field>
         <Field label="Landmark (optional)">
@@ -811,6 +844,13 @@ function StepAddress({
             Pickup address is same as shop address
           </Label>
         </div>
+
+        {v.locationConfirmationRequired && (
+          <div className="sm:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Pickup coordinates are not confirmed yet. The seller will remain flagged until the
+            location can be verified.
+          </div>
+        )}
 
         {!v.pickupSame && (
           <>
@@ -847,8 +887,17 @@ function StepAddress({
         )}
       </div>
       <div className="mt-4">
-        <PickupPinEditor value={parseCoordinates(v.pickupLat, v.pickupLng)} onChange={pin => setV(current => ({ ...current, pickupLat: pin.lat, pickupLng: pin.lng }))} />
-        {errors.pickupPin && <p role="alert" className="text-sm text-destructive mt-2">{errors.pickupPin}</p>}
+        <PickupPinEditor
+          value={parseCoordinates(v.pickupLat, v.pickupLng)}
+          onChange={(pin) =>
+            setV((current) => ({ ...current, pickupLat: pin.lat, pickupLng: pin.lng }))
+          }
+        />
+        {errors.pickupPin && (
+          <p role="alert" className="text-sm text-destructive mt-2">
+            {errors.pickupPin}
+          </p>
+        )}
       </div>
       <StepFooter>
         <Button variant="ghost" onClick={onBack}>
@@ -1024,23 +1073,23 @@ const DOC_FIELDS: Array<{
   required: boolean;
   accept: string;
 }> = [
-    { key: "panCard", label: "PAN Card", required: true, accept: "image/*,.pdf" },
-    { key: "govId", label: "Aadhaar / Government ID", required: true, accept: "image/*,.pdf" },
-    {
-      key: "gstCertificate",
-      label: "GST Certificate (optional)",
-      required: false,
-      accept: "image/*,.pdf",
-    },
-    {
-      key: "bankProof",
-      label: "Cancelled Cheque / Bank Proof",
-      required: true,
-      accept: "image/*,.pdf",
-    },
-    { key: "shopLogo", label: "Shop Logo", required: true, accept: "image/*" },
-    { key: "shopBanner", label: "Shop Banner", required: true, accept: "image/*" },
-  ];
+  { key: "panCard", label: "PAN Card", required: true, accept: "image/*,.pdf" },
+  { key: "govId", label: "Aadhaar / Government ID", required: true, accept: "image/*,.pdf" },
+  {
+    key: "gstCertificate",
+    label: "GST Certificate (optional)",
+    required: false,
+    accept: "image/*,.pdf",
+  },
+  {
+    key: "bankProof",
+    label: "Cancelled Cheque / Bank Proof",
+    required: true,
+    accept: "image/*,.pdf",
+  },
+  { key: "shopLogo", label: "Shop Logo", required: true, accept: "image/*" },
+  { key: "shopBanner", label: "Shop Banner", required: true, accept: "image/*" },
+];
 
 function StepDocuments({
   seller,
@@ -1199,9 +1248,10 @@ function StepReview({
       {
         step: 6,
         title: "Documents",
-        rows: Object.entries(seller.documents).map(([k, v]) => [k, v?.name || "—"]) as Array<
-          [string, string]
-        >,
+        rows: Object.entries(seller.documents).map(([k, v]) => [
+          DOC_FIELDS.find((f) => f.key === k)?.label || k,
+          v?.name || "—",
+        ]) as Array<[string, string]>,
       },
     ],
     [seller],

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { parseCoordinates, type Coordinates } from "@/lib/coordinates";
+import { parseCoordinates, usableGPS, type Coordinates } from "@/lib/coordinates";
 import { Button } from "@/components/ui/button";
 
 export function PickupPinEditor({
@@ -14,6 +14,7 @@ export function PickupPinEditor({
   const marker = useRef<import("leaflet").CircleMarker | null>(null);
   const leaflet = useRef<typeof import("leaflet") | null>(null);
   const change = useRef(onChange);
+  const requestRevision = useRef(0);
   change.current = onChange;
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
@@ -35,9 +36,11 @@ export function PickupPinEditor({
         maxZoom: 19,
         attribution: "© OpenStreetMap contributors",
       }).addTo(instance);
-      instance.on("click", (event) =>
-        change.current({ lat: event.latlng.lat, lng: event.latlng.lng }),
-      );
+      instance.on("click", (event) => {
+        requestRevision.current++;
+        setLocating(false);
+        change.current({ lat: event.latlng.lat, lng: event.latlng.lng });
+      });
       observer = new ResizeObserver(() => instance.invalidateSize());
       observer.observe(container.current);
       setReady(true);
@@ -47,6 +50,7 @@ export function PickupPinEditor({
     });
     return () => {
       alive = false;
+      requestRevision.current++;
       observer?.disconnect();
       map.current?.remove();
       map.current = null;
@@ -54,6 +58,8 @@ export function PickupPinEditor({
     };
   }, []);
   useEffect(() => {
+    requestRevision.current++;
+    setLocating(false);
     if (!ready || !map.current || !leaflet.current) return;
     if (marker.current) {
       marker.current.remove();
@@ -72,11 +78,13 @@ export function PickupPinEditor({
       return;
     }
     setLocating(true);
+    const request = ++requestRevision.current;
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (request !== requestRevision.current) return;
         setLocating(false);
         const pin = parseCoordinates(position.coords.latitude, position.coords.longitude);
-        if (!pin || position.coords.accuracy > 100) {
+        if (!pin || !usableGPS(position)) {
           setMessage("Location is too approximate. Tap the exact pickup entrance on the map.");
           return;
         }
@@ -84,6 +92,7 @@ export function PickupPinEditor({
         setMessage("Check that the pin is at the pickup entrance before saving.");
       },
       () => {
+        if (request !== requestRevision.current) return;
         setLocating(false);
         setMessage("Allow location access or choose the pickup entrance manually.");
       },

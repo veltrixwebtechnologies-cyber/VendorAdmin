@@ -61,6 +61,7 @@ const NAV = [
     items: [
       { title: "Coupons & Promotions", url: "/admin/coupons", icon: Ticket },
       { title: "Merchandising", url: "/admin/merchandising", icon: Sparkles },
+      { title: "ML Control Center", url: "/admin/ml-control-center", icon: Sparkles },
       { title: "Banner Management", url: "/admin/banners", icon: ImageIcon },
       { title: "Reports", url: "/admin/reports", icon: BarChart3 },
     ],

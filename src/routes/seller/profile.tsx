@@ -158,7 +158,8 @@ function ProfilePage() {
           <div>
             <h4 className="font-medium text-foreground text-sm">Delete Seller Account & Shop</h4>
             <p className="text-xs text-muted-foreground">
-              Permanently delete your shop profile, products, availability hours, and document records.
+              Permanently delete your shop profile, products, availability hours, and document
+              records.
             </p>
           </div>
           <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -173,9 +174,10 @@ function ProfilePage() {
                   <AlertTriangle className="h-5 w-5" /> Delete Account Permanently?
                 </DialogTitle>
                 <DialogDescription className="pt-2 text-sm leading-relaxed">
-                  Are you sure you want to delete <strong>{seller.business.shopName || "your shop"}</strong>?
-                  All products, business details, operating hours, and uploaded documents will be permanently removed.
-                  This action cannot be undone.
+                  Are you sure you want to delete{" "}
+                  <strong>{seller.business.shopName || "your shop"}</strong>? All products, business
+                  details, operating hours, and uploaded documents will be permanently removed. This
+                  action cannot be undone.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="gap-2 sm:gap-0 pt-4">

@@ -122,26 +122,10 @@ function SignInForm() {
     if (busy) return;
     setBusy(true);
     try {
-      const signIn = supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
-      const { data, error } = await Promise.race([
-        signIn,
-        new Promise<{
-          data: { user: null; session: null };
-          error: Error;
-        }>((resolve) =>
-          window.setTimeout(
-            () =>
-              resolve({
-                data: { user: null, session: null },
-                error: new Error("Sign in timed out. Check your connection and try again."),
-              }),
-            8_000,
-          ),
-        ),
-      ]);
 
       if (error) {
         toast.error(error.message);

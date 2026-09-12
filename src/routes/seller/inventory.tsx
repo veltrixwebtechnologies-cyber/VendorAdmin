@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Box, Loader2, Minus, Plus, Save } from "lucide-react";
+import { AlertTriangle, Box, Loader2, Minus, Plus, Save, Sparkles, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { fetchSellerDemandForecast, type DemandForecastItem } from "@/lib/ml-forecast-service";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,14 +91,71 @@ function InventoryPage() {
     }
   }
 
+  const forecastQ = useQuery<DemandForecastItem[]>({
+    queryKey: ["seller-demand-forecast", user?.id],
+    queryFn: () => fetchSellerDemandForecast(user?.id || ""),
+    enabled: !!user,
+  });
+
+  const highRiskItems = (forecastQ.data || []).filter(
+    (item) => item.stockout_risk_level === "high" || item.stockout_risk_level === "stockout"
+  );
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Inventory</h1>
         <p className="text-sm text-muted-foreground">
-          Update stock levels and configure low-stock alerts.
+          Update stock levels and configure low-stock alerts with AI demand velocity insights.
         </p>
       </div>
+
+      {/* AI Restock & Demand Insights Banner */}
+      <Card className="border-indigo-500/30 bg-gradient-to-r from-indigo-950/20 via-purple-950/10 to-background shadow-sm">
+        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-indigo-500/10">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="h-4 w-4 text-indigo-400 animate-pulse" />
+            <CardTitle className="text-sm font-semibold text-foreground">
+              AI Demand & Restock Intelligence
+            </CardTitle>
+          </div>
+          <Badge variant="outline" className="text-[10px] border-indigo-500/40 text-indigo-300">
+            Live Predictive Velocity
+          </Badge>
+        </CardHeader>
+        <CardContent className="py-3 px-4">
+          {highRiskItems.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs text-amber-400 flex items-center font-medium">
+                <AlertTriangle className="h-3.5 w-3.5 mr-1 text-amber-400 shrink-0" />
+                {highRiskItems.length} product(s) at risk of stockout within 3 days based on current sales velocity!
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {highRiskItems.slice(0, 3).map((item) => (
+                  <div
+                    key={item.product_id}
+                    className="flex items-center gap-2 bg-background/80 border border-indigo-500/20 rounded-lg px-3 py-1.5 text-xs"
+                  >
+                    <span className="font-medium text-foreground">{item.product_name}</span>
+                    <span className="text-muted-foreground">• Stock: {item.current_stock}</span>
+                    <Badge className="bg-indigo-500 text-white text-[10px]">
+                      Restock +{item.recommended_restock_qty}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="flex items-center">
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-400 mr-1.5" />
+                All product stock levels are optimal. Forecasted 7-day velocity is stable.
+              </span>
+              <span className="text-[11px] text-indigo-300">Updated automatically</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard

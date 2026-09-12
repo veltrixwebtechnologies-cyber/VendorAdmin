@@ -7,3 +7,7 @@ Pickup coordinates are written to the existing `sellers.lat/lng` columns and mat
 Validation: `npm run test:maps`, `npx tsc --noEmit`, and `npm run build`. The browser editor was checked with synthetic coordinates and map clicks. Authenticated saves to Supabase still need a configured test account; no remote data was changed during development.
 
 Release together with the `amrs-map-patch` branches of DeliveryHub and locc. Verify a seller with a separate pickup address, save the pin, and confirm the delivery app routes to that entrance.
+
+## 12 September integration
+
+The original patch history and current main have been merged without rewriting commits. Additional location fixes and regression tests are included. See [LOCATION-FIX-REPORT.md](LOCATION-FIX-REPORT.md) for the complete cross-repository report, validation, and rollout requirements.

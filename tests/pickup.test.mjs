@@ -49,3 +49,21 @@ test("cleared pickup pin clears every coordinate representation", () => {
   assert.equal(patch.wizard_data.lat, null);
   assert.equal(patch.wizard_data.pickupLat, null);
 });
+
+test("explicitly cleared pin cannot resurrect an old coordinate object", () => {
+  const patch = sellerPatchToDb(
+    {
+      address: {
+        pickupSame: true,
+        pickupLat: null,
+        pickupLng: null,
+        shopCoordinates: { lat: 11, lng: 76 },
+        pickupCoordinates: { lat: 11, lng: 76 },
+      },
+    },
+    { lat: 11, lng: 76 },
+  );
+  assert.equal(patch.lat, null);
+  assert.equal(patch.wizard_data.pickupCoordinates, null);
+  assert.equal(patch.wizard_data.shopCoordinates, null);
+});

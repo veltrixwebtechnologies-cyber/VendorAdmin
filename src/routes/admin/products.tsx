@@ -67,7 +67,9 @@ function useAllProducts() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("products")
-        .select("id, name, description, category, selling_price, mrp, stock, sku, status, rejection_reason, image_url, user_id, created_at")
+        .select(
+          "id, name, description, category, selling_price, mrp, stock, sku, status, rejection_reason, image_url, user_id, created_at",
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
       const rows = (data ?? []).map((r: any) => ({

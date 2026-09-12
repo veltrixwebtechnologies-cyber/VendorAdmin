@@ -41,7 +41,9 @@ function createSupabaseAdminClient() {
     runtimeEnv?.["SUPABASE_SERVICE_ROLE_KEY"] ||
     runtimeEnv?.["SUPABASE_PUBLISHABLE_KEY"] ||
     runtimeEnv?.["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
-    (typeof import.meta !== "undefined" ? import.meta.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"] : undefined);
+    (typeof import.meta !== "undefined"
+      ? import.meta.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"]
+      : undefined);
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [

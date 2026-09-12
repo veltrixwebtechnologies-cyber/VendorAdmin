@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 /* ------------ Types ------------ */
 
@@ -14,10 +15,17 @@ export type SellerStatus = "draft" | "pending" | "approved" | "rejected" | "more
 export type OrderStatus =
   | "new"
   | "accepted"
+  | "vendor_accepted"
+  | "cancelled_by_vendor"
   | "preparing"
   | "packed"
   | "ready_for_pickup"
   | "assigned"
+  | "delivery_partner_assigned"
+  | "going_to_vendor"
+  | "arrived_at_vendor"
+  | "going_to_customer"
+  | "arrived_at_customer"
   | "rider_assigned"
   | "rider_accepted"
   | "rider_at_shop"
@@ -85,6 +93,9 @@ export interface Seller {
     pickupCity: string;
     pickupState: string;
     pickupPincode: string;
+    shopCoordinates: { lat: number; lng: number } | null;
+    pickupCoordinates: { lat: number; lng: number } | null;
+    locationConfirmationRequired: boolean;
   };
   bank: {
     holderName: string;
@@ -158,6 +169,29 @@ export interface Settlement {
   utr?: string;
 }
 
+function isValidCoordinate(lat: unknown, lng: unknown): lat is number {
+  return (
+    typeof lat === "number" &&
+    typeof lng === "number" &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180 &&
+    !(lat === 0 && lng === 0)
+  );
+}
+
+function normalizeCoordinate(value: unknown): { lat: number; lng: number } | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const lat = record.lat;
+  const lng = record.lng;
+  if (typeof lat === "number" && typeof lng === "number" && isValidCoordinate(lat, lng)) {
+    return { lat, lng };
+  }
+  return null;
+}
+
 export function getDataErrorMessage(error: unknown, fallback = "Please try again.") {
   if (error instanceof Error && error.message) return error.message;
   if (error && typeof error === "object") {
@@ -179,6 +213,10 @@ export function rowToSeller(r: any): Seller {
     r.wizard_data && typeof r.wizard_data === "object" && !Array.isArray(r.wizard_data)
       ? r.wizard_data
       : {};
+  const shopCoordinates =
+    normalizeCoordinate(w.shopCoordinates) ?? normalizeCoordinate({ lat: r.lat, lng: r.lng });
+  const pickupCoordinates =
+    normalizeCoordinate(w.pickupCoordinates) ?? ((w.pickupSame ?? true) ? shopCoordinates : null);
   return {
     id: r.id,
     userId: r.user_id,
@@ -206,13 +244,24 @@ export function rowToSeller(r: any): Seller {
       state: r.state ?? "",
       pincode: r.pincode ?? "",
       landmark: r.address_line2 ?? "",
-      pickupLat: (w.pickupSame === false ? parseCoordinates(w.pickupLat, w.pickupLng) : parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))?.lat ?? null,
-      pickupLng: (w.pickupSame === false ? parseCoordinates(w.pickupLat, w.pickupLng) : parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))?.lng ?? null,
+      pickupLat:
+        (w.pickupSame === false
+          ? parseCoordinates(w.pickupLat, w.pickupLng)
+          : (parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))
+        )?.lat ?? null,
+      pickupLng:
+        (w.pickupSame === false
+          ? parseCoordinates(w.pickupLat, w.pickupLng)
+          : (parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))
+        )?.lng ?? null,
       pickupSame: w.pickupSame ?? true,
       pickupAddress: w.pickupAddress ?? "",
       pickupCity: w.pickupCity ?? "",
       pickupState: w.pickupState ?? "",
       pickupPincode: w.pickupPincode ?? "",
+      shopCoordinates,
+      pickupCoordinates,
+      locationConfirmationRequired: !!w.locationConfirmationRequired,
     },
     bank: {
       holderName: r.bank_account_name ?? "",
@@ -265,6 +314,49 @@ export function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<s
     w.pickupCity = patch.address.pickupCity;
     w.pickupState = patch.address.pickupState;
     w.pickupPincode = patch.address.pickupPincode;
+    if (patch.address.shopCoordinates !== undefined)
+      w.shopCoordinates = patch.address.shopCoordinates;
+    if (patch.address.pickupCoordinates !== undefined)
+      w.pickupCoordinates = patch.address.pickupCoordinates;
+    if (patch.address.locationConfirmationRequired !== undefined) {
+      w.locationConfirmationRequired = patch.address.locationConfirmationRequired;
+    }
+    const isPickupSame = patch.address.pickupSame ?? w.pickupSame ?? true;
+    const shopCoords = patch.address.shopCoordinates ?? normalizeCoordinate(w.shopCoordinates);
+    const pickupCoords =
+      patch.address.pickupCoordinates ?? normalizeCoordinate(w.pickupCoordinates);
+
+    const hasExplicitPin =
+      Object.prototype.hasOwnProperty.call(patch.address, "pickupLat") ||
+      Object.prototype.hasOwnProperty.call(patch.address, "pickupLng");
+    const effectiveCoords = hasExplicitPin
+      ? pin
+      : isPickupSame
+        ? (shopCoords ?? pickupCoords)
+        : pickupCoords;
+
+    if (
+      effectiveCoords &&
+      typeof effectiveCoords.lat === "number" &&
+      typeof effectiveCoords.lng === "number" &&
+      isValidCoordinate(effectiveCoords.lat, effectiveCoords.lng)
+    ) {
+      db.lat = effectiveCoords.lat;
+      db.lng = effectiveCoords.lng;
+      w.lat = w.pickupLat = effectiveCoords.lat;
+      w.lng = w.pickupLng = effectiveCoords.lng;
+      if (isPickupSame) w.shopCoordinates = effectiveCoords;
+      w.pickupCoordinates = effectiveCoords;
+      w.locationConfirmationRequired = false;
+    } else {
+      db.lat = null;
+      db.lng = null;
+      w.lat = w.pickupLat = null;
+      w.lng = w.pickupLng = null;
+      w.pickupCoordinates = null;
+      if (isPickupSame) w.shopCoordinates = null;
+      w.locationConfirmationRequired = true;
+    }
   }
   if (patch.bank) {
     db.bank_account_name = patch.bank.holderName;
@@ -321,8 +413,9 @@ function rowToOrder(r: any, items: any[]): Order {
   const [city = "", state = ""] = cityState.split(",").map((s: string) => s.trim());
 
   const activeAssignment = Array.isArray(r.delivery_assignments)
-    ? (r.delivery_assignments.find((a: any) => a.status !== "expired" && a.status !== "rejected") ?? r.delivery_assignments[0])
-    : r.delivery_assignments ?? null;
+    ? (r.delivery_assignments.find((a: any) => a.status !== "expired" && a.status !== "rejected") ??
+      r.delivery_assignments[0])
+    : (r.delivery_assignments ?? null);
 
   const partnerRow = r.assigned_partner ?? activeAssignment?.delivery_partners ?? null;
   const assignedPartner: DeliveryPartnerInfo | undefined = partnerRow
@@ -343,7 +436,9 @@ function rowToOrder(r: any, items: any[]): Order {
         id: activeAssignment.id,
         status: activeAssignment.status,
         distanceKm: activeAssignment.distance_km ? Number(activeAssignment.distance_km) : undefined,
-        estimatedEarning: activeAssignment.estimated_earning ? Number(activeAssignment.estimated_earning) : undefined,
+        estimatedEarning: activeAssignment.estimated_earning
+          ? Number(activeAssignment.estimated_earning)
+          : undefined,
         expiresAt: activeAssignment.expires_at ?? undefined,
         respondedAt: activeAssignment.responded_at ?? undefined,
         partner: assignedPartner,
@@ -390,24 +485,13 @@ export function useMySeller() {
   const q = useQuery({
     queryKey: ["my-seller", user?.id],
     enabled: !!user,
-    retry: false,
+    retry: 2,
     queryFn: async () => {
-      const request = supabase.from("sellers").select("*").eq("user_id", user!.id).maybeSingle();
-      const result = await Promise.race([
-        request,
-        new Promise<never>((_, reject) =>
-          globalThis.setTimeout(
-            () =>
-              reject(
-                new Error(
-                  "Seller profile request timed out. Check your Supabase connection and try again.",
-                ),
-              ),
-            5_000,
-          ),
-        ),
-      ]);
-      const { data, error } = result;
+      const { data, error } = await supabase
+        .from("sellers")
+        .select("*")
+        .eq("user_id", user!.id)
+        .maybeSingle();
       if (error) throw error;
       if (data) return rowToSeller(data);
       // Return null when seller profile does not exist or was deleted
@@ -490,12 +574,24 @@ export function useSubmitMySeller() {
         cur?.wizard_data && typeof cur.wizard_data === "object" && !Array.isArray(cur.wizard_data)
           ? (cur.wizard_data as Record<string, any>)
           : {};
-      const pin = curWizard.pickupSame === false ? parseCoordinates(curWizard.pickupLat, curWizard.pickupLng) : parseCoordinates(cur?.lat, cur?.lng);
+      const pin = curWizard.locationConfirmationRequired
+        ? null
+        : curWizard.pickupSame === false
+          ? (parseCoordinates(curWizard.pickupLat, curWizard.pickupLng) ??
+            normalizeCoordinate(curWizard.pickupCoordinates))
+          : (parseCoordinates(cur?.lat, cur?.lng) ??
+            parseCoordinates(curWizard.lat, curWizard.lng));
       if (!pin) throw new Error("Set the exact pickup pin in the address step before submitting.");
       const w = { ...curWizard, submittedAt: new Date().toISOString() };
       const { error } = await supabase
         .from("sellers")
-        .update({ status: "pending", admin_notes: null, wizard_data: w })
+        .update({
+          lat: pin.lat,
+          lng: pin.lng,
+          status: "pending",
+          admin_notes: null,
+          wizard_data: w as any,
+        })
         .eq("user_id", user.id);
       if (error) throw error;
     },
@@ -696,13 +792,14 @@ export function useMyOrders() {
       if (sellerError) throw sellerError;
       if (!seller) return [];
 
-      let { data, error } = await supabase
+      const { data: mainData, error: mainError } = await supabase
         .from("orders")
         .select("*, order_items(*), delivery_assignments(*, delivery_partners(*))")
         .eq("seller_id", seller.id)
         .order("placed_at", { ascending: false });
 
-      if (error) {
+      let data = mainData;
+      if (mainError) {
         const fallback = await supabase
           .from("orders")
           .select("*, order_items(*)")
@@ -719,15 +816,50 @@ export function useMyOrders() {
     if (!user) return;
     const channel = supabase
       .channel(`seller-orders-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload: any) => {
+          const newOrder = payload.new;
+          const orderNum = newOrder?.order_number || "New Order";
+          const totalAmt = newOrder?.total ? `₹${newOrder.total}` : "";
+
+          playOrderNotificationSound();
+
+          toast.success(`🔔 NEW ORDER RECEIVED! #${orderNum} (${totalAmt})`, {
+            duration: 15000,
+            description: "A customer just placed an order with your store! Click to view.",
+            action: {
+              label: "View Orders",
+              onClick: () => {
+                if (typeof window !== "undefined") {
+                  window.location.href = "/seller/orders";
+                }
+              },
+            },
+          });
+
+          triggerDesktopOrderNotification(
+            `🔔 New Order #${orderNum}!`,
+            `Customer order of ${totalAmt} received. Click to open seller portal.`,
+          );
+
+          void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+        },
+      )
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, () => {
         void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, () => {
         void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_assignments" }, () => {
-        void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "delivery_assignments" },
+        () => {
+          void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+        },
+      )
       .subscribe();
 
     return () => {
@@ -736,6 +868,106 @@ export function useMyOrders() {
   }, [qc, user]);
 
   return query;
+}
+
+export function playOrderNotificationSound() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+
+    // 4-note ascending chime: C5 (523Hz), E5 (659Hz), G5 (784Hz), C6 (1046Hz)
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.12 + 0.38);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.12);
+      osc.stop(ctx.currentTime + idx * 0.12 + 0.38);
+    });
+  } catch (err) {
+    console.warn("Audio chime playback blocked:", err);
+  }
+}
+
+export function triggerDesktopOrderNotification(title: string, body: string) {
+  if (typeof window === "undefined" || !("Notification" in window)) return;
+  try {
+    if (Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/favicon.ico" });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          new Notification(title, { body, icon: "/favicon.ico" });
+        }
+      });
+    }
+  } catch (err) {
+    console.warn("Desktop notification trigger skipped:", err);
+  }
+}
+
+export function useOrderNotificationListener() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!user) return;
+
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "default"
+    ) {
+      Notification.requestPermission().catch(() => {});
+    }
+
+    const channel = supabase
+      .channel(`seller-global-orders-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload: any) => {
+          const newOrder = payload.new;
+          const orderNum = newOrder?.order_number || "New Order";
+          const totalAmt = newOrder?.total ? `₹${newOrder.total}` : "";
+
+          playOrderNotificationSound();
+
+          toast.success(`🔔 NEW ORDER RECEIVED! #${orderNum} (${totalAmt})`, {
+            duration: 15000,
+            description: "A customer placed a new order with your store. Click to view orders.",
+            action: {
+              label: "View Order",
+              onClick: () => {
+                if (typeof window !== "undefined") {
+                  window.location.href = "/seller/orders";
+                }
+              },
+            },
+          });
+
+          triggerDesktopOrderNotification(
+            `🔔 New Order #${orderNum}!`,
+            `Customer order of ${totalAmt} received. Click to open seller portal.`,
+          );
+
+          void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+          void qc.invalidateQueries({ queryKey: ["my-notifications", user.id] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user, qc]);
 }
 
 export function useAdvanceOrder() {
@@ -779,6 +1011,163 @@ export function useCancelOrder() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-orders"] });
       qc.invalidateQueries({ queryKey: ["my-notifications"] });
+    },
+  });
+}
+
+export function useVendorAcceptOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: string; estimatedPrepMinutes?: number }) => {
+      const { data, error } = await (supabase as any).rpc("vendor_accept_order", {
+        _order_id: v.id,
+        _estimated_prep_minutes: v.estimatedPrepMinutes ?? 20,
+      });
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          const { data: advData, error: advError } = await (supabase as any).rpc(
+            "advance_seller_order",
+            { _order_id: v.id },
+          );
+          if (advError) throw advError;
+          return advData;
+        }
+        throw error;
+      }
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-notifications"] });
+    },
+  });
+}
+
+export function useVendorRejectOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: string; reason?: string }) => {
+      const { data, error } = await (supabase as any).rpc("vendor_reject_order", {
+        _order_id: v.id,
+        _reason: v.reason ?? "Cancelled by vendor",
+      });
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          const { data: cancelData, error: cancelError } = await (supabase as any).rpc(
+            "cancel_seller_order",
+            { _order_id: v.id, _reason: v.reason ?? "Cancelled by vendor" },
+          );
+          if (cancelError) throw cancelError;
+          return cancelData;
+        }
+        throw error;
+      }
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-notifications"] });
+    },
+  });
+}
+
+export function useVendorMarkReady() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: string }) => {
+      const { data, error } = await (supabase as any).rpc("vendor_mark_ready_for_pickup", {
+        _order_id: v.id,
+      });
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          const { data: advData, error: advError } = await (supabase as any).rpc(
+            "advance_seller_order",
+            { _order_id: v.id },
+          );
+          if (advError) throw advError;
+          return {
+            success: true,
+            status: advData?.status ?? "ready_for_pickup",
+            dispatched_count: advData?.dispatched ?? 0,
+          };
+        }
+        throw error;
+      }
+      return data as { success: boolean; status: string; dispatched_count: number };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+      qc.invalidateQueries({ queryKey: ["my-notifications"] });
+    },
+  });
+}
+
+export function useVendorUpdateLiveLocation() {
+  return useMutation({
+    mutationFn: async (v: {
+      id: string;
+      lat: number;
+      lng: number;
+      heading?: number;
+      speed?: number;
+      accuracy?: number;
+    }) => {
+      const { data, error } = await (supabase as any).rpc("update_vendor_live_location", {
+        _order_id: v.id,
+        _lat: v.lat,
+        _lng: v.lng,
+        _heading: v.heading ?? null,
+        _speed: v.speed ?? null,
+        _accuracy: v.accuracy ?? null,
+      });
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          return true;
+        }
+        throw error;
+      }
+      return data;
+    },
+  });
+}
+
+export function useVendorStopLiveLocation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { id: string }) => {
+      const { data, error } = await (supabase as any).rpc("stop_vendor_live_location", {
+        _order_id: v.id,
+      });
+      if (error) {
+        if (
+          error.code === "PGRST202" ||
+          error.message?.includes("Could not find the function") ||
+          error.message?.includes("schema cache")
+        ) {
+          return true;
+        }
+        throw error;
+      }
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
     },
   });
 }
@@ -987,7 +1376,9 @@ export async function uploadSellerDoc(
     file.type === "application/octet-stream";
 
   if (!isAllowedExt && !isAllowedMime) {
-    throw new Error("Unsupported or invalid document file. Please upload a PDF, PNG, JPG, or WEBP document.");
+    throw new Error(
+      "Unsupported or invalid document file. Please upload a PDF, PNG, JPG, or WEBP document.",
+    );
   }
 
   const path = `${userId}/${docType}-${Date.now()}.${ext}`;

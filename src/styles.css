@@ -212,6 +212,29 @@
     box-shadow: 0 10px 24px -14px color-mix(in oklab, var(--primary) 45%, transparent);
   }
 
+  /* Gold Metallic Gradient Border Utilities (Matching reference image palette: #FBF4BE, #E5C158, #B8860B, #D4AF37, #945700) */
+  .gold-metallic-border {
+    border: 2px solid #D4AF37 !important;
+    outline: 1px solid rgba(243, 208, 83, 0.6) !important;
+    outline-offset: -3px !important;
+    box-shadow: 0 0 14px -2px rgba(212, 175, 55, 0.4), 0 4px 16px -4px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .gold-metallic-border-dark {
+    border: 2.5px solid #D4AF37 !important;
+    outline: 1.5px solid rgba(251, 244, 190, 0.7) !important;
+    outline-offset: -4px !important;
+    box-shadow: 0 0 24px -2px rgba(212, 175, 55, 0.5), 0 8px 24px -6px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .gold-glow-sm {
+    box-shadow: 0 0 14px -2px rgba(212, 175, 55, 0.35), 0 4px 16px -4px rgba(0, 0, 0, 0.08);
+  }
+
+  .gold-glow-md {
+    box-shadow: 0 0 24px -2px rgba(212, 175, 55, 0.45), 0 8px 24px -6px rgba(0, 0, 0, 0.15);
+  }
+
   .hover-scale { transition: transform 220ms ease; }
   .hover-scale:hover { transform: scale(1.03); }
 

@@ -33,7 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { useAuth, signOut } from "@/lib/auth";
-import { useMySeller } from "@/lib/db";
+import { useMySeller, useOrderNotificationListener } from "@/lib/db";
 
 export const Route = createFileRoute("/seller")({
   head: () => ({
@@ -67,6 +67,7 @@ const NAV = [
 function SellerLayout() {
   const { user, loading } = useAuth();
   const sellerQ = useMySeller();
+  useOrderNotificationListener();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const initialPath = useRef(pathname);
@@ -81,16 +82,18 @@ function SellerLayout() {
   useEffect(() => {
     // Store Setup is the onboarding entry point. Other seller operations stay
     // locked until an admin approves the application.
-    if (
-      !sellerQ.isLoading &&
-      sellerQ.data &&
-      sellerQ.data.status !== "approved" &&
-      pathname !== "/seller" &&
-      pathname !== "/seller/store"
-    ) {
-      navigate({ to: "/register", replace: true });
+    if (!loading && user && !sellerQ.isLoading) {
+      if (!sellerQ.data) {
+        navigate({ to: "/register", replace: true });
+      } else if (
+        sellerQ.data.status !== "approved" &&
+        pathname !== "/seller" &&
+        pathname !== "/seller/store"
+      ) {
+        navigate({ to: "/register", replace: true });
+      }
     }
-  }, [sellerQ.data, sellerQ.isLoading, pathname, navigate]);
+  }, [user, loading, sellerQ.data, sellerQ.isLoading, pathname, navigate]);
 
   if (loading || !user || sellerQ.isLoading) {
     return (

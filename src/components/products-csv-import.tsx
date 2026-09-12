@@ -232,7 +232,9 @@ export function ProductsCsvImport({
         await onImport(chunk);
         totalImported += chunk.length;
       }
-      toast.success(`Successfully imported ${totalImported} product${totalImported === 1 ? "" : "s"}`);
+      toast.success(
+        `Successfully imported ${totalImported} product${totalImported === 1 ? "" : "s"}`,
+      );
       reset();
       onOpenChange(false);
     } catch (e: any) {

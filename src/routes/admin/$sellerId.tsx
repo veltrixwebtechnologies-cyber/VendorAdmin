@@ -145,7 +145,9 @@ function AdminSellerDetail() {
       ) : (
         <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-950 dark:bg-amber-950/20">
           <CardContent className="py-3 text-sm text-amber-800 dark:text-amber-300">
-            This seller application is currently <strong className="capitalize">{seller.status}</strong>. Product listing, orders, and payouts are disabled until approved.
+            This seller application is currently{" "}
+            <strong className="capitalize">{seller.status}</strong>. Product listing, orders, and
+            payouts are disabled until approved.
           </CardContent>
         </Card>
       )}
@@ -188,6 +190,16 @@ function AdminSellerDetail() {
                 seller.address.pickupSame
                   ? "Same as shop"
                   : `${seller.address.pickupAddress}, ${seller.address.pickupCity}, ${seller.address.pickupState} - ${seller.address.pickupPincode}`,
+              ],
+              [
+                "Pickup coordinates",
+                seller.address.pickupCoordinates
+                  ? `${seller.address.pickupCoordinates.lat.toFixed(6)}, ${seller.address.pickupCoordinates.lng.toFixed(6)}`
+                  : "Not confirmed",
+              ],
+              [
+                "Location status",
+                seller.address.locationConfirmationRequired ? "Needs confirmation" : "Confirmed",
               ],
             ]}
           />
@@ -243,7 +255,11 @@ function AdminSellerDetail() {
             <Button variant="outline" onClick={() => setDialog("info")}>
               <MessageCircleQuestion className="h-4 w-4" /> Request more info
             </Button>
-            <Button variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => setDialog("reject")}>
+            <Button
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              onClick={() => setDialog("reject")}
+            >
               <XCircle className="h-4 w-4" /> Reject
             </Button>
           </div>
@@ -269,10 +285,15 @@ function AdminSellerDetail() {
               </DialogHeader>
               <div className="space-y-3 py-2">
                 <p className="text-sm text-foreground">
-                  Are you sure you want to delete <strong className="font-bold underline">{seller.business.shopName || "Unnamed shop"}</strong>?
+                  Are you sure you want to delete{" "}
+                  <strong className="font-bold underline">
+                    {seller.business.shopName || "Unnamed shop"}
+                  </strong>
+                  ?
                 </p>
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-                  <strong>Warning:</strong> This will permanently delete the shop profile, uploaded documents, catalog listings, and seller records. This action cannot be undone.
+                  <strong>Warning:</strong> This will permanently delete the shop profile, uploaded
+                  documents, catalog listings, and seller records. This action cannot be undone.
                 </div>
               </div>
               <DialogFooter>
@@ -284,7 +305,9 @@ function AdminSellerDetail() {
                   onClick={async () => {
                     try {
                       await deleteSeller.mutateAsync(seller.id);
-                      toast.success(`Shop "${seller.business.shopName || "Shop"}" has been deleted.`);
+                      toast.success(
+                        `Shop "${seller.business.shopName || "Shop"}" has been deleted.`,
+                      );
                       setDialog(null);
                       navigate({ to: "/admin/vendors" });
                     } catch (err: any) {
@@ -307,7 +330,9 @@ function AdminSellerDetail() {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-2">
-                <Label>{dialog === "reject" ? "Reason for rejection" : "Message to the seller"}</Label>
+                <Label>
+                  {dialog === "reject" ? "Reason for rejection" : "Message to the seller"}
+                </Label>
                 <Textarea
                   rows={4}
                   value={note}
@@ -366,18 +391,14 @@ function StorefrontPreview({ docs, shopName }: { docs: DocRow[]; shopName: strin
   }, [docs]);
 
   const fitClass =
-    fitMode === "cover"
-      ? "object-cover"
-      : fitMode === "contain"
-      ? "object-contain"
-      : "object-fill";
+    fitMode === "cover" ? "object-cover" : fitMode === "contain" ? "object-contain" : "object-fill";
 
   const posClass =
     positionMode === "top"
       ? "object-top"
       : positionMode === "bottom"
-      ? "object-bottom"
-      : "object-center";
+        ? "object-bottom"
+        : "object-center";
 
   return (
     <Card className="overflow-hidden border shadow-xs">
@@ -467,7 +488,9 @@ function StorefrontPreview({ docs, shopName }: { docs: DocRow[]; shopName: strin
       </div>
 
       {/* Media Canvas */}
-      <div className={`relative ${heightClass} bg-slate-950/90 dark:bg-slate-900 transition-all duration-200`}>
+      <div
+        className={`relative ${heightClass} bg-slate-950/90 dark:bg-slate-900 transition-all duration-200`}
+      >
         {images.banner ? (
           <div
             className="group relative h-full w-full cursor-pointer overflow-hidden"

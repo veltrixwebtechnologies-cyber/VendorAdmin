@@ -18,3 +18,29 @@ export function parseCoordinates(lat: unknown, lng: unknown): Coordinates | null
     ? { lat: a, lng: b }
     : null;
 }
+
+export const MAX_NAVIGATION_ACCURACY_M = 100;
+export const MAX_LOCATION_AGE_MS = 30_000;
+
+export function freshPartnerCoordinates(partner: any): [number, number] | null {
+  const point = parseCoordinates(partner?.current_latitude, partner?.current_longitude);
+  const captured = Date.parse(partner?.location_updated_at ?? "");
+  return point &&
+    Number.isFinite(captured) &&
+    Date.now() - captured <= MAX_LOCATION_AGE_MS &&
+    captured <= Date.now() + 1000
+    ? [point.lat, point.lng]
+    : null;
+}
+
+export function usableGPS(position: GeolocationPosition, now = Date.now()): boolean {
+  return (
+    !!parseCoordinates(position.coords.latitude, position.coords.longitude) &&
+    Number.isFinite(position.coords.accuracy) &&
+    position.coords.accuracy >= 0 &&
+    position.coords.accuracy <= MAX_NAVIGATION_ACCURACY_M &&
+    Number.isFinite(position.timestamp) &&
+    now - position.timestamp <= MAX_LOCATION_AGE_MS &&
+    position.timestamp <= now + 1000
+  );
+}

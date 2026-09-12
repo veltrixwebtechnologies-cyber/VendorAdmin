@@ -133,14 +133,14 @@ function ApprovedStats() {
   const products = productsQ.data ?? [];
 
   const stats = useMemo(() => {
-    const active = products.filter((p) => p.status === "active").length;
+    const active = products.filter((p) => ["active", "approved"].includes(p.status)).length;
     const lowStock = products.filter((p) => p.stock > 0 && p.stock <= p.lowStockAt).length;
     const outOfStock = products.filter((p) => p.stock === 0).length;
-    const newOrders = orders.filter((o) => o.status === "new").length;
+    const newOrders = orders.filter((o) => ["new", "pending"].includes(o.status)).length;
     const inProgress = orders.filter((o) =>
-      ["accepted", "packed", "ready_for_pickup", "out_for_delivery", "shipped"].includes(o.status),
+      ["accepted", "vendor_accepted", "preparing", "packed", "ready_for_pickup", "out_for_delivery", "shipped"].includes(o.status),
     ).length;
-    const revenue = orders.filter((o) => o.status === "delivered").reduce((s, o) => s + o.total, 0);
+    const revenue = orders.filter((o) => ["delivered", "completed"].includes(o.status)).reduce((s, o) => s + o.total, 0);
     return { active, lowStock, outOfStock, newOrders, inProgress, revenue };
   }, [products, orders]);
 
@@ -259,10 +259,13 @@ function PendingBanner() {
             ⏳ Store Application Under Review
           </h2>
           <p className="mt-3 text-base text-muted-foreground leading-relaxed max-w-xl">
-            Your store registration and business documents have been submitted to the LocalShore Admin team for review.
+            Your store registration and business documents have been submitted to the LocalShore
+            Admin team for review.
           </p>
           <div className="mt-5 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-950 dark:text-amber-200 text-sm font-medium leading-relaxed max-w-lg mx-auto">
-            ⌛ <strong>24-Hour Review Period:</strong> Verification typically takes up to 24 hours to review and wait for admin approval. Once approved by the admin, all features (Products, Orders, Inventory, Settlements) will be unlocked automatically.
+            ⌛ <strong>24-Hour Review Period:</strong> Verification typically takes up to 24 hours
+            to review and wait for admin approval. Once approved by the admin, all features
+            (Products, Orders, Inventory, Settlements) will be unlocked automatically.
           </div>
         </div>
 
@@ -337,14 +340,23 @@ function ApprovedChecklist({ seller }: { seller: Seller }) {
   });
   const products = productsQ.data ?? [];
   const hasProduct = products.length > 0;
-  const hasActiveProduct = products.some((product) => product.status === "active");
+  const isSellingReady =
+    hasProduct &&
+    (products.some((product) => ["active", "approved", "pending"].includes(product.status)) ||
+      seller.status === "approved");
   const items = [
     { label: "Account created", done: true },
     { label: "Documents verified", done: true },
-    { label: "Bank details added", done: !!seller.bank.accountNumber },
-    { label: "Complete store profile", done: !!seller.business.description },
+    {
+      label: "Bank details added",
+      done: !!seller.bank.accountNumber || seller.status === "approved",
+    },
+    {
+      label: "Complete store profile",
+      done: !!seller.business.description || !!seller.business.shopName,
+    },
     { label: "Add first product", done: hasProduct },
-    { label: "Start selling", done: hasActiveProduct },
+    { label: "Start selling", done: isSellingReady },
   ];
   const done = items.filter((i) => i.done).length;
   const pct = (done / items.length) * 100;
