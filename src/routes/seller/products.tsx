@@ -239,7 +239,7 @@ function ProductsPage() {
         open={importing}
         onOpenChange={setImporting}
         onImport={async (rows) => {
-          await bulkMut.mutateAsync(rows);
+          await bulkMut.mutateAsync(rows.map((r: any) => ({ unit: "1 unit", ...r })) as any);
         }}
       />
 
@@ -466,6 +466,7 @@ type ProductFormData = {
   sku: string;
   category: string;
   brand: string;
+  unit: string;
   description: string;
   mrp: number;
   price: number;
@@ -542,6 +543,7 @@ function ProductFormDialog({
 
     // Validate required & normalize filter definitions
     const normalizedAttributes: Record<string, any> = { ...(form.attributes || {}) };
+    normalizedAttributes.unit = form.unit.trim() || "1 unit";
 
     for (const def of filterDefs) {
       const val = normalizedAttributes[def.key];
@@ -603,6 +605,14 @@ function ProductFormDialog({
           <div>
             <Label>Brand</Label>
             <Input value={form.brand} onChange={(e) => set("brand", e.target.value)} />
+          </div>
+          <div>
+            <Label>Unit / Net Weight (e.g. 1 kg, 500 g, 1 L)</Label>
+            <Input
+              value={form.unit}
+              onChange={(e) => set("unit", e.target.value)}
+              placeholder="e.g. 1 kg, 500 g, 1 L, Pack of 2"
+            />
           </div>
           <div>
             <Label>Category</Label>
@@ -681,7 +691,7 @@ function ProductFormDialog({
                 {filterDefs.map((def: any) => {
                   if (def.key === "brand" || def.key === "price" || def.key === "rating") return null;
 
-                  const val = form.attributes[def.key];
+                  const val = form.attributes?.[def.key];
                   const options = def.options || [];
 
                   return (
@@ -775,6 +785,7 @@ function blank(): ProductFormData {
     sku: "",
     category: "",
     brand: "",
+    unit: "1 unit",
     description: "",
     mrp: 0,
     price: 0,
@@ -791,6 +802,7 @@ function extract(p: ProductDto): ProductFormData {
     sku: p.sku,
     category: p.category,
     brand: p.brand,
+    unit: p.attributes?.unit || "1 unit",
     description: p.description,
     mrp: p.mrp,
     price: p.price,
