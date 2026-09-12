@@ -19,7 +19,8 @@ export function parseCoordinates(lat: unknown, lng: unknown): Coordinates | null
     : null;
 }
 
-export const MAX_NAVIGATION_ACCURACY_M = 100;
+// Maximum reported uncertainty for automatic GPS use; permission alone does not prove accuracy.
+export const MAX_NAVIGATION_ACCURACY_M = 25;
 export const MAX_LOCATION_AGE_MS = 30_000;
 
 export function freshPartnerCoordinates(partner: any): [number, number] | null {

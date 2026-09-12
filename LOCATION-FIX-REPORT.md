@@ -1,5 +1,19 @@
 # Location integration and fixes — 12 September 2026
 
+## Current policy: precise device readings only
+
+This section supersedes the earlier 100-metre threshold and approximate-area option described below. Automatic GPS use now requires a fresh reading with reported accuracy at most 25 metres across customer checkout/maps, delivery navigation/uploads, and vendor GPS pin/live-sharing flows. High-accuracy requests remain enabled, and the delivery refresh no longer downgrades its retry to low accuracy.
+
+The customer approximate-area confirmation option has been removed, its public store entry point removed, and previously cached coarse GPS selections rejected. Users may still deliberately select their delivery entrance on a map; the app does not label that selection as measured current GPS.
+
+Two additional bypasses were corrected: the customer discovery map now uses the bounded accurate acquisition helper, and the delivery dashboard uses the shared validated GPS watch. The dashboard no longer writes coordinates directly to delivery_partners, treats stored coordinates as newly measured GPS, or accepts unvalidated realtime positions as its device location. The parent tracking flow owns uploads. The displayed GPS fix expires after 30 seconds.
+
+Validation: 18 customer tests, 16 delivery tests, and 5 vendor tests pass, including the 25-metre boundary, removal of approximate selection, invalidation of previously saved coarse GPS, and the actual dashboard state/effects rejecting coarse readings, avoiding direct writes, and expiring old GPS.
+
+All three repositories pass TypeScript checks and production builds. The customer selector was verified with synthetic browser coordinates: coarse-only readings leave the location unselected with a visible error and no approximate-acceptance option.
+
+A reported accuracy of 25 metres is an acceptance threshold, not a guarantee that the physical error is zero or at most 25 metres. The browser provides an estimated confidence radius. Precise-location permission and enableHighAccuracy request the best available device result; they do not expose a guaranteed satellite-only or zero-error location. If the device cannot supply a qualifying reading, the app waits, reports the problem, or asks the user to retry.
+
 ## Branch integration
 
 Work was completed on `amrs-map-patch` in locc, DeliveryHub, and VendorAdmin. The remote patch branches had been moved to the same commits as main. The original patch commits were still available locally, so the integration uses merge commits rather than resetting, rebasing, or force-pushing the branches.
