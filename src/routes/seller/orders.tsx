@@ -1,4 +1,3 @@
-
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -65,7 +64,10 @@ const STATUS_META: Record<OrderStatus, { label: string; className: string }> = {
   new: { label: "New (Action Required)", className: "bg-amber-600 text-white animate-pulse" },
   accepted: { label: "Accepted", className: "bg-accent text-accent-foreground" },
   vendor_accepted: { label: "Accepted (Preparing)", className: "bg-emerald-600 text-white" },
-  cancelled_by_vendor: { label: "Cancelled by Vendor", className: "bg-destructive text-destructive-foreground" },
+  cancelled_by_vendor: {
+    label: "Cancelled by Vendor",
+    className: "bg-destructive text-destructive-foreground",
+  },
   preparing: { label: "Preparing", className: "bg-accent text-accent-foreground" },
   packed: { label: "Packed", className: "bg-accent text-accent-foreground" },
   ready_for_pickup: { label: "Ready for pickup", className: "bg-amber-500 text-white" },
@@ -354,7 +356,9 @@ function VendorLiveLocationControl({
         size="sm"
         variant={isSharing ? "destructive" : "default"}
         className={`w-full text-xs font-semibold ${
-          !isSharing ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20" : ""
+          !isSharing
+            ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20"
+            : ""
         }`}
         onClick={toggleSharing}
         disabled={updateLive.isPending || stopLive.isPending}
@@ -518,8 +522,8 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                       {order.status === "ready_for_pickup"
                         ? "No partner has accepted yet. Delivery dispatch is active."
                         : order.status === "new"
-                        ? "Accept the order to begin preparation."
-                        : "Click 'Ready for Pickup' below when order is prepared to dispatch a delivery partner."}
+                          ? "Accept the order to begin preparation."
+                          : "Click 'Ready for Pickup' below when order is prepared to dispatch a delivery partner."}
                     </div>
                   </div>
                 )}
@@ -528,7 +532,12 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
               {/* Vendor Live Location Control Component */}
               {(order.status === "ready_for_pickup" ||
                 order.assignedPartner ||
-                ["assigned", "delivery_partner_assigned", "going_to_vendor", "arrived_at_vendor"].includes(order.status)) && (
+                [
+                  "assigned",
+                  "delivery_partner_assigned",
+                  "going_to_vendor",
+                  "arrived_at_vendor",
+                ].includes(order.status)) && (
                 <VendorLiveLocationControl
                   orderId={order.id}
                   assignedPartnerName={order.assignedPartner?.fullName}
@@ -581,7 +590,11 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                           }
                         }}
                       >
-                        {acceptOrder.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Accept Order"}
+                        {acceptOrder.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Accept Order"
+                        )}
                       </Button>
                       <Button
                         type="button"
@@ -611,7 +624,7 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                         toast.success(
                           res.dispatched_count > 0
                             ? "Order is Ready for Pickup! Searching for nearby delivery partners."
-                            : "Order is Ready for Pickup! Delivery request broadcasted."
+                            : "Order is Ready for Pickup! Delivery request broadcasted.",
                         );
                       } catch (e: any) {
                         toast.error(e?.message ?? "Failed to mark order ready");
@@ -643,7 +656,10 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                     className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
                     onClick={async () => {
                       try {
-                        await rejectOrder.mutateAsync({ id: order.id, reason: "Cancelled by vendor" });
+                        await rejectOrder.mutateAsync({
+                          id: order.id,
+                          reason: "Cancelled by vendor",
+                        });
                         toast.success("Order rejected");
                         setRejectOpen(false);
                       } catch (e: any) {

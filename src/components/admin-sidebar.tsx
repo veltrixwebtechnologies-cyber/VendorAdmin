@@ -63,6 +63,7 @@ const NAV = [
       { title: "Merchandising", url: "/admin/merchandising", icon: Sparkles },
       { title: "ML Control Center", url: "/admin/ml-control-center", icon: Sparkles },
       { title: "Banner Management", url: "/admin/banners", icon: ImageIcon },
+      { title: "LocalShore Offers", url: "/admin/offers", icon: Sparkles },
       { title: "Reports", url: "/admin/reports", icon: BarChart3 },
     ],
   },

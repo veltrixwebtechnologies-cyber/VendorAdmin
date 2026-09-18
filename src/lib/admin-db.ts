@@ -54,6 +54,53 @@ export interface Banner {
   created_at: string;
   updated_at: string;
 }
+export interface LocalShoreOffer {
+  id: string;
+  title: string;
+  description: string;
+  validity: string;
+  action: string;
+  category: string;
+  image_url: string;
+  accent: string;
+  coupon: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useLocalShoreOffers() {
+  return useQuery<LocalShoreOffer[]>({
+    queryKey: ["localshore-offer-cards", "admin"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("localshore_offer_cards").select("*").order("sort_order").order("created_at");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+export function useUpsertLocalShoreOffer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (value: Partial<LocalShoreOffer>) => {
+      const { data: user } = await supabase.auth.getUser();
+      const { data, error } = await (supabase as any).from("localshore_offer_cards").upsert({
+        ...value, id: value.id || undefined, title: value.title?.trim(), created_by: user.user?.id,
+      }).select().single();
+      if (error) throw error;
+      return data as LocalShoreOffer;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["localshore-offer-cards"] }),
+  });
+}
+export function useDeleteLocalShoreOffer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => { const { error } = await (supabase as any).from("localshore_offer_cards").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["localshore-offer-cards"] }),
+  });
+}
 export interface Review {
   id: string;
   product_id: string | null;
@@ -386,7 +433,11 @@ export function useAppBannerConfig() {
         if (!error && data && data.image_url) {
           try {
             const parsed = JSON.parse(data.image_url);
-            const merged = { ...DEFAULT_APP_BANNER_CONFIG, ...parsed, is_active: data.is_active ?? true };
+            const merged = {
+              ...DEFAULT_APP_BANNER_CONFIG,
+              ...parsed,
+              is_active: data.is_active ?? true,
+            };
             localStorage.setItem(APP_BANNER_CONFIG_KEY, JSON.stringify(merged));
             return merged;
           } catch {}
@@ -644,17 +695,15 @@ export function useSendBroadcast() {
       };
 
       try {
-        const { error } = await (supabase as any)
-          .from("admin_broadcasts")
-          .insert({
-            title: broadcastData.title,
-            body: broadcastData.body,
-            channel: broadcastData.channel,
-            audience: broadcastData.audience,
-            target_ids: broadcastData.target_ids,
-            sent_by: broadcastData.sent_by,
-            recipient_count: broadcastData.recipient_count,
-          });
+        const { error } = await (supabase as any).from("admin_broadcasts").insert({
+          title: broadcastData.title,
+          body: broadcastData.body,
+          channel: broadcastData.channel,
+          audience: broadcastData.audience,
+          target_ids: broadcastData.target_ids,
+          sent_by: broadcastData.sent_by,
+          recipient_count: broadcastData.recipient_count,
+        });
         if (error) console.warn("Supabase broadcast warning:", error);
       } catch (e) {
         console.warn("Supabase broadcast error:", e);

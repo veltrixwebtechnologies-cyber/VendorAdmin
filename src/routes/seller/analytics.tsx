@@ -169,17 +169,27 @@ function AnalyticsPage() {
         <CardContent className="py-3 px-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-lg bg-card/60 p-2.5 border border-border/50">
-              <div className="text-[11px] text-muted-foreground uppercase font-semibold">Top Search Keyword</div>
+              <div className="text-[11px] text-muted-foreground uppercase font-semibold">
+                Top Search Keyword
+              </div>
               <div className="text-base font-bold text-foreground mt-0.5">Men's Cotton Shirts</div>
-              <div className="text-[10px] text-emerald-400 font-medium">↑ 34% search volume growth</div>
+              <div className="text-[10px] text-emerald-400 font-medium">
+                ↑ 34% search volume growth
+              </div>
             </div>
             <div className="rounded-lg bg-card/60 p-2.5 border border-border/50">
-              <div className="text-[11px] text-muted-foreground uppercase font-semibold">Highest Unmet Demand</div>
+              <div className="text-[11px] text-muted-foreground uppercase font-semibold">
+                Highest Unmet Demand
+              </div>
               <div className="text-base font-bold text-amber-400 mt-0.5">Urgent Laptop Repairs</div>
-              <div className="text-[10px] text-amber-300 font-medium">18 zero-result searches nearby</div>
+              <div className="text-[10px] text-amber-300 font-medium">
+                18 zero-result searches nearby
+              </div>
             </div>
             <div className="rounded-lg bg-card/60 p-2.5 border border-border/50">
-              <div className="text-[11px] text-muted-foreground uppercase font-semibold">Peak Search Hours</div>
+              <div className="text-[11px] text-muted-foreground uppercase font-semibold">
+                Peak Search Hours
+              </div>
               <div className="text-base font-bold text-indigo-400 mt-0.5">6:00 PM – 9:30 PM</div>
               <div className="text-[10px] text-muted-foreground">Evening local shopper surge</div>
             </div>

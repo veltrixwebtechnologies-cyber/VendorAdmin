@@ -7,19 +7,28 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * All calls run as the signed-in user; RLS scopes rows to them.
  * ============================================================ */
 
-const productInput = z.object({
-  name: z.string().trim().min(1).max(200),
-  sku: z.string().trim().min(1).max(80),
-  category: z.string().trim().min(1).max(80),
-  brand: z.string().trim().max(120).optional().default(""),
-  description: z.string().trim().min(1, "Product description is required").max(4000),
-  mrp: z.number().min(0),
-  price: z.number().min(0),
-  stock: z.number().int().min(0),
-  lowStockAt: z.number().int().min(0).default(5),
-  imageUrl: z.string().max(500).optional().nullable(),
-  attributes: z.record(z.any()).optional().default({}),
-});
+const productInput = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    sku: z.string().trim().min(1).max(80),
+    category: z.string().trim().min(1).max(80),
+    brand: z.string().trim().max(120).optional().default(""),
+    description: z.string().trim().min(1, "Product description is required").max(4000),
+    mrp: z.number().min(0),
+    price: z.number().min(0),
+    stock: z.number().int().min(0),
+    lowStockAt: z.number().int().min(0).default(5),
+    imageUrl: z.string().max(500).optional().nullable(),
+    attributes: z.record(z.any()).optional().default({}),
+  })
+  .refine((value) => value.price > 0, {
+    path: ["price"],
+    message: "Selling price must be greater than 0",
+  })
+  .refine((value) => value.mrp >= value.price, {
+    path: ["mrp"],
+    message: "MRP cannot be lower than selling price",
+  });
 
 export type ProductInput = z.infer<typeof productInput>;
 
@@ -52,6 +61,25 @@ async function signImageIfPath(supabase: any, raw: string | null): Promise<strin
     .createSignedUrl(raw, SIGNED_URL_TTL);
   if (error) return null;
   return data.signedUrl;
+}
+
+async function removeOwnedImage(supabase: any, raw: string | null | undefined) {
+  // Only remove paths created by this app. Never attempt to delete arbitrary
+  // external URLs or data URLs supplied by a seller.
+  if (!raw || /^(https?:|data:)/i.test(raw)) return;
+  try {
+    await supabase.storage.from("product-images").remove([raw]);
+  } catch {
+    // Image cleanup must not make a successful catalog mutation look failed.
+  }
+}
+
+async function assertSkuAvailable(supabase: any, userId: string, sku: string, excludeId?: string) {
+  let query = supabase.from("products").select("id").eq("user_id", userId).eq("sku", sku).limit(1);
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw error;
+  if (data) throw new Error(`SKU ${sku} is already used by another product`);
 }
 
 function toDto(row: any, signedUrl: string | null) {
@@ -103,6 +131,7 @@ export const createProductFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const sellerId = await ensureSellerId(supabase, userId);
+    await assertSkuAvailable(supabase, userId, data.sku);
     const { data: row, error } = await supabase
       .from("products")
       .insert({
@@ -139,6 +168,18 @@ export const updateProductFn = createServerFn({ method: "POST" })
     const { supabase, userId } = context as any;
     const patch: Record<string, unknown> = {};
     const p = data.patch;
+    const { data: existing, error: existingError } = await supabase
+      .from("products")
+      .select("id,sku,mrp,selling_price,image_url")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (existingError) throw existingError;
+    if (p.sku !== undefined) await assertSkuAvailable(supabase, userId, p.sku, data.id);
+    const nextPrice = p.price ?? Number(existing.selling_price ?? 0);
+    const nextMrp = p.mrp ?? Number(existing.mrp ?? 0);
+    if (nextPrice <= 0) throw new Error("Selling price must be greater than 0");
+    if (nextMrp < nextPrice) throw new Error("MRP cannot be lower than selling price");
     if (p.name !== undefined) patch.name = p.name;
     if (p.sku !== undefined) patch.sku = p.sku;
     if (p.category !== undefined) patch.category = p.category;
@@ -159,6 +200,9 @@ export const updateProductFn = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw error;
+    if (p.imageUrl !== undefined && p.imageUrl !== existing.image_url) {
+      await removeOwnedImage(supabase, existing.image_url);
+    }
     const signed = await signImageIfPath(supabase, row.image_url);
     return toDto(row, signed);
   });
@@ -170,12 +214,20 @@ export const deleteProductFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
+    const { data: existing, error: existingError } = await supabase
+      .from("products")
+      .select("image_url")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (existingError) throw existingError;
     const { error } = await supabase
       .from("products")
       .delete()
       .eq("id", data.id)
       .eq("user_id", userId);
     if (error) throw error;
+    await removeOwnedImage(supabase, existing.image_url);
     return { ok: true };
   });
 
@@ -189,6 +241,10 @@ export const bulkCreateProductsFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const sellerId = await ensureSellerId(supabase, userId);
+    const skus = data.rows.map((row) => row.sku);
+    if (new Set(skus).size !== skus.length)
+      throw new Error("Each imported product must have a unique SKU");
+    for (const sku of skus) await assertSkuAvailable(supabase, userId, sku);
     const rows = data.rows.map((r) => ({
       user_id: userId,
       seller_id: sellerId,

@@ -104,34 +104,34 @@
 .dark {
   --background: oklch(0.16 0.03 295);
   --foreground: oklch(0.97 0.01 300);
-  --card: oklch(0.20 0.04 295);
+  --card: oklch(0.2 0.04 295);
   --card-foreground: oklch(0.97 0.01 300);
-  --popover: oklch(0.20 0.04 295);
+  --popover: oklch(0.2 0.04 295);
   --popover-foreground: oklch(0.97 0.01 300);
-  --primary: oklch(0.68 0.20 330);
+  --primary: oklch(0.68 0.2 330);
   --primary-foreground: oklch(0.16 0.03 295);
   --primary-hover: oklch(0.74 0.19 330);
   --secondary: oklch(0.24 0.04 295);
   --secondary-foreground: oklch(0.97 0.01 300);
   --muted: oklch(0.24 0.04 295);
-  --muted-foreground: oklch(0.70 0.04 295);
+  --muted-foreground: oklch(0.7 0.04 295);
   --accent: oklch(0.78 0.14 78);
   --accent-foreground: oklch(0.16 0.03 295);
-  --destructive: oklch(0.68 0.20 30);
+  --destructive: oklch(0.68 0.2 30);
   --destructive-foreground: oklch(0.99 0.005 300);
   --success: oklch(0.68 0.17 155);
   --success-foreground: oklch(0.16 0.03 295);
   --border: oklch(0.34 0.05 295 / 0.7);
   --input: oklch(0.34 0.05 295 / 0.7);
-  --ring: oklch(0.72 0.20 295);
+  --ring: oklch(0.72 0.2 295);
   --sidebar: oklch(0.18 0.04 295);
   --sidebar-foreground: oklch(0.94 0.01 300);
-  --sidebar-primary: oklch(0.72 0.20 295);
+  --sidebar-primary: oklch(0.72 0.2 295);
   --sidebar-primary-foreground: oklch(0.16 0.03 295);
   --sidebar-accent: oklch(0.26 0.05 295);
   --sidebar-accent-foreground: oklch(0.97 0.01 300);
   --sidebar-border: oklch(0.34 0.05 295 / 0.7);
-  --sidebar-ring: oklch(0.72 0.20 295);
+  --sidebar-ring: oklch(0.72 0.2 295);
 }
 
 @layer base {
@@ -146,10 +146,19 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
   }
 
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     letter-spacing: -0.01em;
   }
 
@@ -169,7 +178,8 @@
   [role="menuitem"],
   [data-slot="sidebar-menu-button"],
   [data-state] {
-    transition-property: color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter;
+    transition-property:
+      color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter;
     transition-duration: 200ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -180,32 +190,66 @@
   }
 }
 
-
 @layer utilities {
   @keyframes lov-fade-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   @keyframes lov-fade-in-up {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   @keyframes lov-scale-in {
-    from { opacity: 0; transform: scale(0.97); }
-    to   { opacity: 1; transform: scale(1); }
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
   @keyframes lov-slide-in-right {
-    from { opacity: 0; transform: translateX(12px); }
-    to   { opacity: 1; transform: translateX(0); }
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
 
-  .animate-fade-in { animation: lov-fade-in 0.35s ease-out both; }
-  .animate-fade-in-up { animation: lov-fade-in-up 0.5s ease-out both; }
-  .animate-scale-in { animation: lov-scale-in 0.25s ease-out both; }
-  .animate-slide-in-right { animation: lov-slide-in-right 0.3s ease-out both; }
+  .animate-fade-in {
+    animation: lov-fade-in 0.35s ease-out both;
+  }
+  .animate-fade-in-up {
+    animation: lov-fade-in-up 0.5s ease-out both;
+  }
+  .animate-scale-in {
+    animation: lov-scale-in 0.25s ease-out both;
+  }
+  .animate-slide-in-right {
+    animation: lov-slide-in-right 0.3s ease-out both;
+  }
 
   .hover-lift {
-    transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+    transition:
+      transform 220ms ease,
+      box-shadow 220ms ease,
+      border-color 220ms ease;
   }
   .hover-lift:hover {
     transform: translateY(-2px);
@@ -214,43 +258,78 @@
 
   /* Gold Metallic Gradient Border Utilities (Matching reference image palette: #FBF4BE, #E5C158, #B8860B, #D4AF37, #945700) */
   .gold-metallic-border {
-    border: 2px solid #D4AF37 !important;
+    border: 2px solid #d4af37 !important;
     outline: 1px solid rgba(243, 208, 83, 0.6) !important;
     outline-offset: -3px !important;
-    box-shadow: 0 0 14px -2px rgba(212, 175, 55, 0.4), 0 4px 16px -4px rgba(0, 0, 0, 0.08) !important;
+    box-shadow:
+      0 0 14px -2px rgba(212, 175, 55, 0.4),
+      0 4px 16px -4px rgba(0, 0, 0, 0.08) !important;
   }
 
   .gold-metallic-border-dark {
-    border: 2.5px solid #D4AF37 !important;
+    border: 2.5px solid #d4af37 !important;
     outline: 1.5px solid rgba(251, 244, 190, 0.7) !important;
     outline-offset: -4px !important;
-    box-shadow: 0 0 24px -2px rgba(212, 175, 55, 0.5), 0 8px 24px -6px rgba(0, 0, 0, 0.2) !important;
+    box-shadow:
+      0 0 24px -2px rgba(212, 175, 55, 0.5),
+      0 8px 24px -6px rgba(0, 0, 0, 0.2) !important;
   }
 
   .gold-glow-sm {
-    box-shadow: 0 0 14px -2px rgba(212, 175, 55, 0.35), 0 4px 16px -4px rgba(0, 0, 0, 0.08);
+    box-shadow:
+      0 0 14px -2px rgba(212, 175, 55, 0.35),
+      0 4px 16px -4px rgba(0, 0, 0, 0.08);
   }
 
   .gold-glow-md {
-    box-shadow: 0 0 24px -2px rgba(212, 175, 55, 0.45), 0 8px 24px -6px rgba(0, 0, 0, 0.15);
+    box-shadow:
+      0 0 24px -2px rgba(212, 175, 55, 0.45),
+      0 8px 24px -6px rgba(0, 0, 0, 0.15);
   }
 
-  .hover-scale { transition: transform 220ms ease; }
-  .hover-scale:hover { transform: scale(1.03); }
+  .hover-scale {
+    transition: transform 220ms ease;
+  }
+  .hover-scale:hover {
+    transform: scale(1.03);
+  }
 
-  .stagger > * { opacity: 0; animation: lov-fade-in-up 0.5s ease-out forwards; }
-  .stagger > *:nth-child(1) { animation-delay: 40ms; }
-  .stagger > *:nth-child(2) { animation-delay: 90ms; }
-  .stagger > *:nth-child(3) { animation-delay: 140ms; }
-  .stagger > *:nth-child(4) { animation-delay: 190ms; }
-  .stagger > *:nth-child(5) { animation-delay: 240ms; }
-  .stagger > *:nth-child(6) { animation-delay: 290ms; }
-  .stagger > *:nth-child(7) { animation-delay: 340ms; }
-  .stagger > *:nth-child(8) { animation-delay: 390ms; }
+  .stagger > * {
+    opacity: 0;
+    animation: lov-fade-in-up 0.5s ease-out forwards;
+  }
+  .stagger > *:nth-child(1) {
+    animation-delay: 40ms;
+  }
+  .stagger > *:nth-child(2) {
+    animation-delay: 90ms;
+  }
+  .stagger > *:nth-child(3) {
+    animation-delay: 140ms;
+  }
+  .stagger > *:nth-child(4) {
+    animation-delay: 190ms;
+  }
+  .stagger > *:nth-child(5) {
+    animation-delay: 240ms;
+  }
+  .stagger > *:nth-child(6) {
+    animation-delay: 290ms;
+  }
+  .stagger > *:nth-child(7) {
+    animation-delay: 340ms;
+  }
+  .stagger > *:nth-child(8) {
+    animation-delay: 390ms;
+  }
 
   @keyframes premium-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   .premium-skeleton {
@@ -286,7 +365,9 @@
   .premium-button:active::after {
     opacity: 0.12;
     transform: translate(-50%, -50%) scale(18);
-    transition: transform 360ms ease-out, opacity 420ms ease-out;
+    transition:
+      transform 360ms ease-out,
+      opacity 420ms ease-out;
   }
 
   input:focus-visible,
@@ -296,7 +377,9 @@
   }
 
   tbody tr {
-    transition: background-color 180ms ease, transform 180ms ease;
+    transition:
+      background-color 180ms ease,
+      transform 180ms ease;
   }
 
   tbody tr:hover {
@@ -304,7 +387,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;

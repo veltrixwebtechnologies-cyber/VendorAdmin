@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, Ban, CheckCircle2, Trash2 } from "lucide-react";
+import { Search, Ban, CheckCircle2, UserRound } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -114,30 +114,37 @@ function UsersPage() {
               {paged.map((u) => (
                 <div
                   key={u.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 sm:px-4"
+                  className="grid grid-cols-[minmax(0,1fr)_112px] items-center gap-4 px-4 py-3.5 sm:px-5"
                 >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate font-medium">
-                        {u.display_name || u.email || "Unknown"}
-                      </span>
-                      {u.is_blocked && (
-                        <Badge variant="destructive" className="text-[10px]">
-                          Blocked
-                        </Badge>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="hidden h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary sm:grid">
+                      {(u.display_name || u.email || "U").slice(0, 1).toUpperCase() || (
+                        <UserRound className="h-4 w-4" />
                       )}
                     </div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {u.email} · Joined {new Date(u.created_at).toLocaleDateString()}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate font-medium">
+                          {u.display_name || u.email || "Unknown"}
+                        </span>
+                        {u.is_blocked && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            Blocked
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {u.email} · Joined {new Date(u.created_at).toLocaleDateString()}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex justify-end">
                     {u.is_blocked ? (
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => toggle(u.id, false)}
-                        className="gap-1"
+                        className="w-[100px] justify-center gap-1"
                       >
                         <CheckCircle2 className="h-4 w-4" />
                         Unblock
@@ -145,7 +152,11 @@ function UsersPage() {
                     ) : (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="outline" className="gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-[100px] justify-center gap-1"
+                          >
                             <Ban className="h-4 w-4" />
                             Block
                           </Button>

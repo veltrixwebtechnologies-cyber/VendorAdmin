@@ -83,7 +83,7 @@ export function PickupPinEditor({
         change.current(pin);
         if (position.coords.accuracy > 100) {
           setMessage(
-            `Location pin set (accuracy ±${Math.round(position.coords.accuracy)}m). Tap the exact pickup entrance on the map if needed.`
+            `Location pin set (accuracy ±${Math.round(position.coords.accuracy)}m). Tap the exact pickup entrance on the map if needed.`,
           );
         } else {
           setMessage("Pin set from current location! Tap the map to adjust if needed.");
@@ -92,7 +92,7 @@ export function PickupPinEditor({
       (error) => {
         setLocating(false);
         setMessage(
-          `Location access error (${error.message || "permission denied"}). Please tap the exact entrance on the map or enter coordinates manually.`
+          `Location access error (${error.message || "permission denied"}). Please tap the exact entrance on the map or enter coordinates manually.`,
         );
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },

@@ -101,11 +101,17 @@ function AppBannerConfigEditor() {
               </Badge>
             </div>
             <p className="text-xs text-slate-400">
-              Customize headline, discount offer, badges, store ratings, and text displayed in the dark glass download strip on LocalShore.
+              Customize headline, discount offer, badges, store ratings, and text displayed in the
+              dark glass download strip on LocalShore.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="bg-slate-800 text-white hover:bg-slate-700 border-slate-700" onClick={handleOpenEdit}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-slate-800 text-white hover:bg-slate-700 border-slate-700"
+              onClick={handleOpenEdit}
+            >
               <Pencil className="h-4 w-4 mr-1.5" />
               Edit Banner Settings
             </Button>
@@ -139,8 +145,16 @@ function AppBannerConfigEditor() {
             </div>
             <div className="flex items-center gap-3 shrink-0 bg-[#11162b] p-3 rounded-xl border border-[#232c4a]">
               <div className="text-left space-y-1 text-xs">
-                <div className="text-[10px] text-slate-400">Google Play: <strong className="text-[#facc15]">★ {activeConfig.google_play_rating}</strong> ({activeConfig.google_play_downloads})</div>
-                <div className="text-[10px] text-slate-400">App Store: <strong className="text-[#facc15]">★ {activeConfig.app_store_rating}</strong> ({activeConfig.app_store_downloads})</div>
+                <div className="text-[10px] text-slate-400">
+                  Google Play:{" "}
+                  <strong className="text-[#facc15]">★ {activeConfig.google_play_rating}</strong> (
+                  {activeConfig.google_play_downloads})
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  App Store:{" "}
+                  <strong className="text-[#facc15]">★ {activeConfig.app_store_rating}</strong> (
+                  {activeConfig.app_store_downloads})
+                </div>
               </div>
               <div className="bg-white text-slate-950 p-1.5 rounded font-mono text-[9px] font-bold text-center">
                 QR CODE
@@ -161,7 +175,9 @@ function AppBannerConfigEditor() {
               <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/40">
                 <div>
                   <Label className="font-bold">Enable App Banner</Label>
-                  <p className="text-xs text-muted-foreground">Show or hide this banner on the storefront homepage</p>
+                  <p className="text-xs text-muted-foreground">
+                    Show or hide this banner on the storefront homepage
+                  </p>
                 </div>
                 <input
                   type="checkbox"
@@ -182,7 +198,9 @@ function AppBannerConfigEditor() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="dark-navy">Dark Navy & Gold Luxury (Image Match)</SelectItem>
-                    <SelectItem value="signature-orchid">LocalShore Signature Orchid & Gold</SelectItem>
+                    <SelectItem value="signature-orchid">
+                      LocalShore Signature Orchid & Gold
+                    </SelectItem>
                     <SelectItem value="auto">Auto / Adaptive Theme</SelectItem>
                   </SelectContent>
                 </Select>
@@ -303,14 +321,21 @@ function AppBannerConfigEditor() {
             </div>
           )}
           <DialogFooter className="flex justify-between items-center sm:justify-between">
-            <Button variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={handleReset}>
+            <Button
+              variant="ghost"
+              className="text-destructive hover:bg-destructive/10"
+              onClick={handleReset}
+            >
               Reset to Defaults
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsEditing(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="bg-[#facc15] text-slate-950 hover:bg-[#eab308] font-bold">
+              <Button
+                onClick={handleSave}
+                className="bg-[#facc15] text-slate-950 hover:bg-[#eab308] font-bold"
+              >
                 Save & Publish
               </Button>
             </div>
@@ -350,7 +375,9 @@ function BannersPage() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Banners</h1>
-          <p className="text-sm text-muted-foreground">Homepage hero, app download promo, and featured slots.</p>
+          <p className="text-sm text-muted-foreground">
+            Homepage hero, app download promo, and featured slots.
+          </p>
         </div>
         <Button
           onClick={() =>
@@ -574,7 +601,7 @@ function BannersPage() {
                   new Date(editing.ends_at) <= new Date(editing.starts_at)
                 )
                   return toast.error("End time must be after start time");
-                
+
                 const payload = {
                   ...editing,
                   starts_at: editing.starts_at || null,

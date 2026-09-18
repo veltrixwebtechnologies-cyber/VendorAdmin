@@ -27,7 +27,9 @@ import { CATEGORIES } from "@/lib/catalog-store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/filters")({
-  head: () => ({ meta: [{ title: "Filter Management — Admin" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [{ title: "Filter Management — Admin" }, { name: "robots", content: "noindex" }],
+  }),
   component: AdminFiltersPage,
 });
 
@@ -37,7 +39,8 @@ interface FilterDef {
   product_type_id: string | null;
   key: string;
   label: string;
-  type: "single_select" | "multi_select" | "range" | "boolean" | "number" | "text" | "color" | "rating";
+  type:
+    "single_select" | "multi_select" | "range" | "boolean" | "number" | "text" | "color" | "rating";
   unit: string | null;
   is_universal: boolean;
   is_required: boolean;
@@ -106,10 +109,7 @@ function AdminFiltersPage() {
 
   const deleteDefMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from("filter_definitions")
-        .delete()
-        .eq("id", id);
+      const { error } = await (supabase as any).from("filter_definitions").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -120,7 +120,15 @@ function AdminFiltersPage() {
   });
 
   const addOptMut = useMutation({
-    mutationFn: async ({ filter_id, value, label }: { filter_id: string; value: string; label: string }) => {
+    mutationFn: async ({
+      filter_id,
+      value,
+      label,
+    }: {
+      filter_id: string;
+      value: string;
+      label: string;
+    }) => {
       const { data, error } = await (supabase as any)
         .from("filter_options")
         .insert({ filter_id, value, label })
@@ -140,10 +148,7 @@ function AdminFiltersPage() {
 
   const deleteOptMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from("filter_options")
-        .delete()
-        .eq("id", id);
+      const { error } = await (supabase as any).from("filter_options").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -228,19 +233,27 @@ function AdminFiltersPage() {
                         <div>
                           <h4 className="font-bold text-sm text-foreground flex items-center gap-1.5">
                             <span>{d.label}</span>
-                            <span className="font-mono text-[10px] text-muted-foreground">({d.key})</span>
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              ({d.key})
+                            </span>
                           </h4>
                           <div className="flex flex-wrap gap-1.5 mt-1">
                             <Badge variant="outline" className="text-[10px] capitalize">
                               {d.type}
                             </Badge>
                             {d.is_universal && (
-                              <Badge variant="secondary" className="text-[10px] bg-sky-500/10 text-sky-700">
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] bg-sky-500/10 text-sky-700"
+                              >
                                 Universal
                               </Badge>
                             )}
                             {d.is_required && (
-                              <Badge variant="secondary" className="text-[10px] bg-rose-500/10 text-rose-700">
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] bg-rose-500/10 text-rose-700"
+                              >
                                 Required
                               </Badge>
                             )}
@@ -272,7 +285,9 @@ function AdminFiltersPage() {
                       </div>
 
                       {/* Options Preview */}
-                      {(d.type === "multi_select" || d.type === "single_select" || d.type === "color") && (
+                      {(d.type === "multi_select" ||
+                        d.type === "single_select" ||
+                        d.type === "color") && (
                         <div className="border-t pt-2 space-y-2">
                           <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold">
                             <span>Options ({defOpts.length})</span>
@@ -309,7 +324,9 @@ function AdminFiltersPage() {
       <Dialog open={!!editingDef} onOpenChange={(o) => !o && setEditingDef(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingDef?.id ? "Edit Filter Definition" : "New Filter Definition"}</DialogTitle>
+            <DialogTitle>
+              {editingDef?.id ? "Edit Filter Definition" : "New Filter Definition"}
+            </DialogTitle>
             <DialogDescription>
               Configure attribute key, label, input type, and scope.
             </DialogDescription>
@@ -324,7 +341,10 @@ function AdminFiltersPage() {
                     placeholder="e.g. size, color, ram"
                     value={editingDef.key || ""}
                     onChange={(e) =>
-                      setEditingDef({ ...editingDef, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })
+                      setEditingDef({
+                        ...editingDef,
+                        key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
+                      })
                     }
                   />
                 </div>
@@ -374,7 +394,9 @@ function AdminFiltersPage() {
                   <input
                     type="checkbox"
                     checked={editingDef.is_universal ?? false}
-                    onChange={(e) => setEditingDef({ ...editingDef, is_universal: e.target.checked })}
+                    onChange={(e) =>
+                      setEditingDef({ ...editingDef, is_universal: e.target.checked })
+                    }
                   />
                   <span>Universal Filter</span>
                 </label>
@@ -383,7 +405,9 @@ function AdminFiltersPage() {
                   <input
                     type="checkbox"
                     checked={editingDef.is_required ?? false}
-                    onChange={(e) => setEditingDef({ ...editingDef, is_required: e.target.checked })}
+                    onChange={(e) =>
+                      setEditingDef({ ...editingDef, is_required: e.target.checked })
+                    }
                   />
                   <span>Required in Seller Form</span>
                 </label>

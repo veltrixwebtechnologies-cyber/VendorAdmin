@@ -689,7 +689,8 @@ function ProductFormDialog({
               </h4>
               <div className="grid gap-4 sm:grid-cols-2">
                 {filterDefs.map((def: any) => {
-                  if (def.key === "brand" || def.key === "price" || def.key === "rating") return null;
+                  if (def.key === "brand" || def.key === "price" || def.key === "rating")
+                    return null;
 
                   const val = form.attributes?.[def.key];
                   const options = def.options || [];
@@ -751,7 +752,15 @@ function ProductFormDialog({
                         <Input
                           type={def.type === "number" || def.type === "range" ? "number" : "text"}
                           step={def.type === "number" || def.type === "range" ? "any" : undefined}
-                          value={val !== undefined && val !== null ? (typeof val === "string" ? val : Array.isArray(val) ? val.join(", ") : String(val)) : ""}
+                          value={
+                            val !== undefined && val !== null
+                              ? typeof val === "string"
+                                ? val
+                                : Array.isArray(val)
+                                  ? val.join(", ")
+                                  : String(val)
+                              : ""
+                          }
                           onChange={(e) => setAttributeValue(def.key, e.target.value)}
                           placeholder={`Enter ${def.label}`}
                           className="h-9 text-xs"

@@ -65,6 +65,7 @@ Each step: Back / Save & Continue. Zod schema per step; can't advance until vali
 ## Data layer (mock)
 
 `src/lib/seller-store.ts`:
+
 - Types: `Seller`, `SellerStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'more_info'`, `SellerDocuments`, etc.
 - Zustand-style store backed by `localStorage` key `sellers:v1`, plus a `currentSellerId` key.
 - Helpers: `createSeller`, `updateSeller`, `submitForApproval`, `approveSeller`, `rejectSeller(reason)`, `requestMoreInfo(msg)`, `listSellers`, `getSeller`.

@@ -98,7 +98,7 @@ function InventoryPage() {
   });
 
   const highRiskItems = (forecastQ.data || []).filter(
-    (item) => item.stockout_risk_level === "high" || item.stockout_risk_level === "stockout"
+    (item) => item.stockout_risk_level === "high" || item.stockout_risk_level === "stockout",
   );
 
   return (
@@ -128,7 +128,8 @@ function InventoryPage() {
             <div className="space-y-2">
               <p className="text-xs text-amber-400 flex items-center font-medium">
                 <AlertTriangle className="h-3.5 w-3.5 mr-1 text-amber-400 shrink-0" />
-                {highRiskItems.length} product(s) at risk of stockout within 3 days based on current sales velocity!
+                {highRiskItems.length} product(s) at risk of stockout within 3 days based on current
+                sales velocity!
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 {highRiskItems.slice(0, 3).map((item) => (

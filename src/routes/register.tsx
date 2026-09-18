@@ -277,7 +277,8 @@ function OnboardingChecklist({
         step: 3,
         group: "Store & Pickup",
         label: "Pickup address",
-        done: !!(ad.pickupSame || ad.pickupAddress) && !!parseCoordinates(ad.pickupLat, ad.pickupLng),
+        done:
+          !!(ad.pickupSame || ad.pickupAddress) && !!parseCoordinates(ad.pickupLat, ad.pickupLng),
       },
       { step: 4, group: "Bank", label: "Bank account", done: !!(bk.accountNumber && bk.ifsc) },
       { step: 5, group: "Tax & Legal", label: "PAN added", done: !!tx.pan },
@@ -782,7 +783,10 @@ function StepAddress({
     const pin =
       parseCoordinates(seller.address.pickupLat, seller.address.pickupLng) ??
       parseCoordinates(seller.address.shopCoordinates?.lat, seller.address.shopCoordinates?.lng) ??
-      parseCoordinates(seller.address.pickupCoordinates?.lat, seller.address.pickupCoordinates?.lng);
+      parseCoordinates(
+        seller.address.pickupCoordinates?.lat,
+        seller.address.pickupCoordinates?.lng,
+      );
     return {
       ...seller.address,
       pickupLat: pin?.lat ?? null,
@@ -795,7 +799,8 @@ function StepAddress({
   const update = useUpdateMySeller();
   const submit = async () => {
     const p = addressSchema.safeParse(v);
-    if (!parseCoordinates(v.pickupLat, v.pickupLng)) return setErrors({ pickupPin: "Choose the exact pickup entrance on the map." });
+    if (!parseCoordinates(v.pickupLat, v.pickupLng))
+      return setErrors({ pickupPin: "Choose the exact pickup entrance on the map." });
     await update.mutateAsync({ address: v });
     onNext();
   };
@@ -820,7 +825,9 @@ function StepAddress({
         <Field label="Pincode" error={errors.pincode}>
           <Input
             value={v.pincode}
-            onChange={(e) => addressChanged({ pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+            onChange={(e) =>
+              addressChanged({ pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })
+            }
           />
         </Field>
         <Field label="Landmark (optional)">
@@ -880,8 +887,17 @@ function StepAddress({
         )}
       </div>
       <div className="mt-4">
-        <PickupPinEditor value={parseCoordinates(v.pickupLat, v.pickupLng)} onChange={pin => setV(current => ({ ...current, pickupLat: pin.lat, pickupLng: pin.lng }))} />
-        {errors.pickupPin && <p role="alert" className="text-sm text-destructive mt-2">{errors.pickupPin}</p>}
+        <PickupPinEditor
+          value={parseCoordinates(v.pickupLat, v.pickupLng)}
+          onChange={(pin) =>
+            setV((current) => ({ ...current, pickupLat: pin.lat, pickupLng: pin.lng }))
+          }
+        />
+        {errors.pickupPin && (
+          <p role="alert" className="text-sm text-destructive mt-2">
+            {errors.pickupPin}
+          </p>
+        )}
       </div>
       <StepFooter>
         <Button variant="ghost" onClick={onBack}>

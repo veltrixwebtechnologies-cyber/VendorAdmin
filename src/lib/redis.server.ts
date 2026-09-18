@@ -37,10 +37,14 @@ export async function redisIncrementVersion(versionKey: string): Promise<string>
 
   try {
     const newVer = await client.incr(versionKey);
-    console.log(`[SellerHub Redis] op=INCR key="${versionKey}" newVer=${newVer} status=INVALIDATED`);
+    console.log(
+      `[SellerHub Redis] op=INCR key="${versionKey}" newVer=${newVer} status=INVALIDATED`,
+    );
     return String(newVer);
   } catch (err: any) {
-    console.error(`[SellerHub Redis] op=INCR key="${versionKey}" error="${err?.message || String(err)}"`);
+    console.error(
+      `[SellerHub Redis] op=INCR key="${versionKey}" error="${err?.message || String(err)}"`,
+    );
     return "1";
   }
 }

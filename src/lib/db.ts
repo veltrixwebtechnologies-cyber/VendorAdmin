@@ -244,8 +244,16 @@ export function rowToSeller(r: any): Seller {
       state: r.state ?? "",
       pincode: r.pincode ?? "",
       landmark: r.address_line2 ?? "",
-      pickupLat: (w.pickupSame === false ? parseCoordinates(w.pickupLat, w.pickupLng) : parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))?.lat ?? null,
-      pickupLng: (w.pickupSame === false ? parseCoordinates(w.pickupLat, w.pickupLng) : parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))?.lng ?? null,
+      pickupLat:
+        (w.pickupSame === false
+          ? parseCoordinates(w.pickupLat, w.pickupLng)
+          : (parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))
+        )?.lat ?? null,
+      pickupLng:
+        (w.pickupSame === false
+          ? parseCoordinates(w.pickupLat, w.pickupLng)
+          : (parseCoordinates(r.lat, r.lng) ?? parseCoordinates(w.lat, w.lng))
+        )?.lng ?? null,
       pickupSame: w.pickupSame ?? true,
       pickupAddress: w.pickupAddress ?? "",
       pickupCity: w.pickupCity ?? "",
@@ -575,7 +583,13 @@ export function useSubmitMySeller() {
       };
       const { error } = await supabase
         .from("sellers")
-        .update({ lat: pin.lat, lng: pin.lng, status: "pending", admin_notes: null, wizard_data: w as any })
+        .update({
+          lat: pin.lat,
+          lng: pin.lng,
+          status: "pending",
+          admin_notes: null,
+          wizard_data: w as any,
+        })
         .eq("user_id", user.id);
       if (error) throw error;
     },
@@ -800,33 +814,37 @@ export function useMyOrders() {
     if (!user) return;
     const channel = supabase
       .channel(`seller-orders-${user.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (payload: any) => {
-        const newOrder = payload.new;
-        const orderNum = newOrder?.order_number || "New Order";
-        const totalAmt = newOrder?.total ? `₹${newOrder.total}` : "";
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload: any) => {
+          const newOrder = payload.new;
+          const orderNum = newOrder?.order_number || "New Order";
+          const totalAmt = newOrder?.total ? `₹${newOrder.total}` : "";
 
-        playOrderNotificationSound();
+          playOrderNotificationSound();
 
-        toast.success(`🔔 NEW ORDER RECEIVED! #${orderNum} (${totalAmt})`, {
-          duration: 15000,
-          description: "A customer just placed an order with your store! Click to view.",
-          action: {
-            label: "View Orders",
-            onClick: () => {
-              if (typeof window !== "undefined") {
-                window.location.href = "/seller/orders";
-              }
+          toast.success(`🔔 NEW ORDER RECEIVED! #${orderNum} (${totalAmt})`, {
+            duration: 15000,
+            description: "A customer just placed an order with your store! Click to view.",
+            action: {
+              label: "View Orders",
+              onClick: () => {
+                if (typeof window !== "undefined") {
+                  window.location.href = "/seller/orders";
+                }
+              },
             },
-          },
-        });
+          });
 
-        triggerDesktopOrderNotification(
-          `🔔 New Order #${orderNum}!`,
-          `Customer order of ${totalAmt} received. Click to open seller portal.`,
-        );
+          triggerDesktopOrderNotification(
+            `🔔 New Order #${orderNum}!`,
+            `Customer order of ${totalAmt} received. Click to open seller portal.`,
+          );
 
-        void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
-      })
+          void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
+        },
+      )
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, () => {
         void qc.invalidateQueries({ queryKey: ["my-orders", user.id] });
       })

@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -141,22 +148,51 @@ function AdminProducts() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "products"] }),
   });
   const [filter, setFilter] = useState<"all" | "pending" | "active" | "rejected" | "out">("all");
+  const [vendorFilter, setVendorFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [rejectTarget, setRejectTarget] = useState<Row | null>(null);
   const [viewTarget, setViewTarget] = useState<Row | null>(null);
   const [reason, setReason] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
 
+  const vendors = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const product of q.data ?? []) {
+      const id = product.seller_id || product.user_id;
+      const name =
+        product.shop_name || product.seller_email || `Seller #${product.user_id.slice(0, 8)}`;
+      if (id && !byId.has(id)) byId.set(id, name);
+    }
+    return Array.from(byId, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [q.data]);
+
   const rows = useMemo(() => {
     let r = q.data ?? [];
+    if (vendorFilter !== "all") {
+      r = r.filter((p) => (p.seller_id || p.user_id) === vendorFilter);
+    }
     if (filter === "out") r = r.filter((p) => (p.stock ?? 0) === 0);
     else if (filter !== "all") r = r.filter((p) => (p.status || "").toLowerCase() === filter);
     if (search.trim()) {
       const s = search.toLowerCase();
-      r = r.filter((p) => (p.name + " " + (p.category || "")).toLowerCase().includes(s));
+      r = r.filter((p) =>
+        (
+          p.name +
+          " " +
+          (p.category || "") +
+          " " +
+          (p.shop_name || "") +
+          " " +
+          (p.seller_email || "")
+        )
+          .toLowerCase()
+          .includes(s),
+      );
     }
     return r;
-  }, [q.data, filter, search]);
+  }, [q.data, filter, search, vendorFilter]);
 
   const openReject = (p: Row) => {
     setRejectTarget(p);
@@ -202,6 +238,19 @@ function AdminProducts() {
             {f === "out" ? "Out of stock" : f}
           </Button>
         ))}
+        <Select value={vendorFilter} onValueChange={setVendorFilter}>
+          <SelectTrigger className="h-9 w-full rounded-full sm:w-56">
+            <SelectValue placeholder="All vendors" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All vendors</SelectItem>
+            {vendors.map((vendor) => (
+              <SelectItem key={vendor.id} value={vendor.id}>
+                {vendor.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="relative ml-auto w-full sm:w-64">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -212,6 +261,10 @@ function AdminProducts() {
           />
         </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Showing {rows.length} product{rows.length === 1 ? "" : "s"}
+        {vendorFilter !== "all" ? " for the selected vendor" : " across all vendors"}.
+      </p>
 
       {q.isLoading ? (
         <div className="grid gap-2">

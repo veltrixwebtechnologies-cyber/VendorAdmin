@@ -138,9 +138,19 @@ function ApprovedStats() {
     const outOfStock = products.filter((p) => p.stock === 0).length;
     const newOrders = orders.filter((o) => ["new", "pending"].includes(o.status)).length;
     const inProgress = orders.filter((o) =>
-      ["accepted", "vendor_accepted", "preparing", "packed", "ready_for_pickup", "out_for_delivery", "shipped"].includes(o.status),
+      [
+        "accepted",
+        "vendor_accepted",
+        "preparing",
+        "packed",
+        "ready_for_pickup",
+        "out_for_delivery",
+        "shipped",
+      ].includes(o.status),
     ).length;
-    const revenue = orders.filter((o) => ["delivered", "completed"].includes(o.status)).reduce((s, o) => s + o.total, 0);
+    const revenue = orders
+      .filter((o) => ["delivered", "completed"].includes(o.status))
+      .reduce((s, o) => s + o.total, 0);
     return { active, lowStock, outOfStock, newOrders, inProgress, revenue };
   }, [products, orders]);
 

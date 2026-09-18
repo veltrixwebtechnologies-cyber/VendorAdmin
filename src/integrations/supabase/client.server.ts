@@ -37,22 +37,13 @@ function createSupabaseAdminClient() {
   const SUPABASE_URL =
     runtimeEnv?.["SUPABASE_URL"] ||
     (typeof import.meta !== "undefined" ? import.meta.env?.["VITE_SUPABASE_URL"] : undefined);
-  const SUPABASE_SERVICE_ROLE_KEY =
-    runtimeEnv?.["SUPABASE_SERVICE_ROLE_KEY"] ||
-    runtimeEnv?.["SUPABASE_PUBLISHABLE_KEY"] ||
-    runtimeEnv?.["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
-    (typeof import.meta !== "undefined"
-      ? import.meta.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"]
-      : undefined);
+  const SUPABASE_SERVICE_ROLE_KEY = runtimeEnv?.["SUPABASE_SERVICE_ROLE_KEY"];
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ["SUPABASE_URL"] : []),
-      ...(!SUPABASE_SERVICE_ROLE_KEY ? ["SUPABASE_SERVICE_ROLE_KEY"] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Connect Supabase in Lovable Cloud.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+  if (!SUPABASE_URL) {
+    throw new Error("SUPABASE_URL environment variable is required");
+  }
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for server admin operations");
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

@@ -27,6 +27,7 @@ import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminMerchandisingRouteImport } from './routes/admin/merchandising'
 import { Route as AdminMlControlCenterRouteImport } from './routes/admin/ml-control-center'
 import { Route as AdminNotificationsRouteImport } from './routes/admin/notifications'
+import { Route as AdminOffersRouteImport } from './routes/admin/offers'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminPaymentsRouteImport } from './routes/admin/payments'
 import { Route as AdminPayoutsRouteImport } from './routes/admin/payouts'
@@ -138,6 +139,11 @@ const AdminMlControlCenterRoute = AdminMlControlCenterRouteImport.update({
 const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminOffersRoute = AdminOffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
@@ -269,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/admin/merchandising': typeof AdminMerchandisingRoute
   '/admin/ml-control-center': typeof AdminMlControlCenterRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/offers': typeof AdminOffersRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
@@ -309,6 +316,7 @@ export interface FileRoutesByTo {
   '/admin/merchandising': typeof AdminMerchandisingRoute
   '/admin/ml-control-center': typeof AdminMlControlCenterRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/offers': typeof AdminOffersRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
@@ -352,6 +360,7 @@ export interface FileRoutesById {
   '/admin/merchandising': typeof AdminMerchandisingRoute
   '/admin/ml-control-center': typeof AdminMlControlCenterRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/offers': typeof AdminOffersRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
@@ -396,6 +405,7 @@ export interface FileRouteTypes {
     | '/admin/merchandising'
     | '/admin/ml-control-center'
     | '/admin/notifications'
+    | '/admin/offers'
     | '/admin/orders'
     | '/admin/payments'
     | '/admin/payouts'
@@ -436,6 +446,7 @@ export interface FileRouteTypes {
     | '/admin/merchandising'
     | '/admin/ml-control-center'
     | '/admin/notifications'
+    | '/admin/offers'
     | '/admin/orders'
     | '/admin/payments'
     | '/admin/payouts'
@@ -478,6 +489,7 @@ export interface FileRouteTypes {
     | '/admin/merchandising'
     | '/admin/ml-control-center'
     | '/admin/notifications'
+    | '/admin/offers'
     | '/admin/orders'
     | '/admin/payments'
     | '/admin/payouts'
@@ -638,6 +650,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/admin/notifications'
       preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/offers': {
+      id: '/admin/offers'
+      path: '/offers'
+      fullPath: '/admin/offers'
+      preLoaderRoute: typeof AdminOffersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/orders': {
@@ -809,6 +828,7 @@ interface AdminRouteRouteChildren {
   AdminMerchandisingRoute: typeof AdminMerchandisingRoute
   AdminMlControlCenterRoute: typeof AdminMlControlCenterRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminOffersRoute: typeof AdminOffersRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminPayoutsRoute: typeof AdminPayoutsRoute
@@ -834,6 +854,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminMerchandisingRoute: AdminMerchandisingRoute,
   AdminMlControlCenterRoute: AdminMlControlCenterRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminOffersRoute: AdminOffersRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminPayoutsRoute: AdminPayoutsRoute,

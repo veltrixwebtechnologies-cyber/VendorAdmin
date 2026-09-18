@@ -63,6 +63,11 @@ const PRESET_BANNERS = [
   },
 ];
 
+const SHOPPER_APP_URL = (import.meta.env.VITE_SHOPPER_APP_URL || "http://localhost:8082").replace(
+  /\/$/,
+  "",
+);
+
 export const Route = createFileRoute("/seller/store")({
   head: () => ({
     meta: [
@@ -405,7 +410,8 @@ function StorefrontCustomizer({ seller }: { seller: any }) {
   const updateSeller = useUpdateMySeller();
   const [shopName, setShopName] = useState(seller.business.shopName || "");
   const [tagline, setTagline] = useState(
-    seller.business.description || "Daily fresh groceries, staples, cooking oil, snacks & household ration",
+    seller.business.description ||
+      "Daily fresh groceries, staples, cooking oil, snacks & household ration",
   );
   const [category, setCategory] = useState(seller.business.category || "Grocery");
   const [bannerUrl, setBannerUrl] = useState(
@@ -451,7 +457,8 @@ function StorefrontCustomizer({ seller }: { seller: any }) {
               <span>Storefront Hero Banner & Design Customizer</span>
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Sellers can customize their hero banner image, tagline, emblem logo & store category in real-time.
+              Sellers can customize their hero banner image, tagline, emblem logo & store category
+              in real-time.
             </p>
           </div>
           <Button
@@ -649,7 +656,9 @@ function StorefrontCustomizer({ seller }: { seller: any }) {
                 onClick={() => {
                   const targetUrl = bannerUrl.trim() || PRESET_BANNERS[0].url;
                   setBannerUrl(targetUrl);
-                  document.getElementById("live-shopper-preview")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("live-shopper-preview")
+                    ?.scrollIntoView({ behavior: "smooth" });
                   toast.success("Live preview updated! Scroll up to view your store hero banner.");
                 }}
                 className="text-xs font-bold shrink-0 bg-purple-50 text-[#981495] hover:bg-purple-100 border-purple-200"
@@ -658,7 +667,7 @@ function StorefrontCustomizer({ seller }: { seller: any }) {
               </Button>
 
               <a
-                href={`http://localhost:3000/store/${seller.id}`}
+                href={`${SHOPPER_APP_URL}/store/${encodeURIComponent(seller.id)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-md bg-amber-400 hover:bg-amber-300 px-3 py-2 text-xs font-black text-slate-950 shadow-xs transition-all shrink-0"
