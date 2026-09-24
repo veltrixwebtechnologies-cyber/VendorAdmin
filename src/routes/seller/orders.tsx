@@ -250,6 +250,9 @@ function VendorLiveLocationControl({
           navigator.geolocation.clearWatch(watchIdRef.current);
           watchIdRef.current = null;
         }
+        void stopLive.mutateAsync({ id: orderId }).catch((error) => {
+          console.error("Failed to stop live location after order status change:", error);
+        });
         setIsSharing(false);
       }
     }
@@ -309,6 +312,13 @@ function VendorLiveLocationControl({
         },
         (err) => {
           toast.error(`GPS Error: ${err.message}`);
+          if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+          }
+          void stopLive.mutateAsync({ id: orderId }).catch((error) => {
+            console.error("Failed to stop live location after GPS error:", error);
+          });
           setIsSharing(false);
         },
         {

@@ -1131,13 +1131,6 @@ export function useVendorUpdateLiveLocation() {
         _accuracy: v.accuracy ?? null,
       });
       if (error) {
-        if (
-          error.code === "PGRST202" ||
-          error.message?.includes("Could not find the function") ||
-          error.message?.includes("schema cache")
-        ) {
-          return true;
-        }
         throw error;
       }
       return data;
@@ -1153,13 +1146,6 @@ export function useVendorStopLiveLocation() {
         _order_id: v.id,
       });
       if (error) {
-        if (
-          error.code === "PGRST202" ||
-          error.message?.includes("Could not find the function") ||
-          error.message?.includes("schema cache")
-        ) {
-          return true;
-        }
         throw error;
       }
       return data;

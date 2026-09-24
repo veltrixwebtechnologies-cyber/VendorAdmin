@@ -423,7 +423,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.get_shop_status TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.get_shop_status(UUID, TIMESTAMPTZ, TEXT) TO authenticated, anon;
 
 -- ── batch helper: get statuses for a list of seller IDs ───────────────────────
 CREATE OR REPLACE FUNCTION public.get_shops_status(_seller_ids UUID[])
