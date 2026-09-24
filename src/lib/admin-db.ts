@@ -74,7 +74,11 @@ export function useLocalShoreOffers() {
   return useQuery<LocalShoreOffer[]>({
     queryKey: ["localshore-offer-cards", "admin"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("localshore_offer_cards").select("*").order("sort_order").order("created_at");
+      const { data, error } = await (supabase as any)
+        .from("localshore_offer_cards")
+        .select("*")
+        .order("sort_order")
+        .order("created_at");
       if (error) throw error;
       return data ?? [];
     },
@@ -85,9 +89,16 @@ export function useUpsertLocalShoreOffer() {
   return useMutation({
     mutationFn: async (value: Partial<LocalShoreOffer>) => {
       const { data: user } = await supabase.auth.getUser();
-      const { data, error } = await (supabase as any).from("localshore_offer_cards").upsert({
-        ...value, id: value.id || undefined, title: value.title?.trim(), created_by: user.user?.id,
-      }).select().single();
+      const { data, error } = await (supabase as any)
+        .from("localshore_offer_cards")
+        .upsert({
+          ...value,
+          id: value.id || undefined,
+          title: value.title?.trim(),
+          created_by: user.user?.id,
+        })
+        .select()
+        .single();
       if (error) throw error;
       return data as LocalShoreOffer;
     },
@@ -97,7 +108,13 @@ export function useUpsertLocalShoreOffer() {
 export function useDeleteLocalShoreOffer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => { const { error } = await (supabase as any).from("localshore_offer_cards").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any)
+        .from("localshore_offer_cards")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["localshore-offer-cards"] }),
   });
 }

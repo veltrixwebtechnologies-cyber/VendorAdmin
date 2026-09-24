@@ -127,7 +127,7 @@ export const listProducts = createServerFn({ method: "GET" })
 
 export const createProductFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => productInput.parse(d))
+  .validator((d: unknown) => productInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const sellerId = await ensureSellerId(supabase, userId);
@@ -161,7 +161,7 @@ export const createProductFn = createServerFn({ method: "POST" })
 
 export const updateProductFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ id: z.string().uuid(), patch: productInput.partial() }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -211,7 +211,7 @@ export const updateProductFn = createServerFn({ method: "POST" })
 
 export const deleteProductFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const { data: existing, error: existingError } = await supabase
@@ -235,9 +235,7 @@ export const deleteProductFn = createServerFn({ method: "POST" })
 
 export const bulkCreateProductsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ rows: z.array(productInput).min(1).max(500) }).parse(d),
-  )
+  .validator((d: unknown) => z.object({ rows: z.array(productInput).min(1).max(500) }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const sellerId = await ensureSellerId(supabase, userId);

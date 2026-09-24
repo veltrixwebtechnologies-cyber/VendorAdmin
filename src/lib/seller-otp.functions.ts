@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 const emailOk = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 export const sendSellerEmailOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: { accessToken: string; email: string }) => {
+  .validator((d: { accessToken: string; email: string }) => {
     if (!d?.accessToken || !emailOk(d.email)) throw new Error("Invalid verification request");
     return { accessToken: d.accessToken, email: d.email.trim().toLowerCase() };
   })
@@ -24,7 +24,7 @@ export const sendSellerEmailOtp = createServerFn({ method: "POST" })
   });
 
 export const verifySellerEmailOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: { accessToken: string; email: string; code: string }) => {
+  .validator((d: { accessToken: string; email: string; code: string }) => {
     if (!d?.accessToken || !emailOk(d.email) || !d.code)
       throw new Error("Invalid verification request");
     return { accessToken: d.accessToken, email: d.email.trim().toLowerCase(), code: d.code.trim() };
