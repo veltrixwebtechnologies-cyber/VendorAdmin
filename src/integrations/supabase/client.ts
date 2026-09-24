@@ -31,12 +31,21 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 
 function resolveSupabaseUrl(values: Array<string | undefined>): string | undefined {
   for (const rawValue of values) {
-    const value = rawValue?.trim().replace(/^['"]|['"]$/g, "");
+    const raw = rawValue?.trim();
+    const value = raw?.includes("=")
+      ? raw.slice(raw.indexOf("=") + 1).trim().replace(/^['"]|['"]$/g, "")
+      : raw?.replace(/^['"]|['"]$/g, "");
     if (!value) continue;
 
     try {
       const url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(value) ? value : `https://${value}`);
-      if (url.protocol === "http:" || url.protocol === "https:") return url.toString().replace(/\/$/, "");
+      if (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        url.hostname.length > 0 &&
+        !/["'=]/.test(url.hostname)
+      ) {
+        return url.toString().replace(/\/$/, "");
+      }
     } catch {
       // Ignore malformed deployment values and try the next configured source.
     }
