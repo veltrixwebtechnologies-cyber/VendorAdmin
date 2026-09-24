@@ -29,15 +29,33 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
+function resolveSupabaseUrl(values: Array<string | undefined>): string | undefined {
+  for (const rawValue of values) {
+    const value = rawValue?.trim().replace(/^['"]|['"]$/g, "");
+    if (!value) continue;
+
+    try {
+      const url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(value) ? value : `https://${value}`);
+      if (url.protocol === "http:" || url.protocol === "https:") return url.toString().replace(/\/$/, "");
+    } catch {
+      // Ignore malformed deployment values and try the next configured source.
+    }
+  }
+}
+
 function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
   // Fall back to process.env for SSR (server-side rendering)
   const runtimeEnv = typeof process !== "undefined" ? process.env : undefined;
   const metaEnv = typeof import.meta !== "undefined" ? import.meta.env : undefined;
-  const SUPABASE_URL =
-    metaEnv?.["VITE_SUPABASE_URL"] ||
-    runtimeEnv?.["SUPABASE_URL"] ||
-    runtimeEnv?.["VITE_SUPABASE_URL"];
+  const SUPABASE_PROJECT_ID =
+    metaEnv?.["VITE_SUPABASE_PROJECT_ID"] || runtimeEnv?.["SUPABASE_PROJECT_ID"];
+  const SUPABASE_URL = resolveSupabaseUrl([
+    metaEnv?.["VITE_SUPABASE_URL"],
+    runtimeEnv?.["SUPABASE_URL"],
+    runtimeEnv?.["VITE_SUPABASE_URL"],
+    SUPABASE_PROJECT_ID ? `https://${SUPABASE_PROJECT_ID}.supabase.co` : undefined,
+  ]);
   const SUPABASE_PUBLISHABLE_KEY =
     metaEnv?.["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
     runtimeEnv?.["SUPABASE_PUBLISHABLE_KEY"] ||
