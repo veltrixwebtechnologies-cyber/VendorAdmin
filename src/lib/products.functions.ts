@@ -7,20 +7,21 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * All calls run as the signed-in user; RLS scopes rows to them.
  * ============================================================ */
 
-const productInput = z
-  .object({
-    name: z.string().trim().min(1).max(200),
-    sku: z.string().trim().min(1).max(80),
-    category: z.string().trim().min(1).max(80),
-    brand: z.string().trim().max(120).optional().default(""),
-    description: z.string().trim().min(1, "Product description is required").max(4000),
-    mrp: z.number().min(0),
-    price: z.number().min(0),
-    stock: z.number().int().min(0),
-    lowStockAt: z.number().int().min(0).default(5),
-    imageUrl: z.string().max(500).optional().nullable(),
-    attributes: z.record(z.any()).optional().default({}),
-  })
+const productFields = z.object({
+  name: z.string().trim().min(1).max(200),
+  sku: z.string().trim().min(1).max(80),
+  category: z.string().trim().min(1).max(80),
+  brand: z.string().trim().max(120).optional().default(""),
+  description: z.string().trim().min(1, "Product description is required").max(4000),
+  mrp: z.number().min(0),
+  price: z.number().min(0),
+  stock: z.number().int().min(0),
+  lowStockAt: z.number().int().min(0).default(5),
+  imageUrl: z.string().max(500).optional().nullable(),
+  attributes: z.record(z.any()).optional().default({}),
+});
+
+const productInput = productFields
   .refine((value) => value.price > 0, {
     path: ["price"],
     message: "Selling price must be greater than 0",
@@ -29,6 +30,8 @@ const productInput = z
     path: ["mrp"],
     message: "MRP cannot be lower than selling price",
   });
+
+const productPatch = productFields.partial();
 
 export type ProductInput = z.infer<typeof productInput>;
 
@@ -162,7 +165,7 @@ export const createProductFn = createServerFn({ method: "POST" })
 export const updateProductFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) =>
-    z.object({ id: z.string().uuid(), patch: productInput.partial() }).parse(d),
+    z.object({ id: z.string().uuid(), patch: productPatch }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;

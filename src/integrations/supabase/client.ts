@@ -33,7 +33,10 @@ function resolveSupabaseUrl(values: Array<string | undefined>): string | undefin
   for (const rawValue of values) {
     const raw = rawValue?.trim();
     const value = raw?.includes("=")
-      ? raw.slice(raw.indexOf("=") + 1).trim().replace(/^['"]|['"]$/g, "")
+      ? raw
+          .slice(raw.indexOf("=") + 1)
+          .trim()
+          .replace(/^['"]|['"]$/g, "")
       : raw?.replace(/^['"]|['"]$/g, "");
     if (!value) continue;
 

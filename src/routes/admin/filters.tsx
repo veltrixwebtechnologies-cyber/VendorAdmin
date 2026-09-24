@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { CATEGORIES } from "@/lib/catalog-store";
+import { useCategories } from "@/lib/admin-db";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/filters")({
@@ -64,6 +64,7 @@ function AdminFiltersPage() {
   const [editingOptFilter, setEditingOptFilter] = useState<FilterDef | null>(null);
   const [newOptValue, setNewOptValue] = useState("");
   const [newOptLabel, setNewOptLabel] = useState("");
+  const categoriesQ = useCategories();
 
   const filterDefsQ = useQuery<FilterDef[]>({
     queryKey: ["admin-filter-defs"],
@@ -164,7 +165,7 @@ function AdminFiltersPage() {
   const filteredDefs = useMemo(() => {
     if (selectedCategory === "all") return defs;
     if (selectedCategory === "universal") return defs.filter((d) => d.is_universal);
-    return defs.filter((d) => d.is_universal || d.category_id);
+    return defs.filter((d) => d.is_universal || d.category_id === selectedCategory);
   }, [defs, selectedCategory]);
 
   return (
@@ -207,9 +208,9 @@ function AdminFiltersPage() {
               <SelectContent>
                 <SelectItem value="all">All Filters ({defs.length})</SelectItem>
                 <SelectItem value="universal">Universal Filters</SelectItem>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
+                {(categoriesQ.data ?? []).map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
                   </SelectItem>
                 ))}
               </SelectContent>
