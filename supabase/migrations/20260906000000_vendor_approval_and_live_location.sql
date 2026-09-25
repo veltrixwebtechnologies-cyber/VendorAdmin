@@ -21,10 +21,11 @@ ALTER TABLE public.sellers
   ADD COLUMN IF NOT EXISTS location_verified_at timestamptz DEFAULT now(),
   ADD COLUMN IF NOT EXISTS estimated_prep_time_minutes integer DEFAULT 20;
 
--- Backfill shop_latitude and shop_longitude from existing lat/lng/current_latitude columns if missing
+-- Backfill from the canonical seller coordinates. Seller live coordinates belong
+-- to delivery_partners; sellers use lat/lng for the shop location.
 UPDATE public.sellers
-SET shop_latitude = COALESCE(shop_latitude, lat, current_latitude, (wizard_data->>'lat')::double precision, 13.0827),
-    shop_longitude = COALESCE(shop_longitude, lng, current_longitude, (wizard_data->>'lng')::double precision, 80.2707)
+SET shop_latitude = COALESCE(shop_latitude, lat, 13.0827),
+    shop_longitude = COALESCE(shop_longitude, lng, 80.2707)
 WHERE shop_latitude IS NULL OR shop_longitude IS NULL;
 
 -- 3. Create temporary vendor live location table
