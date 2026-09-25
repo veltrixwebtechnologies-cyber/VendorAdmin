@@ -164,9 +164,7 @@ export const createProductFn = createServerFn({ method: "POST" })
 
 export const updateProductFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
-    z.object({ id: z.string().uuid(), patch: productPatch }).parse(d),
-  )
+  .validator((d: unknown) => z.object({ id: z.string().uuid(), patch: productPatch }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     const patch: Record<string, unknown> = {};
