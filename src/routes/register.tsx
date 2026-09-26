@@ -58,6 +58,24 @@ const STEPS = [
 ] as const;
 const searchSchema = z.object({ step: z.coerce.number().min(1).max(7).optional() });
 
+function withTimeout<T>(promise: Promise<T>, message: string, ms = 15000): Promise<T> {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  });
+}
+
+function verificationErrorMessage(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("SUPABASE_SERVICE_ROLE_KEY")) {
+    return "Email verification is not configured on the server. Please contact the administrator.";
+  }
+  return message || fallback;
+}
+
 async function geocodeSellerAddress(query: string): Promise<{ lat: number; lng: number } | null> {
   const cleanQuery = query.trim();
   if (!cleanQuery) return null;
@@ -435,27 +453,38 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
   const [mobileCode, setMobileCode] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [mobileSent, setMobileSent] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailVerifying, setEmailVerifying] = useState(false);
+  const [mobileVerifying, setMobileVerifying] = useState(false);
 
   const emailVerified = seller.account.emailVerified;
   const mobileVerified = seller.account.mobileVerified;
 
   const sendEmailOtp = async () => {
+    if (emailBusy || emailVerified) return;
     const p = accountSchema.shape.email.safeParse(values.email);
     if (!p.success) return setErrors((e) => ({ ...e, email: p.error.issues[0].message }));
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return toast.error("Please sign in again before verifying your email");
+    setEmailBusy(true);
     try {
-      const { error: clientErr } = await supabase.auth.signInWithOtp({
-        email: values.email.trim(),
-      });
+      const { error: clientErr } = await withTimeout(
+        supabase.auth.signInWithOtp({ email: values.email.trim() }),
+        "The verification service is taking too long. Please try again.",
+      );
       if (clientErr) {
-        await sendSellerEmailOtp({ data: { accessToken: token, email: values.email } });
+        await withTimeout(
+          sendSellerEmailOtp({ data: { accessToken: token, email: values.email } }),
+          "The verification service is taking too long. Please try again.",
+        );
       }
       setEmailSent(true);
       toast.success(`Verification code sent to ${values.email}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not send verification code");
+      toast.error(verificationErrorMessage(e, "Could not send verification code"));
+    } finally {
+      setEmailBusy(false);
     }
   };
   const sendMobileOtp = () => {
@@ -466,10 +495,12 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
     toast.success("Demo OTP sent: 123456 (Demo Mode)");
   };
   const verifyEmail = async () => {
+    if (emailVerifying) return;
     if (!emailCode.trim()) return toast.error("Enter the verification code");
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return toast.error("Please sign in again before verifying your email");
+    setEmailVerifying(true);
     try {
       let verified = false;
 
@@ -504,18 +535,24 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
         toast.success("Email verified!");
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Invalid or expired OTP");
+      toast.error(verificationErrorMessage(e, "Invalid or expired OTP"));
+    } finally {
+      setEmailVerifying(false);
     }
   };
   const verifyMobile = async () => {
+    if (mobileVerifying) return;
     if (!mobileCode || mobileCode.length < 6 || mobileCode.length > 8) {
       return toast.error("Enter the verification code (up to 8 digits)");
     }
+    setMobileVerifying(true);
     try {
       await update.mutateAsync({ account: { ...seller.account, ...values, mobileVerified: true } });
       toast.success("Mobile number verified!");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not verify mobile number");
+    } finally {
+      setMobileVerifying(false);
     }
   };
 
@@ -559,8 +596,18 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
               onChange={(e) => setValues({ ...values, email: e.target.value })}
               disabled={emailVerified}
             />
-            <Button type="button" variant="outline" onClick={sendEmailOtp} disabled={emailVerified}>
-              <Send className="h-4 w-4" /> Send OTP
+            <Button
+              type="button"
+              variant="outline"
+              onClick={sendEmailOtp}
+              disabled={emailVerified || emailBusy}
+            >
+              {emailBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              {emailBusy ? "Sending…" : "Send OTP"}
             </Button>
           </div>
           {emailSent && !emailVerified && (
@@ -572,8 +619,9 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
                 onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter OTP (up to 8 digits)"
               />
-              <Button type="button" onClick={verifyEmail}>
-                Verify
+              <Button type="button" onClick={verifyEmail} disabled={emailVerifying || !emailCode}>
+                {emailVerifying && <Loader2 className="h-4 w-4 animate-spin" />}
+                {emailVerifying ? "Verifying…" : "Verify"}
               </Button>
             </div>
           )}
@@ -591,8 +639,13 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
         >
           <div className="flex gap-2">
             <Input
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
               value={values.mobile}
-              onChange={(e) => setValues({ ...values, mobile: e.target.value.replace(/\D/g, "") })}
+              onChange={(e) =>
+                setValues({ ...values, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })
+              }
               placeholder="10-digit mobile"
               disabled={mobileVerified}
             />
@@ -614,8 +667,9 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
                 onChange={(e) => setMobileCode(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter OTP (up to 8 digits)"
               />
-              <Button type="button" onClick={verifyMobile}>
-                Verify
+              <Button type="button" onClick={verifyMobile} disabled={mobileVerifying || !mobileCode}>
+                {mobileVerifying && <Loader2 className="h-4 w-4 animate-spin" />}
+                {mobileVerifying ? "Verifying…" : "Verify"}
               </Button>
             </div>
           )}
@@ -949,27 +1003,36 @@ function StepBank({
     onNext();
   };
   return (
-    <StepCard title="Bank details" subtitle="Step 4 of 7">
+    <StepCard title="Bank details" subtitle="Step 4 of 7" onBack={onBack}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Account holder name" error={errors.holderName}>
+        <Field label="Account holder name" required error={errors.holderName}>
           <Input
+            required
             value={v.holderName}
             onChange={(e) => setV({ ...v, holderName: e.target.value })}
           />
         </Field>
-        <Field label="Bank name" error={errors.bankName}>
-          <Input value={v.bankName} onChange={(e) => setV({ ...v, bankName: e.target.value })} />
-        </Field>
-        <Field label="Account number" error={errors.accountNumber}>
+        <Field label="Bank name" required error={errors.bankName}>
           <Input
+            required
+            value={v.bankName}
+            onChange={(e) => setV({ ...v, bankName: e.target.value })}
+          />
+        </Field>
+        <Field label="Account number" required error={errors.accountNumber}>
+          <Input
+            required
+            inputMode="numeric"
+            type="text"
             value={v.accountNumber}
             onChange={(e) =>
               setV({ ...v, accountNumber: e.target.value.replace(/\D/g, "").slice(0, 18) })
             }
           />
         </Field>
-        <Field label="IFSC code" error={errors.ifsc}>
+        <Field label="IFSC code" required error={errors.ifsc}>
           <Input
+            required
             value={v.ifsc}
             onChange={(e) => setV({ ...v, ifsc: e.target.value.toUpperCase().slice(0, 11) })}
           />
@@ -1108,6 +1171,20 @@ function StepDocuments({
   const handleFile = async (key: keyof SellerDocuments, file?: File | null) => {
     if (!file || !user) return;
     if (file.size > 5 * 1024 * 1024) return toast.error("File must be under 5 MB");
+    const imageOnly = key === "shopLogo" || key === "shopBanner";
+    const allowedTypes = imageOnly
+      ? ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]
+      : [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/heic",
+          "image/heif",
+          "application/pdf",
+        ];
+    if (file.type && !allowedTypes.includes(file.type)) {
+      return toast.error(imageOnly ? "Upload a JPG, PNG, or WEBP image" : "Upload a PDF or image");
+    }
     setBusy(key as string);
     try {
       const stored: StoredFile = await uploadSellerDoc(user.id, seller.id, key as string, file);
@@ -1123,6 +1200,7 @@ function StepDocuments({
   };
 
   const submit = async () => {
+    if (busy) return toast.error("Please wait for the current upload to finish");
     const missing = DOC_FIELDS.filter((d) => d.required && !docs[d.key]);
     if (missing.length) return toast.error(`Missing: ${missing.map((m) => m.label).join(", ")}`);
     await update.mutateAsync({ documents: docs });
@@ -1160,9 +1238,16 @@ function StepDocuments({
                   type="file"
                   className="hidden"
                   accept={accept}
-                  onChange={(e) => handleFile(key, e.target.files?.[0])}
+                  disabled={busy !== null}
+                  onChange={(e) => {
+                    void handleFile(key, e.target.files?.[0]);
+                    e.currentTarget.value = "";
+                  }}
                 />
-                <span className="inline-flex h-9 items-center rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+                <span
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${busy !== null ? "cursor-not-allowed opacity-60" : ""}`}
+                >
+                  {busy === key && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   {busy === key ? "Uploading…" : f ? "Replace" : "Upload"}
                 </span>
               </label>
@@ -1174,8 +1259,9 @@ function StepDocuments({
         <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <Button onClick={submit} disabled={update.isPending}>
-          Save & Continue <ArrowRight className="h-4 w-4" />
+        <Button onClick={submit} disabled={update.isPending || busy !== null}>
+          {update.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          {update.isPending ? "Saving…" : "Save & Continue"} <ArrowRight className="h-4 w-4" />
         </Button>
       </StepFooter>
     </StepCard>
@@ -1317,15 +1403,28 @@ function StepReview({
 function StepCard({
   title,
   subtitle,
+  onBack,
   children,
 }: {
   title: string;
   subtitle?: string;
+  onBack?: () => void;
   children: React.ReactNode;
 }) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="relative">
+        {onBack && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="absolute right-4 top-4 gap-1.5 text-muted-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
+        )}
         <CardTitle className="text-xl">{title}</CardTitle>
         {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </CardHeader>
@@ -1342,11 +1441,13 @@ function StepFooter({ children }: { children: React.ReactNode }) {
 }
 function Field({
   label,
+  required = false,
   error,
   right,
   children,
 }: {
   label: string;
+  required?: boolean;
   error?: string;
   right?: React.ReactNode;
   children: React.ReactNode;
@@ -1354,7 +1455,10 @@ function Field({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <Label>{label}</Label>
+        <Label>
+          {label}
+          {required && <span className="ml-1 text-destructive" aria-hidden="true">*</span>}
+        </Label>
         {right}
       </div>
       {children}

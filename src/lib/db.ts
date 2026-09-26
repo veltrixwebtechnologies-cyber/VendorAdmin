@@ -735,11 +735,12 @@ export function useIsAdmin() {
     queryKey: ["is-admin", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("user_roles")
         .select("role")
         .eq("user_id", user!.id)
         .eq("role", "admin")
+        .eq("status", "active")
         .maybeSingle();
       if (error) throw error;
       return !!data;
@@ -1177,6 +1178,26 @@ export function useUpdateProductStock() {
 
 export function useMyNotifications() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`notifications-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        () => {
+          void qc.invalidateQueries({ queryKey: ["my-notifications", user.id] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user, qc]);
+
   return useQuery({
     queryKey: ["my-notifications", user?.id],
     enabled: !!user,
@@ -1198,6 +1219,8 @@ export function useMyNotifications() {
         createdAt: r.created_at,
       }));
     },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -1348,16 +1371,18 @@ export async function uploadSellerDoc(
   docType: string,
   file: File,
 ): Promise<StoredFile> {
-  if (file.size <= 0 || file.size > 10 * 1024 * 1024)
-    throw new Error("Document exceeds the 10 MB limit");
+  if (file.size <= 0 || file.size > 5 * 1024 * 1024)
+    throw new Error("File must be under 5 MB");
   const ext = (file.name.split(".").pop() || "").toLowerCase();
   const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "webp", "heic", "heif"];
   const isAllowedExt = allowedExtensions.includes(ext);
   const isAllowedMime =
-    !file.type ||
-    file.type.startsWith("image/") ||
-    file.type === "application/pdf" ||
-    file.type === "application/octet-stream";
+    file.type === "image/jpeg" ||
+    file.type === "image/png" ||
+    file.type === "image/webp" ||
+    file.type === "image/heic" ||
+    file.type === "image/heif" ||
+    file.type === "application/pdf";
 
   if (!isAllowedExt && !isAllowedMime) {
     throw new Error(
@@ -1370,7 +1395,7 @@ export async function uploadSellerDoc(
     .from("seller-docs")
     .upload(path, file, { upsert: true, contentType: file.type });
   if (error) throw error;
-  await supabase.from("seller_documents").insert({
+  const { error: documentError } = await supabase.from("seller_documents").insert({
     seller_id: sellerId,
     user_id: userId,
     doc_type: docType,
@@ -1378,6 +1403,7 @@ export async function uploadSellerDoc(
     file_url: path,
     file_size: file.size,
   });
+  if (documentError) throw documentError;
   return { name: file.name, size: file.size, type: file.type, path };
 }
 

@@ -855,18 +855,21 @@ export type Database = {
           created_at: string;
           id: string;
           role: Database["public"]["Enums"]["app_role"];
+          status: string;
           user_id: string;
         };
         Insert: {
           created_at?: string;
           id?: string;
           role: Database["public"]["Enums"]["app_role"];
+          status?: string;
           user_id: string;
         };
         Update: {
           created_at?: string;
           id?: string;
           role?: Database["public"]["Enums"]["app_role"];
+          status?: string;
           user_id?: string;
         };
         Relationships: [];
@@ -908,7 +911,7 @@ export type Database = {
       seed_demo_order: { Args: never; Returns: string };
     };
     Enums: {
-      app_role: "admin" | "seller";
+      app_role: "admin" | "seller" | "customer" | "delivery_partner" | "vendor";
       order_status:
         "new" | "accepted" | "packed" | "shipped" | "delivered" | "cancelled" | "returned";
       product_status: "draft" | "pending" | "active" | "rejected" | "inactive";
@@ -1035,7 +1038,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "seller"],
+      app_role: ["admin", "seller", "customer", "delivery_partner", "vendor"],
       order_status: ["new", "accepted", "packed", "shipped", "delivered", "cancelled", "returned"],
       product_status: ["draft", "pending", "active", "rejected", "inactive"],
       seller_status: ["draft", "pending", "approved", "rejected", "more_info"],

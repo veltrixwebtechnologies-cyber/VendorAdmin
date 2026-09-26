@@ -115,7 +115,8 @@ function useAllProducts() {
       }
       return rows;
     },
-    refetchInterval: 15000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 }
 

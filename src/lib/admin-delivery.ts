@@ -108,7 +108,8 @@ export function useDispatchCenter() {
         earnings: earnings.data ?? [],
       };
     },
-    refetchInterval: 10_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 }
 

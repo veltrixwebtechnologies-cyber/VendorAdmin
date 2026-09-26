@@ -1,5 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck, Package, ShoppingBag, Wallet, UserCog } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,14 +21,41 @@ export function NotificationsBell() {
   const markOne = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const initialized = useRef(false);
+  const knownIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (q.isLoading || !q.data) return;
+    const nextItems = q.data;
+    const nextIds = new Set(nextItems.map((n) => n.id));
+    const newUnread = nextItems.filter((n) => !knownIds.current.has(n.id) && !n.readAt);
+
+    if (!initialized.current) {
+      initialized.current = true;
+      if (newUnread.length > 0) setOpen(true);
+    } else if (newUnread.length > 0) {
+      setOpen(true);
+      toast.info(newUnread[0].title, {
+        description: newUnread[0].body,
+        action: newUnread[0].link
+          ? { label: "View", onClick: () => navigate({ to: newUnread[0].link }) }
+          : undefined,
+      });
+    }
+    knownIds.current = nextIds;
+  }, [q.data, q.isLoading, navigate]);
 
   const openOne = (n: Notification) => {
     if (!n.readAt) markOne.mutate(n.id);
-    if (n.link) navigate({ to: n.link });
+    if (n.link) {
+      setOpen(false);
+      navigate({ to: n.link });
+    }
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
           <Bell className="h-5 w-5" />

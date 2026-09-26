@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { useAuth, signOut } from "@/lib/auth";
 import { useMySeller, useOrderNotificationListener } from "@/lib/db";
+import { useRoles } from "@/lib/roles";
 
 export const Route = createFileRoute("/seller")({
   head: () => ({
@@ -67,6 +68,7 @@ const NAV = [
 function SellerLayout() {
   const { user, loading } = useAuth();
   const sellerQ = useMySeller();
+  const rolesQ = useRoles();
   useOrderNotificationListener();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -82,8 +84,12 @@ function SellerLayout() {
   useEffect(() => {
     // Store Setup is the onboarding entry point. Other seller operations stay
     // locked until an admin approves the application.
-    if (!loading && user && !sellerQ.isLoading) {
+    if (!loading && user && !sellerQ.isLoading && !rolesQ.isLoading) {
       if (!sellerQ.data) {
+        navigate({ to: "/register", replace: true });
+      } else if (!rolesQ.hasRole("seller")) {
+        navigate({ to: "/register", replace: true });
+      } else if (sellerQ.data.status === "approved" && !rolesQ.hasActiveRole("seller")) {
         navigate({ to: "/register", replace: true });
       } else if (
         sellerQ.data.status !== "approved" &&
@@ -93,9 +99,19 @@ function SellerLayout() {
         navigate({ to: "/register", replace: true });
       }
     }
-  }, [user, loading, sellerQ.data, sellerQ.isLoading, pathname, navigate]);
+  }, [
+    user,
+    loading,
+    sellerQ.data,
+    sellerQ.isLoading,
+    rolesQ.isLoading,
+    rolesQ.hasRole,
+    rolesQ.hasActiveRole,
+    pathname,
+    navigate,
+  ]);
 
-  if (loading || !user || sellerQ.isLoading) {
+  if (loading || !user || sellerQ.isLoading || rolesQ.isLoading) {
     return (
       <div className="grid min-h-svh place-items-center bg-background text-sm text-muted-foreground">
         Loading your dashboard…

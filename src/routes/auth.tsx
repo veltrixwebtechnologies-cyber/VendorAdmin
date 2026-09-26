@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth";
+import { useRoles } from "@/lib/roles";
+import { sendPasswordReset } from "@/lib/password-reset.functions";
 
 const OTP_LENGTH = 8;
 
@@ -37,15 +39,19 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const { user, loading } = useAuth();
+  const roleQuery = useRoles();
   const navigate = useNavigate();
   const { redirect, reset } = useSearch({ from: "/auth" });
   const resetMode = reset === "1";
 
   useEffect(() => {
-    if (!loading && user && !resetMode) {
-      navigate({ to: (redirect as any) || "/seller", replace: true });
+    if (!loading && user && !resetMode && !roleQuery.isLoading) {
+      navigate({
+        to: (redirect as any) || (roleQuery.hasRole("seller") ? "/seller" : "/register"),
+        replace: true,
+      });
     }
-  }, [user, loading, navigate, redirect, resetMode]);
+  }, [user, loading, navigate, redirect, resetMode, roleQuery.isLoading, roleQuery.hasRole]);
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-slate-50 px-4 py-10">
@@ -155,10 +161,12 @@ function SignInForm() {
     if (busy) return;
     setBusy(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth?reset=1`,
+      await sendPasswordReset({
+        data: {
+          email: email.trim(),
+          redirectTo: `${window.location.origin}/auth?reset=1`,
+        },
       });
-      if (error) throw error;
       toast.success("Password reset link sent. Check your inbox or spam folder.");
       setForgotPassword(false);
     } catch (error) {
@@ -321,22 +329,45 @@ function SignUpForm() {
   const [otpSent, setOtpSent] = useState(false);
   const [code, setCode] = useState("");
 
-  async function sendCode(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return toast.error("Enter your email address");
-    if (password.length < 8) return toast.error("Password must be at least 8 characters");
-    setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({
+  async function requestVerificationCode() {
+    const request = supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
         shouldCreateUser: true,
         data: { display_name: displayName || email.trim().split("@")[0] },
       },
     });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    setOtpSent(true);
-    toast.success(`Verification code sent to ${email.trim()}`);
+    let timeoutId: number | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = window.setTimeout(
+        () => reject(new Error("The verification service is taking too long. Please try again.")),
+        15000,
+      );
+    });
+
+    try {
+      const { error } = await Promise.race([request, timeout]);
+      if (error) throw error;
+      setOtpSent(true);
+    } finally {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    }
+  }
+
+  async function sendCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    if (!email.trim()) return toast.error("Enter your email address");
+    if (password.length < 8) return toast.error("Password must be at least 8 characters");
+    setBusy(true);
+    try {
+      await requestVerificationCode();
+      toast.success(`Verification code sent to ${email.trim()}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send verification code");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function verifyAndCreate(e: React.FormEvent) {
@@ -430,23 +461,24 @@ function SignUpForm() {
         </div>
         <button
           type="button"
+          disabled={busy}
           className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-          onClick={() => {
-            void supabase.auth
-              .signInWithOtp({
-                email: email.trim(),
-                options: {
-                  shouldCreateUser: true,
-                  data: { display_name: displayName || email.trim().split("@")[0] },
-                },
-              })
-              .then(({ error }) => {
-                if (error) toast.error(error.message);
-                else toast.success("A new verification code was sent.");
-              });
+          onClick={async () => {
+            if (busy) return;
+            setBusy(true);
+            try {
+              await requestVerificationCode();
+              toast.success("A new verification code was sent.");
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : "Could not resend verification code",
+              );
+            } finally {
+              setBusy(false);
+            }
           }}
         >
-          Resend code
+          {busy ? "Sending…" : "Resend code"}
         </button>
       </form>
     );
@@ -500,8 +532,9 @@ function SignUpForm() {
           Minimum 8 characters. Avoid common passwords — we check against known breaches.
         </p>
       </div>
-      <Button type="submit" className="w-full">
-        Send verification code
+      <Button type="submit" className="w-full" disabled={busy}>
+        {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+        {busy ? "Sending verification code…" : "Send verification code"}
       </Button>
     </form>
   );

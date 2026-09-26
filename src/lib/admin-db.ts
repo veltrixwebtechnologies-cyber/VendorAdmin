@@ -542,8 +542,8 @@ export const useBanners = () => {
       }
       return getLocalBanners();
     },
-    staleTime: 5_000,
-    refetchInterval: 5_000,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -873,5 +873,7 @@ export function useAdminOverview() {
         todayOrders: todayOrders.count ?? 0,
       };
     },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 }

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
-import { useClaimFirstAdmin, useHasAnyAdmin, useIsAdmin } from "@/lib/db";
+import { useIsAdmin } from "@/lib/db";
 
 export const Route = createFileRoute("/admin/login")({
   head: () => ({
@@ -27,8 +27,6 @@ function AdminLoginPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdminQ = useIsAdmin();
-  const hasAdminQ = useHasAnyAdmin();
-  const claim = useClaimFirstAdmin();
 
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
@@ -75,11 +73,12 @@ function AdminLoginPage() {
       }
 
       const roleResult = await Promise.race([
-        supabase
+        (supabase as any)
           .from("user_roles")
           .select("role")
           .eq("user_id", uid)
           .eq("role", "admin")
+          .eq("status", "active")
           .maybeSingle(),
         new Promise<{ data: null; error: Error }>((resolve) =>
           window.setTimeout(
@@ -105,17 +104,8 @@ function AdminLoginPage() {
         return;
       }
 
-      const { data: anyAdmin, error: adminCheckError } = await supabase.rpc("has_any_admin");
-      if (adminCheckError) {
-        console.error("[auth] admin availability check failed", adminCheckError);
-      }
-      if (adminCheckError || anyAdmin !== false) {
-        await supabase.auth.signOut();
-        toast.error("This account does not have admin access.");
-        return;
-      }
-
-      toast.message("Sign-in successful — claim admin to continue.");
+      await supabase.auth.signOut();
+      toast.error("This account does not have admin access.");
     } catch (error) {
       console.error("[auth] admin sign in failed", error);
       toast.error(
@@ -125,17 +115,6 @@ function AdminLoginPage() {
       setBusy(false);
     }
   }
-
-  async function onClaim() {
-    const ok = await claim.mutateAsync();
-    if (ok) {
-      toast.success("You're now the admin");
-    } else {
-      toast.error("Admin already exists — ask them for access.");
-    }
-  }
-
-  const canClaim = user && hasAdminQ.data === false && !isAdminQ.data;
 
   return (
     <div className="min-h-screen grid place-items-center bg-background px-4">
@@ -199,15 +178,6 @@ function AdminLoginPage() {
               <Button className="w-full" onClick={() => navigate({ to: "/admin" })}>
                 Enter admin console
               </Button>
-            ) : canClaim ? (
-              <div className="space-y-2">
-                <div className="text-xs text-muted-foreground">
-                  No admin exists yet. The first authorized setup account can claim admin access.
-                </div>
-                <Button className="w-full" onClick={onClaim} disabled={claim.isPending}>
-                  {claim.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Claim admin
-                </Button>
-              </div>
             ) : (
               <div className="space-y-3">
                 <div className="text-xs text-muted-foreground">

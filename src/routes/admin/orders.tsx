@@ -40,7 +40,8 @@ function useAllOrders() {
       if (error) throw error;
       return data ?? [];
     },
-    refetchInterval: 5_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
