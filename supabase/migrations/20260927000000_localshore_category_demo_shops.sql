@@ -157,7 +157,7 @@ BEGIN
     ('home_kitchen'), ('furniture'), ('hardware'), ('books_stationery'),
     ('sports'), ('toys'), ('gifts'), ('flowers'), ('pet_shops'), ('pooja'),
     ('auto'), ('repair'), ('local_services')
-  ) AS c(category) ON true
+  ) AS c(category)
   WHERE z.is_active
     AND (
       SELECT count(*)
