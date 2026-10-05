@@ -397,3 +397,20 @@
     }
   }
 }
+
+/* Keep Google's native Places widget full-width in the seller address form. */
+.google-place-autocomplete {
+  display: block;
+  width: 100%;
+}
+
+.google-place-autocomplete::part(input) {
+  width: 100%;
+  min-height: 2.5rem;
+  border: 1px solid hsl(var(--input));
+  border-radius: 0.5rem;
+  background: hsl(var(--background));
+  padding: 0 0.75rem;
+  color: hsl(var(--foreground));
+  font: inherit;
+}

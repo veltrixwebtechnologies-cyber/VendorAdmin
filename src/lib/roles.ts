@@ -11,8 +11,11 @@ export function useRoles() {
   const query = useQuery({
     queryKey: ["localshore-roles", user?.id],
     enabled: Boolean(user),
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
+    // Admin approval can activate a seller role while the seller dashboard is
+    // open in another tab/session; refresh on return so access unlocks promptly.
+    staleTime: 15_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("user_roles")

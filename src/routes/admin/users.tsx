@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAdminUsers, useSetUserBlocked } from "@/lib/admin-db";
 import { toast } from "sonner";
+import { useAdminAccess, adminErrorMessage } from "@/lib/admin-permissions";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({ meta: [{ title: "Users — Admin" }, { name: "robots", content: "noindex" }] }),
@@ -25,6 +26,8 @@ export const Route = createFileRoute("/admin/users")({
 });
 
 function UsersPage() {
+  const access = useAdminAccess();
+  const canManageCustomers = access.hasPermission("customers.manage");
   const q = useAdminUsers();
   const block = useSetUserBlocked();
   const [search, setSearch] = useState("");
@@ -55,7 +58,7 @@ function UsersPage() {
       { userId, blocked },
       {
         onSuccess: () => toast.success(blocked ? "User blocked" : "User unblocked"),
-        onError: (e: any) => toast.error(e.message || "Failed"),
+        onError: (e: any) => toast.error(adminErrorMessage(e, "Failed to update customer status.")),
       },
     );
   };
@@ -64,7 +67,11 @@ function UsersPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Users</h1>
-        <p className="text-sm text-muted-foreground">Manage customers who use the marketplace.</p>
+        <p className="text-sm text-muted-foreground">
+          {canManageCustomers
+            ? "Manage customers who use the marketplace."
+            : "View marketplace customer accounts."}
+        </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {(["all", "active", "blocked"] as const).map((f) => (
@@ -139,7 +146,9 @@ function UsersPage() {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    {u.is_blocked ? (
+                    {!canManageCustomers ? (
+                      <span className="text-xs text-muted-foreground">View only</span>
+                    ) : u.is_blocked ? (
                       <Button
                         size="sm"
                         variant="outline"

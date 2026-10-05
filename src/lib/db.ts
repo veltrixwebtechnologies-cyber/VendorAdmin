@@ -95,6 +95,7 @@ export interface Seller {
     pickupPincode: string;
     shopCoordinates: { lat: number; lng: number } | null;
     pickupCoordinates: { lat: number; lng: number } | null;
+    googlePlaceId?: string | null;
     locationConfirmationRequired: boolean;
   };
   bank: {
@@ -164,7 +165,12 @@ export interface Settlement {
   commission: number;
   gstOnFees: number;
   net: number;
-  status: "pending" | "processing" | "paid";
+  currentPayable?: number;
+  status: "pending" | "processing" | "paid" | "held" | "failed";
+  hold_reason?: string | null;
+  held_at?: string | null;
+  held_by?: string | null;
+  held_from_status?: "pending" | "processing" | null;
   paidAt?: string;
   utr?: string;
 }
@@ -261,6 +267,7 @@ export function rowToSeller(r: any): Seller {
       pickupPincode: w.pickupPincode ?? "",
       shopCoordinates,
       pickupCoordinates,
+      googlePlaceId: w.googlePlaceId ?? null,
       locationConfirmationRequired: !!w.locationConfirmationRequired,
     },
     bank: {
@@ -317,12 +324,13 @@ export function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<s
     if (patch.address.locationConfirmationRequired !== undefined) {
       w.locationConfirmationRequired = patch.address.locationConfirmationRequired;
     }
+    if (patch.address.googlePlaceId !== undefined) w.googlePlaceId = patch.address.googlePlaceId;
     const isPickupSame = patch.address.pickupSame ?? w.pickupSame ?? true;
     const shopCoords = patch.address.shopCoordinates ?? normalizeCoordinate(w.shopCoordinates);
     const pickupCoords =
       patch.address.pickupCoordinates ?? normalizeCoordinate(w.pickupCoordinates);
 
-    const effectiveCoords = pin ?? (isPickupSame ? (shopCoords ?? pickupCoords) : pickupCoords);
+    const effectiveCoords = shopCoords ?? pin ?? pickupCoords;
 
     if (
       effectiveCoords &&
@@ -332,10 +340,22 @@ export function sellerPatchToDb(patch: Partial<Seller>, existingWizard: Record<s
     ) {
       db.lat = effectiveCoords.lat;
       db.lng = effectiveCoords.lng;
-      w.lat = w.pickupLat = effectiveCoords.lat;
-      w.lng = w.pickupLng = effectiveCoords.lng;
+      w.lat = effectiveCoords.lat;
+      w.lng = effectiveCoords.lng;
       w.shopCoordinates = effectiveCoords;
-      w.pickupCoordinates = effectiveCoords;
+      if (isPickupSame) {
+        w.pickupLat = effectiveCoords.lat;
+        w.pickupLng = effectiveCoords.lng;
+        w.pickupCoordinates = effectiveCoords;
+      } else if (pin) {
+        w.pickupLat = pin.lat;
+        w.pickupLng = pin.lng;
+        w.pickupCoordinates = pin;
+      } else if (pickupCoords) {
+        w.pickupLat = pickupCoords.lat;
+        w.pickupLng = pickupCoords.lng;
+        w.pickupCoordinates = pickupCoords;
+      }
       w.locationConfirmationRequired = false;
     } else {
       db.lat = null;
@@ -545,6 +565,41 @@ export function useUpdateMySeller() {
   });
 }
 
+export function useConfirmSellerStoreLocation() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (location: {
+      addressLine1: string;
+      addressLine2?: string;
+      city: string;
+      state: string;
+      pincode: string;
+      latitude: number;
+      longitude: number;
+      googlePlaceId?: string | null;
+    }) => {
+      if (!user) throw new Error("Sign in to update your store location.");
+      const { data, error } = await (supabase as any).rpc("confirm_seller_store_location", {
+        p_address_line1: location.addressLine1,
+        p_address_line2: location.addressLine2?.trim() || null,
+        p_city: location.city,
+        p_state: location.state,
+        p_pincode: location.pincode,
+        p_latitude: location.latitude,
+        p_longitude: location.longitude,
+        p_google_place_id: location.googlePlaceId?.trim() || null,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["my-seller", user?.id] });
+      void qc.invalidateQueries({ queryKey: ["my-seller"] });
+    },
+  });
+}
+
 export function useSubmitMySeller() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -561,33 +616,37 @@ export function useSubmitMySeller() {
         cur?.wizard_data && typeof cur.wizard_data === "object" && !Array.isArray(cur.wizard_data)
           ? (cur.wizard_data as Record<string, any>)
           : {};
-      const pin =
-        parseCoordinates(curWizard.pickupLat, curWizard.pickupLng) ??
+      const shopPin =
         parseCoordinates(cur?.lat, cur?.lng) ??
+        normalizeCoordinate(curWizard.shopCoordinates) ??
         parseCoordinates(curWizard.lat, curWizard.lng) ??
-        normalizeCoordinate(curWizard.pickupCoordinates) ??
-        normalizeCoordinate(curWizard.shopCoordinates);
-
-      if (!pin) throw new Error("Set the exact pickup pin in the address step before submitting.");
+        parseCoordinates(curWizard.pickupLat, curWizard.pickupLng) ??
+        normalizeCoordinate(curWizard.pickupCoordinates);
+      if (!shopPin) throw new Error("Set the store entrance on the Google Map before submitting.");
+      const pickupPin =
+        curWizard.pickupSame === false
+          ? (parseCoordinates(curWizard.pickupLat, curWizard.pickupLng) ??
+            normalizeCoordinate(curWizard.pickupCoordinates))
+          : shopPin;
+      if (!pickupPin) throw new Error("Set the separate pickup entrance before submitting.");
 
       const w = {
         ...curWizard,
-        lat: pin.lat,
-        lng: pin.lng,
-        pickupLat: pin.lat,
-        pickupLng: pin.lng,
-        shopCoordinates: pin,
-        pickupCoordinates: pin,
+        lat: shopPin.lat,
+        lng: shopPin.lng,
+        pickupLat: pickupPin.lat,
+        pickupLng: pickupPin.lng,
+        shopCoordinates: shopPin,
+        pickupCoordinates: pickupPin,
         locationConfirmationRequired: false,
         submittedAt: new Date().toISOString(),
       };
       const { error } = await supabase
         .from("sellers")
         .update({
-          lat: pin.lat,
-          lng: pin.lng,
+          lat: shopPin.lat,
+          lng: shopPin.lng,
           status: "pending",
-          admin_notes: null,
           wizard_data: w as any,
         })
         .eq("user_id", user.id);
@@ -644,31 +703,6 @@ export function useReviewSeller() {
         .update({ status, admin_notes: v.note ?? null, reviewed_at: new Date().toISOString() })
         .eq("id", v.id);
       if (error) throw error;
-      // Notify seller
-      const { data: seller } = await supabase
-        .from("sellers")
-        .select("user_id, business_name")
-        .eq("id", v.id)
-        .maybeSingle();
-      if (seller) {
-        const label =
-          status === "approved"
-            ? "Application approved"
-            : status === "rejected"
-              ? "Application rejected"
-              : "More information requested";
-        await supabase.from("notifications").insert({
-          user_id: seller.user_id,
-          title: label,
-          body:
-            v.note ||
-            (status === "approved"
-              ? "You can now list products and receive orders."
-              : "Please check your registration for details."),
-          kind: "status",
-          link: "/seller",
-        });
-      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-sellers"] });
@@ -1100,11 +1134,17 @@ export function useVendorMarkReady() {
             success: true,
             status: advData?.status ?? "ready_for_pickup",
             dispatched_count: advData?.dispatched ?? 0,
+            dispatch_error: null,
           };
         }
         throw error;
       }
-      return data as { success: boolean; status: string; dispatched_count: number };
+      return data as {
+        success: boolean;
+        status: string;
+        dispatched_count: number;
+        dispatch_error?: string | null;
+      };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-orders"] });
@@ -1176,17 +1216,25 @@ export function useUpdateProductStock() {
 
 /* ------------ Notifications ------------ */
 
+let notificationChannelSequence = 0;
+
 export function useMyNotifications() {
   const { user } = useAuth();
   const qc = useQueryClient();
 
   useEffect(() => {
     if (!user) return;
+    const channelName = `notifications-${user.id}-${++notificationChannelSequence}`;
     const channel = supabase
-      .channel(`notifications-${user.id}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
         () => {
           void qc.invalidateQueries({ queryKey: ["my-notifications", user.id] });
         },
@@ -1256,30 +1304,25 @@ export function useMarkAllNotificationsRead() {
   });
 }
 
-/* ------------ Settlements (derived from delivered orders, upserted into DB) ------------ */
-
-export const COMMISSION_RATE = 0.08;
-export const GST_ON_FEES = 0.18;
-export const COD_FEE = 40;
-
-function startOfWeek(iso: string): Date {
-  const d = new Date(iso);
-  d.setHours(0, 0, 0, 0);
-  const day = (d.getDay() + 6) % 7; // Mon = 0
-  d.setDate(d.getDate() - day);
-  return d;
-}
+/* ------------ Settlements: display only persisted finance records ------------ */
 
 export interface CycleSummary {
+  id: string;
   cycleStart: string;
   cycleEnd: string;
-  payoutDate: string;
+  payoutDate: string | null;
   gross: number;
   commission: number;
   gstOnFees: number;
   codFees: number;
   net: number;
-  status: "processing" | "paid";
+  currentPayable?: number;
+  refundDeductions?: number;
+  recoveryDue?: number;
+  unallocatedRefundAdjustments?: number;
+  adjustmentDataAvailable?: boolean;
+  status: "pending" | "processing" | "paid" | "held" | "failed";
+  holdReason?: string | null;
   txns: Array<{
     orderId: string;
     orderNumber: string;
@@ -1299,66 +1342,108 @@ export function useMySettlements() {
     queryKey: ["my-settlements", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data: orders, error } = await supabase
-        .from("orders")
+      const { data, error } = await (supabase as any)
+        .from("settlements")
         .select(
-          "id, order_number, status, subtotal, shipping_fee, total, delivered_at, placed_at, seller_id",
+          "id,cycle_start,cycle_end,gross_sales,commission,gst_on_fees,net_payout,status,paid_at,created_at,hold_reason",
         )
         .eq("user_id", user!.id)
-        .eq("status", "delivered");
+        .order("cycle_start", { ascending: false });
       if (error) throw error;
-
-      const cycles = new Map<string, CycleSummary>();
-      for (const o of orders ?? []) {
-        const commission = Math.round(Number(o.subtotal) * COMMISSION_RATE);
-        const codFee = Number(o.shipping_fee) > 0 ? COD_FEE : 0;
-        const gstOnFees = Math.round((commission + codFee) * GST_ON_FEES);
-        const net = Number(o.total) - commission - gstOnFees - codFee;
-        const date = o.delivered_at ?? o.placed_at;
-        const start = startOfWeek(date);
-        const key = start.toISOString().slice(0, 10);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 6);
-        const payout = new Date(end);
-        payout.setDate(payout.getDate() + 2);
-        const cur =
-          cycles.get(key) ??
-          ({
-            cycleStart: start.toISOString(),
-            cycleEnd: end.toISOString(),
-            payoutDate: payout.toISOString(),
-            gross: 0,
-            commission: 0,
-            gstOnFees: 0,
-            codFees: 0,
-            net: 0,
-            status: Date.now() >= payout.getTime() ? "paid" : "processing",
-            txns: [],
-          } as CycleSummary);
-        cur.gross += Number(o.total);
-        cur.commission += commission;
-        cur.gstOnFees += gstOnFees;
-        cur.codFees += codFee;
-        cur.net += net;
-        cur.txns.push({
-          orderId: o.id,
-          orderNumber: o.order_number,
-          date,
-          gross: Number(o.total),
-          commission,
-          gstOnFees,
-          codFee,
-          net,
-          paymentMode: Number(o.shipping_fee) > 0 ? "COD" : "Prepaid",
-        });
-        cycles.set(key, cur);
+      let adjustmentRows: any[] = [];
+      let adjustmentDataAvailable = true;
+      const settlementIds = (data ?? []).map((row: any) => row.id);
+      if (settlementIds.length) {
+        const { data: adjustments, error: adjustmentError } = await (supabase as any)
+          .from("seller_financial_adjustments")
+          .select("settlement_id,amount,status")
+          .in("settlement_id", settlementIds);
+        if (adjustmentError) {
+          // This extension migration is prepared separately; preserve old
+          // settlement reads until it is installed, but identify missing data.
+          adjustmentDataAvailable = false;
+          if (
+            !/[42]P01|PGRST205|schema cache/i.test(
+              adjustmentError.code ?? adjustmentError.message ?? "",
+            )
+          ) {
+            throw adjustmentError;
+          }
+        } else {
+          adjustmentRows = adjustments ?? [];
+        }
       }
-      const sorted = Array.from(cycles.values()).sort((a, b) =>
-        a.cycleStart < b.cycleStart ? 1 : -1,
-      );
+      return (data ?? []).map((row: any) => {
+        const adjustments = adjustmentRows.filter((item) => item.settlement_id === row.id);
+        const refundDeductions = adjustments
+          .filter((item) => item.status === "deduct_before_payout")
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const recoveryDue = adjustments
+          .filter((item) => item.status === "recovery_due")
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const unallocatedRefundAdjustments = adjustments
+          .filter((item) => item.status === "unallocated")
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const originalNet = Number(row.net_payout);
+        return {
+          id: row.id,
+          cycleStart: row.cycle_start,
+          cycleEnd: row.cycle_end,
+          payoutDate: row.paid_at ?? null,
+          gross: Number(row.gross_sales),
+          commission: Number(row.commission),
+          gstOnFees: Number(row.gst_on_fees),
+          codFees: 0,
+          net: originalNet,
+          refundDeductions,
+          recoveryDue,
+          unallocatedRefundAdjustments,
+          adjustmentDataAvailable,
+          currentPayable: row.status === "paid" ? originalNet : originalNet - refundDeductions,
+          status: row.status,
+          holdReason: row.hold_reason ?? null,
+          // This schema stores cycle-level aggregates, not order-level allocations.
+          txns: [],
+        };
+      }) as CycleSummary[];
+    },
+  });
+}
 
-      // Settlements are created by admin/backend only — sellers cannot self-issue payout records.
-      return sorted;
+export interface SellerFinancialAdjustmentSummary {
+  id: string;
+  amount: number;
+  status: "deduct_before_payout" | "recovery_due" | "unallocated" | "recovered";
+  createdAt: string;
+  orderId: string;
+}
+
+export function useMyFinancialAdjustments(sellerId?: string) {
+  return useQuery({
+    queryKey: ["my-financial-adjustments", sellerId],
+    enabled: Boolean(sellerId),
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("seller_financial_adjustments")
+        .select("id,amount,status,created_at,order_id")
+        .eq("seller_id", sellerId!)
+        .order("created_at", { ascending: false });
+      if (error) {
+        if (/[42]P01|PGRST205|schema cache/i.test(error.code ?? error.message ?? "")) {
+          return { available: false, rows: [] as SellerFinancialAdjustmentSummary[] };
+        }
+        throw error;
+      }
+      return {
+        available: true,
+        rows: (data ?? []).map((row: any) => ({
+          id: row.id,
+          amount: Number(row.amount),
+          status: row.status,
+          createdAt: row.created_at,
+          orderId: row.order_id,
+        })) as SellerFinancialAdjustmentSummary[],
+      };
     },
   });
 }
@@ -1371,8 +1456,7 @@ export async function uploadSellerDoc(
   docType: string,
   file: File,
 ): Promise<StoredFile> {
-  if (file.size <= 0 || file.size > 5 * 1024 * 1024)
-    throw new Error("File must be under 5 MB");
+  if (file.size <= 0 || file.size > 5 * 1024 * 1024) throw new Error("File must be under 5 MB");
   const ext = (file.name.split(".").pop() || "").toLowerCase();
   const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "webp", "heic", "heif"];
   const isAllowedExt = allowedExtensions.includes(ext);

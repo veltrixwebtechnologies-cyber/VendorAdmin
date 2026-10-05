@@ -18,11 +18,13 @@ import { useAuth, signOut } from "@/lib/auth";
 import { useIsAdmin } from "@/lib/db";
 import { useTheme } from "@/lib/theme";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { Card, CardContent } from "@/components/ui/card";
+import { adminPermissionForPath, useAdminAccess } from "@/lib/admin-permissions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin Console — Seller Hub" },
+      { title: "LocalShore Admin Console" },
       { name: "description", content: "Multi-vendor marketplace admin dashboard." },
       { name: "robots", content: "noindex" },
     ],
@@ -34,27 +36,60 @@ function AdminLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useAuth();
-  const isAdminQ = useIsAdmin();
+  const adminAccess = useAdminAccess();
   const { mode, toggle } = useTheme();
 
-  const onLogin = pathname === "/admin/login";
-  const notReady = loading || (!!user && isAdminQ.isLoading);
+  const onPublicAuthRoute = pathname === "/admin/login" || pathname === "/admin/reset";
+  const notReady = loading || (!!user && adminAccess.isLoading);
 
   useEffect(() => {
-    if (onLogin || loading) return;
-    if (!user || (!isAdminQ.isLoading && !isAdminQ.data)) {
+    if (onPublicAuthRoute || loading) return;
+    if (!user || (!adminAccess.isLoading && !adminAccess.data)) {
       navigate({ to: "/admin/login", replace: true });
     }
-  }, [onLogin, loading, user, isAdminQ.isLoading, isAdminQ.data, navigate]);
+  }, [onPublicAuthRoute, loading, user, adminAccess.isLoading, adminAccess.data, navigate]);
 
-  if (onLogin) return <Outlet />;
+  if (onPublicAuthRoute) return <Outlet />;
+  if (adminAccess.isError)
+    return (
+      <div className="grid min-h-screen place-items-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="space-y-3 p-6">
+            <h1 className="text-lg font-semibold">Could not verify admin access</h1>
+            <p className="text-sm text-muted-foreground">
+              Admin permissions could not be checked. Access remains blocked until verification
+              succeeds.
+            </p>
+            <Button onClick={() => void adminAccess.refetch()}>Try again</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   if (notReady)
     return (
       <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
         Loading admin console…
       </div>
     );
-  if (!user || !isAdminQ.data) return null;
+  if (!user || !adminAccess.data) return null;
+
+  const requiredPermission = adminPermissionForPath(pathname);
+  if (!adminAccess.hasPermission(requiredPermission))
+    return (
+      <div className="grid min-h-[60vh] place-items-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="space-y-2 p-6">
+            <h1 className="text-lg font-semibold">You don’t have access to this page</h1>
+            <p className="text-sm text-muted-foreground">
+              Your assigned admin role does not include {requiredPermission}.
+            </p>
+            <Button variant="outline" onClick={() => navigate({ to: "/admin" })}>
+              Back to dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
 
   const initial = (user.email?.[0] ?? "A").toUpperCase();
 
@@ -67,7 +102,11 @@ function AdminLayout() {
             <SidebarTrigger className="shrink-0" />
             <div className="relative hidden max-w-md flex-1 md:block">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search users, vendors, products, orders…" className="pl-8 h-9" />
+              <Input
+                placeholder="Search users, vendors, products, orders…"
+                className="pl-8 h-9"
+                aria-label="Search the admin console"
+              />
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-2">
               <Button
@@ -79,7 +118,7 @@ function AdminLayout() {
               >
                 {mode === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
-              <NotificationsBell />
+              <NotificationsBell homeTo="/admin" />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-9 gap-2 px-1.5 sm:px-2">

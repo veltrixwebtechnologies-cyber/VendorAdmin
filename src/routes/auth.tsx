@@ -164,7 +164,7 @@ function SignInForm() {
       await sendPasswordReset({
         data: {
           email: email.trim(),
-          redirectTo: `${window.location.origin}/auth?reset=1`,
+          redirectTo: `${window.location.origin}/auth/reset`,
         },
       });
       toast.success("Password reset link sent. Check your inbox or spam folder.");

@@ -20,7 +20,7 @@ export const Route = createFileRoute("/shop")({
   component: Shop,
   errorComponent: ({ error }) => (
     <div role="alert" className="p-8">
-      {error.message}
+      {error instanceof Error ? error.message : "The shop could not be loaded."}
     </div>
   ),
   notFoundComponent: () => <div className="p-8">Not found.</div>,

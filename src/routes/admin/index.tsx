@@ -23,13 +23,10 @@ import {
   CartesianGrid,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from "recharts";
 import { useAdminOverview } from "@/lib/admin-db";
 import { AnimatedNumber, Reveal } from "@/components/motion/presets";
+import { useAdminAccess } from "@/lib/admin-permissions";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: "Dashboard — Admin" }, { name: "robots", content: "noindex" }] }),
@@ -48,7 +45,7 @@ function Kpi({
 }: {
   icon: typeof Users;
   label: string;
-  value: number;
+  value: number | null;
   sub?: string;
   tone?: "default" | "warn" | "danger";
   currency?: boolean;
@@ -72,10 +69,14 @@ function Kpi({
             {label}
           </div>
           <div className="mt-0.5 truncate text-lg font-black tracking-tight sm:text-2xl">
-            <AnimatedNumber
-              value={value}
-              format={currency ? (number) => fmt(Math.round(number)) : undefined}
-            />
+            {value === null ? (
+              <span className="text-xs font-medium text-muted-foreground">Not available</span>
+            ) : (
+              <AnimatedNumber
+                value={value}
+                format={currency ? (number) => fmt(Math.round(number)) : undefined}
+              />
+            )}
           </div>
           {sub && (
             <div className="mt-0.5 truncate text-[10px] text-muted-foreground sm:text-[11px]">
@@ -89,7 +90,8 @@ function Kpi({
 }
 
 function AdminDashboard() {
-  const { data, isLoading } = useAdminOverview();
+  const { data, isLoading, isError, refetch } = useAdminOverview();
+  const access = useAdminAccess();
 
   const stats = useMemo(() => {
     if (!data) return null;
@@ -98,23 +100,27 @@ function AdminDashboard() {
     const orders = data.orders;
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthlyRevenue = orders
+    const monthlyGmv = orders
       .filter((o) => new Date(o.created_at) >= monthStart && o.status !== "cancelled")
       .reduce((a, o) => a + Number(o.total || 0), 0);
-    const platformRevenue = Math.round(monthlyRevenue * 0.08);
+    const monthlyOrders = orders.filter(
+      (o) => new Date(o.created_at) >= monthStart && o.status !== "cancelled",
+    );
+    const averageOrderValue = monthlyOrders.length ? monthlyGmv / monthlyOrders.length : 0;
+    const cancelledOrders = orders.filter((o) => o.status === "cancelled").length;
 
-    // Revenue by last 6 months
-    const months: Record<string, { revenue: number; orders: number; label: string }> = {};
+    // Gross merchandise value by the month in which each order was placed.
+    const months: Record<string, { gmv: number; orders: number; label: string }> = {};
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
-      months[key] = { revenue: 0, orders: 0, label: d.toLocaleString("en", { month: "short" }) };
+      months[key] = { gmv: 0, orders: 0, label: d.toLocaleString("en", { month: "short" }) };
     }
     orders.forEach((o) => {
       const d = new Date(o.created_at);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (months[key] && o.status !== "cancelled") {
-        months[key].revenue += Number(o.total || 0);
+        months[key].gmv += Number(o.total || 0);
         months[key].orders += 1;
       }
     });
@@ -127,33 +133,12 @@ function AdminDashboard() {
       vendorsPerMonth[key] = (vendorsPerMonth[key] ?? 0) + 1;
     });
 
-    const chartRevenue = Object.entries(months).map(([k, v]) => ({
+    const chartGmv = Object.entries(months).map(([k, v]) => ({
       month: v.label,
-      revenue: v.revenue,
+      gmv: v.gmv,
       orders: v.orders,
       vendors: vendorsPerMonth[k] ?? 0,
     }));
-
-    // Top selling categories
-    const catRev: Record<string, number> = {};
-    orders.forEach((o) => {
-      // fallback: assign to "General" since we don't have order->product join here
-    });
-    products.forEach((p) => {
-      const c = p.category || "Uncategorized";
-      catRev[c] =
-        (catRev[c] ?? 0) +
-        Number(p.selling_price || 0) * Math.max(1, Number(p.stock || 0) > 0 ? 1 : 0);
-    });
-    const topCategories = Object.entries(catRev)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
-
-    // Best selling products (fallback: highest priced in-stock)
-    const bestProducts = [...products]
-      .sort((a, b) => Number(b.selling_price || 0) - Number(a.selling_price || 0))
-      .slice(0, 5);
 
     // Low stock
     const lowStock = products
@@ -169,11 +154,10 @@ function AdminDashboard() {
       pendingProducts: products.filter((p) => p.status === "pending" || p.status === "draft")
         .length,
       totalOrders: orders.length,
-      monthlyRevenue,
-      platformRevenue,
-      chartRevenue,
-      topCategories,
-      bestProducts,
+      monthlyGmv,
+      averageOrderValue,
+      cancelledOrders,
+      chartGmv,
       lowStock,
       outOfStock,
       recentOrders: [...orders]
@@ -185,6 +169,22 @@ function AdminDashboard() {
       pendingApprovals: vendors.filter((v) => v.status === "pending").slice(0, 5),
     };
   }, [data]);
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-start gap-3 p-6">
+          <div>
+            <h1 className="text-lg font-semibold">Admin overview couldn’t load</h1>
+            <p className="text-sm text-muted-foreground">
+              Marketplace data could not be retrieved. Check your connection and try again.
+            </p>
+          </div>
+          <Button onClick={() => void refetch()}>Try again</Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading || !stats || !data) {
     return (
@@ -224,29 +224,45 @@ function AdminDashboard() {
         <Kpi
           icon={Store}
           label="Total Vendors"
-          value={stats.totalVendors}
-          sub={`${stats.activeVendors} active`}
+          value={data.available.sellers ? stats.totalVendors : null}
+          sub={data.available.sellers ? `${stats.activeVendors} active` : undefined}
         />
-        <Kpi icon={Clock} label="Pending Vendors" value={stats.pendingVendors} tone="warn" />
-        <Kpi icon={Package} label="Total Products" value={stats.totalProducts} />
+        <Kpi
+          icon={Clock}
+          label="Pending Vendors"
+          value={data.available.sellers ? stats.pendingVendors : null}
+          tone="warn"
+        />
+        <Kpi
+          icon={Package}
+          label="Total Products"
+          value={data.available.products ? stats.totalProducts : null}
+        />
         <Kpi
           icon={AlertTriangle}
           label="Pending Products"
-          value={stats.pendingProducts}
+          value={data.available.products ? stats.pendingProducts : null}
           tone="warn"
         />
         <Kpi
           icon={ShoppingCart}
           label="Total Orders"
-          value={stats.totalOrders}
-          sub={`${data.todayOrders} today`}
+          value={data.available.orders ? stats.totalOrders : null}
+          sub={data.available.orders ? `${data.todayOrders ?? 0} today` : undefined}
         />
-        <Kpi icon={IndianRupee} label="Monthly Revenue" value={stats.monthlyRevenue} currency />
+        <Kpi
+          icon={IndianRupee}
+          label="Monthly GMV"
+          value={data.available.orders ? stats.monthlyGmv : null}
+          currency
+        />
         <Kpi
           icon={TrendingUp}
-          label="Platform Revenue"
-          value={stats.platformRevenue}
-          sub="8% commission"
+          label="Average Order Value"
+          value={data.available.orders ? stats.averageOrderValue : null}
+          sub={
+            data.available.orders ? `${stats.cancelledOrders} cancelled orders total` : undefined
+          }
           currency
         />
       </div>
@@ -255,63 +271,21 @@ function AdminDashboard() {
       <Reveal className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Revenue overview</CardTitle>
+            <CardTitle className="text-base">GMV over time</CardTitle>
           </CardHeader>
           <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartRevenue} margin={{ left: 0, right: 8, top: 8 }}>
-                <defs>
-                  <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.55} />
-                    <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--popover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="var(--chart-1)"
-                  fill="url(#rev)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Top selling categories</CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
-            {stats.topCategories.length === 0 ? (
-              <div className="grid h-full place-items-center text-sm text-muted-foreground">
-                No data yet
-              </div>
-            ) : (
+            {data.available.orders ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.topCategories}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={80}
-                    innerRadius={45}
-                  >
-                    {stats.topCategories.map((_, i) => (
-                      <Cell key={i} fill={pieColors[i % pieColors.length]} />
-                    ))}
-                  </Pie>
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                <AreaChart data={stats.chartGmv} margin={{ left: 0, right: 8, top: 8 }}>
+                  <defs>
+                    <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.55} />
+                      <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{
                       background: "var(--popover)",
@@ -320,8 +294,36 @@ function AdminDashboard() {
                       fontSize: 12,
                     }}
                   />
-                </PieChart>
+                  <Area
+                    type="monotone"
+                    dataKey="gmv"
+                    stroke="var(--chart-1)"
+                    fill="url(#rev)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
+            ) : (
+              <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                Not available for this role.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Category sales</CardTitle>
+          </CardHeader>
+          <CardContent className="h-72">
+            {data.orders.length === 0 ? (
+              <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                No sales yet
+              </div>
+            ) : (
+              <div className="grid h-full place-items-center px-5 text-center text-sm text-muted-foreground">
+                Category sales attribution isn’t available because order items aren’t included in
+                this dashboard data yet.
+              </div>
             )}
           </CardContent>
         </Card>
@@ -331,22 +333,28 @@ function AdminDashboard() {
             <CardTitle className="text-base">Orders by month</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.chartRevenue}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--popover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                />
-                <Bar dataKey="orders" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {data.available.orders ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.chartGmv}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--popover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Bar dataKey="orders" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                Not available for this role.
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -354,22 +362,28 @@ function AdminDashboard() {
             <CardTitle className="text-base">New vendors</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.chartRevenue}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--popover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                />
-                <Bar dataKey="vendors" fill="var(--chart-4)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {data.available.sellers ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.chartGmv}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--popover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Bar dataKey="vendors" fill="var(--chart-4)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                Not available for this role.
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -377,18 +391,10 @@ function AdminDashboard() {
             <CardTitle className="text-base">Best selling products</CardTitle>
           </CardHeader>
           <CardContent>
-            {stats.bestProducts.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No products yet</div>
-            ) : (
-              <ul className="space-y-2">
-                {stats.bestProducts.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between text-sm">
-                    <span className="truncate">{p.name}</span>
-                    <span className="font-semibold">{fmt(Number(p.selling_price || 0))}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="text-sm text-muted-foreground">
+              Product sales attribution isn’t available because order items aren’t included in this
+              dashboard data yet.
+            </div>
           </CardContent>
         </Card>
       </Reveal>
@@ -405,7 +411,9 @@ function AdminDashboard() {
             </Link>
           </CardHeader>
           <CardContent>
-            {stats.recentOrders.length === 0 ? (
+            {!data.available.orders ? (
+              <div className="text-sm text-muted-foreground">Not available for this role.</div>
+            ) : stats.recentOrders.length === 0 ? (
               <div className="text-sm text-muted-foreground">No orders yet</div>
             ) : (
               <ul className="space-y-2 text-sm">
@@ -442,7 +450,9 @@ function AdminDashboard() {
             </Link>
           </CardHeader>
           <CardContent>
-            {stats.recentVendors.length === 0 ? (
+            {!data.available.sellers ? (
+              <div className="text-sm text-muted-foreground">Not available for this role.</div>
+            ) : stats.recentVendors.length === 0 ? (
               <div className="text-sm text-muted-foreground">No vendors yet</div>
             ) : (
               <ul className="space-y-2 text-sm">
@@ -476,7 +486,9 @@ function AdminDashboard() {
             </Link>
           </CardHeader>
           <CardContent>
-            {stats.lowStock.length === 0 ? (
+            {!data.available.products ? (
+              <div className="text-sm text-muted-foreground">Not available for this role.</div>
+            ) : stats.lowStock.length === 0 ? (
               <div className="text-sm text-muted-foreground">No low-stock alerts</div>
             ) : (
               <ul className="space-y-2 text-sm">

@@ -1,1 +1,36 @@
 project_id = "flbygucibbrfcwcgzyea"
+
+[auth]
+additional_redirect_urls = [
+  "https://locc-eight.vercel.app/auth?flow=password-recovery",
+  "https://vendor-admin-6f5h.vercel.app/auth/reset",
+  "https://vendor-admin-6f5h.vercel.app/admin/reset",
+  "http://localhost:8081/auth/reset",
+  "http://localhost:8081/admin/reset",
+]
+site_url = "https://locc-eight.vercel.app/"
+
+[auth.email]
+max_frequency = "1m0s"
+otp_length = 8
+
+[auth.rate_limit]
+email_sent = 30
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[db.pooler]
+default_pool_size = 15
+max_client_conn = 200
+
+[storage.analytics]
+enabled = true
+max_namespaces = 10
+
+[storage.image_transformation]
+enabled = true
+
+[storage.vector]
+enabled = false

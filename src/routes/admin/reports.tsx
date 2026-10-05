@@ -33,55 +33,59 @@ function ReportsPage() {
   const { data } = useAdminOverview();
   const reports = useMemo(() => {
     if (!data) return [];
-    return [
-      {
-        name: "Sales Report",
-        rows: data.orders.map((o) => ({
-          id: o.id,
-          buyer: o.buyer_name,
-          total: o.total,
-          status: o.status,
-          date: o.created_at,
-        })),
-      },
-      {
-        name: "Vendor Report",
-        rows: data.sellers.map((v) => ({
-          id: v.id,
-          shop: v.shop_name,
-          owner: v.owner_name,
-          status: v.status,
-          joined: v.created_at,
-        })),
-      },
-      {
-        name: "Product Report",
-        rows: data.products.map((p) => ({
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          price: p.selling_price,
-          stock: p.stock,
-          status: p.status,
-        })),
-      },
-      {
-        name: "Inventory Report",
-        rows: data.products.map((p) => ({
-          id: p.id,
-          name: p.name,
-          stock: p.stock,
-          status: p.status,
-        })),
-      },
-      {
-        name: "Payment Report",
-        rows: data.orders
-          .filter((o) => o.status === "delivered")
-          .map((o) => ({ id: o.id, buyer: o.buyer_name, total: o.total, date: o.created_at })),
-      },
-      { name: "Customer Report", rows: [{ note: "Uses profiles + orders join" }] },
+    const availableReports = [
+      data.available.orders
+        ? {
+            name: "Sales Report",
+            rows: data.orders.map((o) => ({
+              id: o.id,
+              buyer: o.buyer_name,
+              total: o.total,
+              status: o.status,
+              date: o.created_at,
+            })),
+          }
+        : null,
+      data.available.sellers
+        ? {
+            name: "Vendor Report",
+            rows: data.sellers.map((v) => ({
+              id: v.id,
+              shop: v.shop_name,
+              owner: v.owner_name,
+              status: v.status,
+              joined: v.created_at,
+            })),
+          }
+        : null,
+      data.available.products
+        ? {
+            name: "Product Report",
+            rows: data.products.map((p) => ({
+              id: p.id,
+              name: p.name,
+              category: p.category,
+              price: p.selling_price,
+              stock: p.stock,
+              status: p.status,
+            })),
+          }
+        : null,
+      data.available.products
+        ? {
+            name: "Inventory Report",
+            rows: data.products.map((p) => ({
+              id: p.id,
+              name: p.name,
+              stock: p.stock,
+              status: p.status,
+            })),
+          }
+        : null,
     ];
+    return availableReports.filter(
+      (report): report is NonNullable<typeof report> => report !== null,
+    );
   }, [data]);
 
   return (
@@ -114,6 +118,13 @@ function ReportsPage() {
           </Card>
         ))}
       </div>
+      {reports.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            No reports are available for your current permissions and data.
+          </CardContent>
+        </Card>
+      ) : null}
       <p className="text-xs text-muted-foreground">
         PDF / Excel exports can be added by wiring xlsx or jspdf; CSV covers the same data.
       </p>

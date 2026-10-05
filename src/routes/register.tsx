@@ -1,4 +1,4 @@
-import { PickupPinEditor } from "@/components/PickupPinEditor";
+import { GoogleStoreLocationPicker } from "@/components/google-store-location-picker";
 import { parseCoordinates } from "@/lib/coordinates";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -40,6 +40,7 @@ import {
   useCreateDraftSeller,
   useSubmitMySeller,
   useUpdateMySeller,
+  useConfirmSellerStoreLocation,
   uploadSellerDoc,
   type Seller,
   type BusinessType,
@@ -74,25 +75,6 @@ function verificationErrorMessage(error: unknown, fallback: string) {
     return "Email verification is not configured on the server. Please contact the administrator.";
   }
   return message || fallback;
-}
-
-async function geocodeSellerAddress(query: string): Promise<{ lat: number; lng: number } | null> {
-  const cleanQuery = query.trim();
-  if (!cleanQuery) return null;
-
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(cleanQuery)}`,
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) return null;
-    const lat = Number(data[0]?.lat);
-    const lng = Number(data[0]?.lon);
-    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-  } catch {
-    return null;
-  }
 }
 
 export const Route = createFileRoute("/register")({
@@ -136,6 +118,41 @@ function RegisterPage() {
     navigate({ to: "/register", search: { step: n } });
   };
 
+  const completedSteps = useMemo(
+    () =>
+      new Set(
+        sellerQ.data
+          ? STEPS.map((_, index) => index + 1).filter((n) =>
+              isOnboardingStepComplete(sellerQ.data!, n),
+            )
+          : [],
+      ),
+    [sellerQ.data],
+  );
+  const canVisitStep = (target: number) =>
+    target === 1 ||
+    Array.from({ length: target - 1 }, (_, index) => index + 1).every((n) => completedSteps.has(n));
+  const submitSellerApplication = async () => {
+    const missingStep = [1, 2, 3, 4, 5, 6].find((n) => !completedSteps.has(n));
+    if (missingStep) {
+      toast.error(`Complete the ${STEPS[missingStep - 1]} step before submitting.`);
+      goto(missingStep);
+      return;
+    }
+    try {
+      await submitApplication.mutateAsync();
+      toast.success("Application submitted for approval");
+      navigate({ to: "/seller" });
+    } catch (error) {
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String(error.message)
+          : "Could not submit your application. Please try again.";
+      toast.error(message);
+    }
+  };
+  const submitApplication = useSubmitMySeller();
+
   if (loading || sellerQ.isLoading || !sellerQ.data || createDraft.isPending) {
     return (
       <div className="grid min-h-screen place-items-center">
@@ -155,7 +172,12 @@ function RegisterPage() {
             </div>
             <span className="truncate font-semibold">Seller Hub</span>
           </Link>
-          <TopStepTabs current={step} onGoto={goto} />
+          <TopStepTabs
+            current={step}
+            completed={completedSteps}
+            canVisit={canVisitStep}
+            onGoto={goto}
+          />
           <Link
             to="/seller"
             className="text-xs font-semibold uppercase tracking-wide text-primary hover:underline sm:text-sm"
@@ -165,9 +187,15 @@ function RegisterPage() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_260px]">
+      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-24 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_260px]">
         <aside className="lg:sticky lg:top-6 lg:self-start">
-          <OnboardingChecklist seller={seller} current={step} onGoto={goto} />
+          <OnboardingChecklist
+            seller={seller}
+            current={step}
+            completed={completedSteps}
+            canVisit={canVisitStep}
+            onGoto={goto}
+          />
         </aside>
 
         <section className="min-w-0">
@@ -188,9 +216,7 @@ function RegisterPage() {
             {step === 6 && (
               <StepDocuments seller={seller} onBack={() => goto(5)} onNext={() => goto(7)} />
             )}
-            {step === 7 && (
-              <StepReview seller={seller} onEdit={(n) => goto(n)} onBack={() => goto(6)} />
-            )}
+            {step === 7 && <StepReview seller={seller} onEdit={(n) => goto(n)} />}
           </div>
         </section>
 
@@ -208,23 +234,77 @@ function RegisterPage() {
           />
         </aside>
       </main>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 shadow-[0_-4px_16px_-12px_hsl(var(--foreground)/0.25)] backdrop-blur supports-[backdrop-filter]:bg-background/85">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <span className="hidden text-sm text-muted-foreground sm:inline">
+            Step {step} of {STEPS.length} · {STEPS[step - 1]}
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => goto(step - 1)}
+              disabled={step === 1 || !canVisitStep(step - 1)}
+            >
+              <ArrowLeft className="h-4 w-4" /> Back
+            </Button>
+            {step === STEPS.length ? (
+              <Button
+                type="button"
+                onClick={() => void submitSellerApplication()}
+                disabled={submitApplication.isPending}
+                className="min-w-48"
+              >
+                {submitApplication.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {submitApplication.isPending ? "Submitting…" : "Submit for approval"}
+                {!submitApplication.isPending && <ArrowRight className="h-4 w-4" />}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => goto(step + 1)}
+                disabled={!completedSteps.has(step) || !canVisitStep(step + 1)}
+                title={
+                  completedSteps.has(step)
+                    ? `Continue to ${STEPS[step]}`
+                    : "Complete and save this step before continuing"
+                }
+              >
+                Next: {STEPS[step]} <ArrowRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ---------- Top step tabs (Flipkart-style current path) ---------- */
-function TopStepTabs({ current, onGoto }: { current: number; onGoto: (n: number) => void }) {
+function TopStepTabs({
+  current,
+  completed,
+  canVisit,
+  onGoto,
+}: {
+  current: number;
+  completed: Set<number>;
+  canVisit: (n: number) => boolean;
+  onGoto: (n: number) => void;
+}) {
   return (
     <ol className="hidden min-w-0 flex-1 items-center justify-center gap-3 overflow-hidden md:flex xl:gap-4">
       {STEPS.map((label, i) => {
         const n = i + 1;
-        const state = n < current ? "done" : n === current ? "active" : "todo";
+        const state = n === current ? "active" : completed.has(n) ? "done" : "todo";
         return (
           <li key={label} className="flex items-center gap-2 text-xs">
             <button
               type="button"
-              onClick={() => n <= current && onGoto(n)}
-              disabled={n > current}
+              onClick={() => onGoto(n)}
+              disabled={!canVisit(n)}
+              aria-label={`${label}${completed.has(n) ? ", completed" : ""}`}
+              title={canVisit(n) ? `Go to ${label}` : "Complete the earlier steps first"}
               className={[
                 "grid h-5 w-5 place-items-center rounded-full border text-[10px] font-bold transition-colors",
                 state === "done"
@@ -257,10 +337,14 @@ function TopStepTabs({ current, onGoto }: { current: number; onGoto: (n: number)
 function OnboardingChecklist({
   seller,
   current,
+  completed,
+  canVisit,
   onGoto,
 }: {
   seller: Seller;
   current: number;
+  completed: Set<number>;
+  canVisit: (n: number) => boolean;
   onGoto: (n: number) => void;
 }) {
   const items = useMemo(() => {
@@ -345,8 +429,9 @@ function OnboardingChecklist({
               <button
                 type="button"
                 onClick={() => onGoto(step)}
+                disabled={!canVisit(step)}
                 className={[
-                  "text-left text-xs font-semibold uppercase tracking-wide transition-colors",
+                  "text-left text-xs font-semibold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50",
                   isCurrent ? "text-primary" : "text-foreground hover:text-primary",
                 ].join(" ")}
               >
@@ -667,7 +752,11 @@ function StepAccount({ seller, onNext }: { seller: Seller; onNext: () => void })
                 onChange={(e) => setMobileCode(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter OTP (up to 8 digits)"
               />
-              <Button type="button" onClick={verifyMobile} disabled={mobileVerifying || !mobileCode}>
+              <Button
+                type="button"
+                onClick={verifyMobile}
+                disabled={mobileVerifying || !mobileCode}
+              >
                 {mobileVerifying && <Loader2 className="h-4 w-4 animate-spin" />}
                 {mobileVerifying ? "Verifying…" : "Verify"}
               </Button>
@@ -835,28 +924,75 @@ function StepAddress({
 }) {
   const [v, setV] = useState(() => {
     const pin =
-      parseCoordinates(seller.address.pickupLat, seller.address.pickupLng) ??
       parseCoordinates(seller.address.shopCoordinates?.lat, seller.address.shopCoordinates?.lng) ??
+      parseCoordinates(seller.address.pickupLat, seller.address.pickupLng) ??
       parseCoordinates(
         seller.address.pickupCoordinates?.lat,
         seller.address.pickupCoordinates?.lng,
       );
+    const pickup = seller.address.pickupSame
+      ? pin
+      : (parseCoordinates(seller.address.pickupLat, seller.address.pickupLng) ??
+        seller.address.pickupCoordinates ??
+        null);
     return {
       ...seller.address,
-      pickupLat: pin?.lat ?? null,
-      pickupLng: pin?.lng ?? null,
+      shopCoordinates: pin,
+      pickupCoordinates: pickup,
+      pickupLat: pickup?.lat ?? null,
+      pickupLng: pickup?.lng ?? null,
     };
   });
   const addressChanged = (patch: Partial<Seller["address"]>) =>
-    setV((current) => ({ ...current, ...patch }));
+    setV((current) => ({ ...current, ...patch, googlePlaceId: null }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const update = useUpdateMySeller();
+  const confirmLocation = useConfirmSellerStoreLocation();
+  const [shopLocationPending, setShopLocationPending] = useState(false);
+  const [pickupLocationPending, setPickupLocationPending] = useState(false);
   const submit = async () => {
     const p = addressSchema.safeParse(v);
-    if (!parseCoordinates(v.pickupLat, v.pickupLng))
-      return setErrors({ pickupPin: "Choose the exact pickup entrance on the map." });
-    await update.mutateAsync({ address: v });
-    onNext();
+    if (!p.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of p.error.issues) {
+        const key = String(issue.path[0] ?? "address");
+        fieldErrors[key] = issue.message;
+      }
+      setErrors(fieldErrors);
+      return;
+    }
+    const shopPin = parseCoordinates(v.shopCoordinates?.lat, v.shopCoordinates?.lng);
+    const pickupPin = v.pickupSame ? shopPin : parseCoordinates(v.pickupLat, v.pickupLng);
+    if (!shopPin) return setErrors({ shopPin: "Choose the store entrance on the Google Map." });
+    if (!pickupPin)
+      return setErrors({ pickupPin: "Choose the pickup entrance on the Google Map." });
+    if (shopLocationPending || pickupLocationPending)
+      return setErrors({ location: "Wait for the selected location address to finish updating." });
+
+    try {
+      const address = {
+        ...v,
+        shopCoordinates: shopPin,
+        pickupCoordinates: pickupPin,
+        pickupLat: pickupPin.lat,
+        pickupLng: pickupPin.lng,
+        locationConfirmationRequired: false,
+      };
+      await update.mutateAsync({ address });
+      await confirmLocation.mutateAsync({
+        addressLine1: v.shopAddress,
+        addressLine2: v.landmark,
+        city: v.city,
+        state: v.state,
+        pincode: v.pincode,
+        latitude: shopPin.lat,
+        longitude: shopPin.lng,
+        googlePlaceId: v.googlePlaceId,
+      });
+      onNext();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save the store location.");
+    }
   };
   return (
     <StepCard title="Business address" subtitle="Step 3 of 7">
@@ -866,7 +1002,7 @@ function StepAddress({
             <Textarea
               rows={2}
               value={v.shopAddress}
-              onChange={(e) => addressChanged({ shopAddress: e.target.value })}
+              onChange={(e) => addressChanged({ shopAddress: e.target.value, googlePlaceId: null })}
             />
           </Field>
         </div>
@@ -940,15 +1076,75 @@ function StepAddress({
           </>
         )}
       </div>
-      <div className="mt-4">
-        <PickupPinEditor
-          value={parseCoordinates(v.pickupLat, v.pickupLng)}
-          onChange={(pin) =>
-            setV((current) => ({ ...current, pickupLat: pin.lat, pickupLng: pin.lng }))
-          }
+      <div className="mt-4 space-y-5">
+        <GoogleStoreLocationPicker
+          value={parseCoordinates(v.shopCoordinates?.lat, v.shopCoordinates?.lng)}
+          addressLabel={v.shopAddress}
+          onLocationChange={(update) => {
+            setShopLocationPending(update.pending);
+            setV((current) => ({
+              ...current,
+              shopCoordinates: update.coordinates,
+              ...(current.pickupSame
+                ? {
+                    pickupCoordinates: update.coordinates,
+                    pickupLat: update.coordinates.lat,
+                    pickupLng: update.coordinates.lng,
+                  }
+                : {}),
+              ...(update.pending
+                ? { shopAddress: "", city: "", state: "", pincode: "", googlePlaceId: null }
+                : update.address
+                  ? {
+                      shopAddress: update.address.formattedAddress,
+                      city: update.address.city,
+                      state: update.address.state,
+                      pincode: update.address.pincode.replace(/\D/g, "").slice(0, 6),
+                      googlePlaceId: update.address.placeId,
+                    }
+                  : {}),
+            }));
+          }}
         />
-        {errors.pickupPin && (
+        {errors.shopPin && (
           <p role="alert" className="text-sm text-destructive mt-2">
+            {errors.shopPin}
+          </p>
+        )}
+        {errors.location && (
+          <p role="alert" className="text-sm text-destructive">
+            {errors.location}
+          </p>
+        )}
+        {!v.pickupSame && (
+          <GoogleStoreLocationPicker
+            title="Separate Pickup Location"
+            description="Search the pickup address or use the map to set the exact collection entrance."
+            value={parseCoordinates(v.pickupLat, v.pickupLng)}
+            addressLabel={v.pickupAddress}
+            onLocationChange={(update) => {
+              setPickupLocationPending(update.pending);
+              setV((current) => ({
+                ...current,
+                pickupCoordinates: update.coordinates,
+                pickupLat: update.coordinates.lat,
+                pickupLng: update.coordinates.lng,
+                ...(update.pending
+                  ? { pickupAddress: "", pickupCity: "", pickupState: "", pickupPincode: "" }
+                  : update.address
+                    ? {
+                        pickupAddress: update.address.formattedAddress,
+                        pickupCity: update.address.city,
+                        pickupState: update.address.state,
+                        pickupPincode: update.address.pincode.replace(/\D/g, "").slice(0, 6),
+                      }
+                    : {}),
+              }));
+            }}
+          />
+        )}
+        {errors.pickupPin && (
+          <p role="alert" className="text-sm text-destructive">
             {errors.pickupPin}
           </p>
         )}
@@ -957,7 +1153,15 @@ function StepAddress({
         <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <Button onClick={submit} disabled={update.isPending}>
+        <Button
+          onClick={() => void submit()}
+          disabled={
+            update.isPending ||
+            confirmLocation.isPending ||
+            shopLocationPending ||
+            pickupLocationPending
+          }
+        >
           Save & Continue <ArrowRight className="h-4 w-4" />
         </Button>
       </StepFooter>
@@ -1154,6 +1358,52 @@ const DOC_FIELDS: Array<{
   { key: "shopBanner", label: "Shop Banner", required: true, accept: "image/*" },
 ];
 
+function isOnboardingStepComplete(seller: Seller, step: number): boolean {
+  switch (step) {
+    case 1:
+      return (
+        !!seller.account.emailVerified &&
+        accountSchema.safeParse({
+          fullName: seller.account.fullName,
+          mobile: seller.account.mobile,
+          email: seller.account.email,
+        }).success
+      );
+    case 2:
+      return businessSchema.safeParse(seller.business).success;
+    case 3: {
+      const shopPin = parseCoordinates(
+        seller.address.shopCoordinates?.lat,
+        seller.address.shopCoordinates?.lng,
+      );
+      const pickupPin = seller.address.pickupSame
+        ? shopPin
+        : (parseCoordinates(seller.address.pickupLat, seller.address.pickupLng) ??
+          seller.address.pickupCoordinates);
+      return addressSchema.safeParse(seller.address).success && !!shopPin && !!pickupPin;
+    }
+    case 4:
+      return bankSchema.safeParse({
+        ...seller.bank,
+        ifsc: seller.bank.ifsc.toUpperCase(),
+      }).success;
+    case 5:
+      return taxSchema.safeParse({
+        ...seller.tax,
+        pan: seller.tax.pan.toUpperCase(),
+        gst: (seller.tax.gst ?? "").toUpperCase(),
+      }).success;
+    case 6:
+      return DOC_FIELDS.filter((field) => field.required).every(
+        (field) => !!seller.documents[field.key],
+      );
+    case 7:
+      return [1, 2, 3, 4, 5, 6].every((n) => isOnboardingStepComplete(seller, n));
+    default:
+      return false;
+  }
+}
+
 function StepDocuments({
   seller,
   onBack,
@@ -1174,14 +1424,7 @@ function StepDocuments({
     const imageOnly = key === "shopLogo" || key === "shopBanner";
     const allowedTypes = imageOnly
       ? ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]
-      : [
-          "image/jpeg",
-          "image/png",
-          "image/webp",
-          "image/heic",
-          "image/heif",
-          "application/pdf",
-        ];
+      : ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"];
     if (file.type && !allowedTypes.includes(file.type)) {
       return toast.error(imageOnly ? "Upload a JPG, PNG, or WEBP image" : "Upload a PDF or image");
     }
@@ -1270,18 +1513,7 @@ function StepDocuments({
 
 /* ---------------- Step 7: Review + Submit ---------------- */
 
-function StepReview({
-  seller,
-  onEdit,
-  onBack,
-}: {
-  seller: Seller;
-  onEdit: (n: number) => void;
-  onBack: () => void;
-}) {
-  const navigate = useNavigate();
-  const submitMut = useSubmitMySeller();
-
+function StepReview({ seller, onEdit }: { seller: Seller; onEdit: (n: number) => void }) {
   const sections = useMemo(
     () => [
       {
@@ -1343,27 +1575,14 @@ function StepReview({
     [seller],
   );
 
-  const doSubmit = async () => {
-    const missingStorefrontMedia = [
-      !seller.documents.shopLogo && "Shop Logo",
-      !seller.documents.shopBanner && "Shop Banner",
-    ].filter(Boolean);
-    if (missingStorefrontMedia.length > 0) {
-      toast.error(`Missing: ${missingStorefrontMedia.join(", ")}`);
-      onEdit(6);
-      return;
-    }
-    try {
-      await submitMut.mutateAsync();
-      toast.success("Application submitted for approval");
-      navigate({ to: "/seller" });
-    } catch (e: any) {
-      toast.error(e?.message || "Submit failed");
-    }
-  };
-
   return (
     <StepCard title="Review & submit" subtitle="Step 7 of 7">
+      <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+        <p className="text-sm font-semibold">Your application is ready for review</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Check the details below. Use Edit to make changes, then submit your store for approval.
+        </p>
+      </div>
       <div className="grid gap-4">
         {sections.map((s) => (
           <Card key={s.step}>
@@ -1386,14 +1605,6 @@ function StepReview({
           </Card>
         ))}
       </div>
-      <StepFooter>
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <Button onClick={doSubmit} disabled={submitMut.isPending}>
-          {submitMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Submit for approval
-        </Button>
-      </StepFooter>
     </StepCard>
   );
 }
@@ -1457,7 +1668,11 @@ function Field({
       <div className="flex items-center justify-between gap-2">
         <Label>
           {label}
-          {required && <span className="ml-1 text-destructive" aria-hidden="true">*</span>}
+          {required && (
+            <span className="ml-1 text-destructive" aria-hidden="true">
+              *
+            </span>
+          )}
         </Label>
         {right}
       </div>

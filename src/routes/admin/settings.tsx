@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { usePlatformSettings, useUpdateSettings } from "@/lib/admin-db";
 import { toast } from "sonner";
+import { useAdminAccess, adminErrorMessage } from "@/lib/admin-permissions";
 
 export const Route = createFileRoute("/admin/settings")({
   head: () => ({ meta: [{ title: "Settings — Admin" }, { name: "robots", content: "noindex" }] }),
@@ -14,6 +15,9 @@ export const Route = createFileRoute("/admin/settings")({
 });
 
 function SettingsPage() {
+  const access = useAdminAccess();
+  const canManageSettings = access.hasPermission("settings.manage");
+  const canManageCommission = access.hasPermission("commissions.manage");
   const q = usePlatformSettings();
   const upd = useUpdateSettings();
   const [form, setForm] = useState<any>({});
@@ -40,6 +44,7 @@ function SettingsPage() {
                 <Label>Marketplace name</Label>
                 <Input
                   value={form.marketplace_name || ""}
+                  readOnly={!canManageSettings}
                   onChange={(e) => setForm({ ...form, marketplace_name: e.target.value })}
                 />
               </div>
@@ -47,6 +52,7 @@ function SettingsPage() {
                 <Label>Logo URL</Label>
                 <Input
                   value={form.logo_url || ""}
+                  readOnly={!canManageSettings}
                   onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
                 />
               </div>
@@ -54,6 +60,7 @@ function SettingsPage() {
                 <Label>Payment gateway</Label>
                 <Input
                   value={form.payment_gateway || ""}
+                  readOnly={!canManageSettings}
                   onChange={(e) => setForm({ ...form, payment_gateway: e.target.value })}
                   placeholder="stripe / razorpay / paddle"
                 />
@@ -70,6 +77,7 @@ function SettingsPage() {
                 <Input
                   type="number"
                   value={form.commission_percent ?? 0}
+                  readOnly={!canManageCommission}
                   onChange={(e) => setForm({ ...form, commission_percent: Number(e.target.value) })}
                 />
               </div>
@@ -78,6 +86,7 @@ function SettingsPage() {
                 <Input
                   type="number"
                   value={form.shipping_flat ?? 0}
+                  readOnly={!canManageSettings}
                   onChange={(e) => setForm({ ...form, shipping_flat: Number(e.target.value) })}
                 />
               </div>
@@ -86,6 +95,7 @@ function SettingsPage() {
                 <Input
                   type="number"
                   value={form.tax_percent ?? 0}
+                  readOnly={!canManageSettings}
                   onChange={(e) => setForm({ ...form, tax_percent: Number(e.target.value) })}
                 />
               </div>
@@ -101,6 +111,7 @@ function SettingsPage() {
                 <Textarea
                   rows={6}
                   value={form.return_policy || ""}
+                  readOnly={!canManageSettings}
                   onChange={(e) => setForm({ ...form, return_policy: e.target.value })}
                 />
               </div>
@@ -109,6 +120,7 @@ function SettingsPage() {
                 <Textarea
                   rows={6}
                   value={form.privacy_policy || ""}
+                  readOnly={!canManageSettings}
                   onChange={(e) => setForm({ ...form, privacy_policy: e.target.value })}
                 />
               </div>
@@ -117,24 +129,28 @@ function SettingsPage() {
                 <Textarea
                   rows={6}
                   value={form.terms_conditions || ""}
+                  readOnly={!canManageSettings}
                   onChange={(e) => setForm({ ...form, terms_conditions: e.target.value })}
                 />
               </div>
             </CardContent>
           </Card>
-          <div className="lg:col-span-2 flex justify-end">
-            <Button
-              onClick={() =>
-                upd.mutate(form, {
-                  onSuccess: () => toast.success("Saved"),
-                  onError: (e: any) => toast.error(e.message),
-                })
-              }
-              disabled={upd.isPending}
-            >
-              Save changes
-            </Button>
-          </div>
+          {(canManageSettings || canManageCommission) && (
+            <div className="lg:col-span-2 flex justify-end">
+              <Button
+                onClick={() =>
+                  upd.mutate(form, {
+                    onSuccess: () => toast.success("Saved"),
+                    onError: (e: any) =>
+                      toast.error(adminErrorMessage(e, "Settings could not be saved.")),
+                  })
+                }
+                disabled={upd.isPending}
+              >
+                Save changes
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

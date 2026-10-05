@@ -323,6 +323,7 @@ export type Database = {
           order_number: string;
           placed_at: string;
           seller_id: string;
+          store_id: string | null;
           shipping_fee: number;
           status: Database["public"]["Enums"]["order_status"];
           subtotal: number;
@@ -342,6 +343,7 @@ export type Database = {
           order_number?: string;
           placed_at?: string;
           seller_id: string;
+          store_id?: string | null;
           shipping_fee?: number;
           status?: Database["public"]["Enums"]["order_status"];
           subtotal?: number;
@@ -361,6 +363,7 @@ export type Database = {
           order_number?: string;
           placed_at?: string;
           seller_id?: string;
+          store_id?: string | null;
           shipping_fee?: number;
           status?: Database["public"]["Enums"]["order_status"];
           subtotal?: number;
@@ -375,6 +378,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "sellers";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_seller_store_fkey";
+            columns: ["seller_id", "store_id"];
+            isOneToOne: false;
+            referencedRelation: "stores";
+            referencedColumns: ["seller_id", "id"];
           },
         ];
       };
@@ -436,6 +446,7 @@ export type Database = {
           name: string;
           rejection_reason: string | null;
           seller_id: string;
+          store_id: string | null;
           selling_price: number;
           sku: string | null;
           status: Database["public"]["Enums"]["product_status"];
@@ -459,6 +470,7 @@ export type Database = {
           name: string;
           rejection_reason?: string | null;
           seller_id: string;
+          store_id?: string | null;
           selling_price?: number;
           sku?: string | null;
           status?: Database["public"]["Enums"]["product_status"];
@@ -482,6 +494,7 @@ export type Database = {
           name?: string;
           rejection_reason?: string | null;
           seller_id?: string;
+          store_id?: string | null;
           selling_price?: number;
           sku?: string | null;
           status?: Database["public"]["Enums"]["product_status"];
@@ -497,6 +510,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "sellers";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "products_seller_store_fkey";
+            columns: ["seller_id", "store_id"];
+            isOneToOne: false;
+            referencedRelation: "stores";
+            referencedColumns: ["seller_id", "id"];
           },
         ];
       };
@@ -614,6 +634,182 @@ export type Database = {
             columns: ["seller_id"];
             isOneToOne: false;
             referencedRelation: "sellers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      stores: {
+        Row: {
+          accepts_orders: boolean;
+          address_line1: string | null;
+          address_line2: string | null;
+          business_type: string | null;
+          category: string | null;
+          city: string | null;
+          country: string | null;
+          created_at: string;
+          description: string | null;
+          estimated_prep_time_minutes: number | null;
+          google_place_id: string | null;
+          id: string;
+          is_default: boolean;
+          latitude: number | null;
+          location_source: string | null;
+          location_verified: boolean | null;
+          location_verified_at: string | null;
+          location_verified_by: string | null;
+          longitude: number | null;
+          name: string | null;
+          operating_hours: Json | null;
+          pincode: string | null;
+          seller_id: string;
+          service_radius_km: number | null;
+          state: string | null;
+          status: string;
+          timezone: string;
+          updated_at: string;
+        };
+        Insert: {
+          accepts_orders?: boolean;
+          address_line1?: string | null;
+          address_line2?: string | null;
+          business_type?: string | null;
+          category?: string | null;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string;
+          description?: string | null;
+          estimated_prep_time_minutes?: number | null;
+          google_place_id?: string | null;
+          id?: string;
+          is_default?: boolean;
+          latitude?: number | null;
+          location_source?: string | null;
+          location_verified?: boolean | null;
+          location_verified_at?: string | null;
+          location_verified_by?: string | null;
+          longitude?: number | null;
+          name?: string | null;
+          operating_hours?: Json | null;
+          pincode?: string | null;
+          seller_id: string;
+          service_radius_km?: number | null;
+          state?: string | null;
+          status?: string;
+          timezone?: string;
+          updated_at?: string;
+        };
+        Update: {
+          accepts_orders?: boolean;
+          address_line1?: string | null;
+          address_line2?: string | null;
+          business_type?: string | null;
+          category?: string | null;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string;
+          description?: string | null;
+          estimated_prep_time_minutes?: number | null;
+          google_place_id?: string | null;
+          id?: string;
+          is_default?: boolean;
+          latitude?: number | null;
+          location_source?: string | null;
+          location_verified?: boolean | null;
+          location_verified_at?: string | null;
+          location_verified_by?: string | null;
+          longitude?: number | null;
+          name?: string | null;
+          operating_hours?: Json | null;
+          pincode?: string | null;
+          seller_id?: string;
+          service_radius_km?: number | null;
+          state?: string | null;
+          status?: string;
+          timezone?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stores_seller_id_fkey";
+            columns: ["seller_id"];
+            isOneToOne: false;
+            referencedRelation: "sellers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      delivery_zones: {
+        Row: {
+          city: string;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          latitude: number | null;
+          longitude: number | null;
+          name: string;
+          radius_km: number;
+          updated_at: string | null;
+          zone_type: string;
+        };
+        Insert: {
+          city?: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          latitude?: number | null;
+          longitude?: number | null;
+          name: string;
+          radius_km?: number;
+          updated_at?: string | null;
+          zone_type?: string;
+        };
+        Update: {
+          city?: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          latitude?: number | null;
+          longitude?: number | null;
+          name?: string;
+          radius_km?: number;
+          updated_at?: string | null;
+          zone_type?: string;
+        };
+        Relationships: [];
+      };
+      store_service_zones: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          store_id: string;
+          zone_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          store_id: string;
+          zone_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          store_id?: string;
+          zone_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "store_service_zones_store_id_fkey";
+            columns: ["store_id"];
+            isOneToOne: false;
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_service_zones_zone_id_fkey";
+            columns: ["zone_id"];
+            isOneToOne: false;
+            referencedRelation: "delivery_zones";
             referencedColumns: ["id"];
           },
         ];
@@ -908,6 +1104,21 @@ export type Database = {
     Functions: {
       claim_first_admin: { Args: never; Returns: boolean };
       has_any_admin: { Args: never; Returns: boolean };
+      admin_update_store_location: {
+        Args: {
+          p_address_line1: string;
+          p_address_line2: string | null;
+          p_city: string;
+          p_google_place_id: string | null;
+          p_latitude: number;
+          p_longitude: number;
+          p_pincode: string;
+          p_reason: string;
+          p_state: string;
+          p_store_id: string;
+        };
+        Returns: string;
+      };
       seed_demo_order: { Args: never; Returns: string };
     };
     Enums: {
@@ -916,7 +1127,7 @@ export type Database = {
         "new" | "accepted" | "packed" | "shipped" | "delivered" | "cancelled" | "returned";
       product_status: "draft" | "pending" | "active" | "rejected" | "inactive";
       seller_status: "draft" | "pending" | "approved" | "rejected" | "more_info";
-      settlement_status: "pending" | "processing" | "paid";
+      settlement_status: "pending" | "processing" | "paid" | "held" | "failed";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1042,7 +1253,7 @@ export const Constants = {
       order_status: ["new", "accepted", "packed", "shipped", "delivered", "cancelled", "returned"],
       product_status: ["draft", "pending", "active", "rejected", "inactive"],
       seller_status: ["draft", "pending", "approved", "rejected", "more_info"],
-      settlement_status: ["pending", "processing", "paid"],
+      settlement_status: ["pending", "processing", "paid", "held", "failed"],
     },
   },
 } as const;

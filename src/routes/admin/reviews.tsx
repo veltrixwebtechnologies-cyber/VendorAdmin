@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
-import { useAdminReviews, useModerateReview, useDeleteReview } from "@/lib/admin-db";
+import { useAdminReviews, useModerateReview } from "@/lib/admin-db";
+import { useAdminAccess } from "@/lib/admin-permissions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/reviews")({
@@ -13,9 +14,10 @@ export const Route = createFileRoute("/admin/reviews")({
 });
 
 function ReviewsPage() {
+  const access = useAdminAccess();
+  const canModerateReviews = access.hasPermission("reviews.moderate");
   const q = useAdminReviews();
   const mod = useModerateReview();
-  const del = useDeleteReview();
   const [status, setStatus] = useState<"all" | "pending" | "approved" | "hidden" | "reported">(
     "all",
   );
@@ -81,42 +83,34 @@ function ReviewsPage() {
                   </span>
                 </div>
                 {r.body && <p className="text-sm text-muted-foreground">{r.body}</p>}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      mod.mutate(
-                        { id: r.id, status: "approved" },
-                        { onSuccess: () => toast.success("Approved") },
-                      )
-                    }
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      mod.mutate(
-                        { id: r.id, status: "hidden" },
-                        { onSuccess: () => toast.success("Hidden") },
-                      )
-                    }
-                  >
-                    Hide
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => {
-                      if (confirm("Delete review?"))
-                        del.mutate(r.id, { onSuccess: () => toast.success("Deleted") });
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
+                {canModerateReviews ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        mod.mutate(
+                          { id: r.id, status: "approved" },
+                          { onSuccess: () => toast.success("Approved") },
+                        )
+                      }
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        mod.mutate(
+                          { id: r.id, status: "hidden" },
+                          { onSuccess: () => toast.success("Hidden") },
+                        )
+                      }
+                    >
+                      Hide
+                    </Button>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           ))}

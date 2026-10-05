@@ -4,6 +4,8 @@ import { AlertTriangle, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,7 @@ function ProfilePage() {
   const q = useMySeller();
   const deleteMyAccount = useDeleteMyAccount();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const seller = q.data;
 
   if (q.isError) {
@@ -55,11 +58,21 @@ function ProfilePage() {
       </div>
     );
 
+  const deletePhrase = `DELETE ${seller.business.shopName || "MY SHOP"}`;
+  const deleteConfirmed = deleteConfirmation.trim() === deletePhrase;
+
+  const handleDeleteDialogChange = (open: boolean) => {
+    setDeleteOpen(open);
+    if (!open) setDeleteConfirmation("");
+  };
+
   const handleDelete = () => {
+    if (!deleteConfirmed || deleteMyAccount.isPending) return;
+
     deleteMyAccount.mutate(seller.id, {
       onSuccess: () => {
         toast.success("Your seller account and shop profile have been completely deleted.");
-        setDeleteOpen(false);
+        handleDeleteDialogChange(false);
         navigate({ to: "/seller", replace: true });
       },
       onError: (err) => {
@@ -162,7 +175,7 @@ function ProfilePage() {
               records.
             </p>
           </div>
-          <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <Dialog open={deleteOpen} onOpenChange={handleDeleteDialogChange}>
             <DialogTrigger asChild>
               <Button variant="destructive" size="sm" className="shrink-0 font-semibold">
                 <Trash2 className="mr-2 h-4 w-4" /> Delete Account
@@ -180,14 +193,38 @@ function ProfilePage() {
                   action cannot be undone.
                 </DialogDescription>
               </DialogHeader>
+              <div className="space-y-2 py-2">
+                <Label htmlFor="delete-account-confirmation" className="leading-relaxed">
+                  Type{" "}
+                  <span className="font-mono font-semibold text-foreground">{deletePhrase}</span> to
+                  confirm.
+                </Label>
+                <Input
+                  id="delete-account-confirmation"
+                  value={deleteConfirmation}
+                  onChange={(event) => setDeleteConfirmation(event.target.value)}
+                  placeholder={deletePhrase}
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={deleteMyAccount.isPending}
+                  aria-invalid={deleteConfirmation.length > 0 && !deleteConfirmed}
+                />
+                {deleteConfirmation.length > 0 && !deleteConfirmed ? (
+                  <p className="text-xs text-destructive">The confirmation text does not match.</p>
+                ) : null}
+              </div>
               <DialogFooter className="gap-2 sm:gap-0 pt-4">
-                <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteDialogChange(false)}
+                  disabled={deleteMyAccount.isPending}
+                >
                   Cancel
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={handleDelete}
-                  disabled={deleteMyAccount.isPending}
+                  disabled={deleteMyAccount.isPending || !deleteConfirmed}
                 >
                   {deleteMyAccount.isPending ? (
                     <>

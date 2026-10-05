@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { useEffect, useRef } from "react";
 import {
   BarChart3,
+  Bell,
   Box,
   ClipboardList,
   Clock,
@@ -51,19 +52,52 @@ export const Route = createFileRoute("/seller")({
   component: SellerLayout,
 });
 
-const NAV = [
-  { url: "/seller", label: "Dashboard", icon: Home, exact: true },
-  { url: "/seller/store", label: "Store Setup", icon: Store },
-  { url: "/seller/hours", label: "Shop Hours", icon: Clock },
-  { url: "/seller/products", label: "Products", icon: Package },
-  { url: "/seller/orders", label: "Orders", icon: ShoppingBag },
-  { url: "/seller/inventory", label: "Inventory", icon: Box },
-  { url: "/seller/settlements", label: "Settlements", icon: Wallet },
-  { url: "/seller/analytics", label: "Analytics", icon: BarChart3 },
-  { url: "/seller/reviews", label: "Reviews", icon: Star },
-  { url: "/seller/reports", label: "Reports", icon: ClipboardList },
-  { url: "/seller/profile", label: "Profile", icon: Settings },
-];
+const NAV_GROUPS = [
+  {
+    label: "Overview",
+    items: [{ url: "/seller", label: "Dashboard", icon: Home, exact: true }],
+  },
+  {
+    label: "Orders",
+    items: [{ url: "/seller/orders", label: "Orders", icon: ShoppingBag }],
+  },
+  {
+    label: "Catalog",
+    items: [
+      { url: "/seller/products", label: "Products", icon: Package },
+      { url: "/seller/inventory", label: "Inventory", icon: Box },
+    ],
+  },
+  {
+    label: "Grow",
+    items: [
+      { url: "/seller/analytics", label: "Analytics", icon: BarChart3 },
+      { url: "/seller/reports", label: "Reports", icon: ClipboardList },
+    ],
+  },
+  {
+    label: "Business",
+    items: [
+      { url: "/seller/settlements", label: "Payments", icon: Wallet },
+      { url: "/seller/reviews", label: "Reviews", icon: Star },
+    ],
+  },
+  {
+    label: "Store",
+    items: [
+      { url: "/seller/store", label: "Store Profile", icon: Store },
+      { url: "/seller/hours", label: "Business Hours", icon: Clock },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { url: "/seller/notifications", label: "Notifications", icon: Bell },
+      { url: "/seller/support", label: "Seller Support", icon: MessageSquare },
+      { url: "/seller/profile", label: "Settings", icon: Settings },
+    ],
+  },
+] as const;
 
 function SellerLayout() {
   const { user, loading } = useAuth();
@@ -211,44 +245,40 @@ function SellerSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Manage</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {NAV.map((item) => {
-                const Icon = item.icon;
-                const isLocked =
-                  !isApproved &&
-                  item.url !== "/seller" &&
-                  item.url !== "/seller/store" &&
-                  item.url !== "/seller/profile";
-                return (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.url, item.exact)}
-                      className={isLocked ? "opacity-60" : ""}
-                    >
-                      <Link to={isLocked ? "/seller" : item.url}>
-                        <Icon className="h-4 w-4" />
-                        <span className="flex-1">{item.label}</span>
-                        {isLocked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link to="/seller/support">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Support</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {NAV_GROUPS.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const exact = "exact" in item && item.exact;
+                  const isLocked =
+                    !isApproved &&
+                    item.url !== "/seller" &&
+                    item.url !== "/seller/store" &&
+                    item.url !== "/seller/profile";
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.label}
+                        isActive={isActive(item.url, exact)}
+                        className={isLocked ? "opacity-60" : ""}
+                      >
+                        <Link to={isLocked ? "/seller" : item.url}>
+                          <Icon className="h-4 w-4" />
+                          <span className="flex-1">{item.label}</span>
+                          {isLocked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
     </Sidebar>
   );

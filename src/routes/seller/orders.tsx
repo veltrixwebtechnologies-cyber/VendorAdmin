@@ -631,11 +631,20 @@ function OrderDetailSheet({ order, onClose }: { order: Order | null; onClose: ()
                     onClick={async () => {
                       try {
                         const res = await markReady.mutateAsync({ id: order.id });
-                        toast.success(
-                          res.dispatched_count > 0
-                            ? "Order is Ready for Pickup! Searching for nearby delivery partners."
-                            : "Order is Ready for Pickup! Delivery request broadcasted.",
-                        );
+                        if (res.dispatch_error) {
+                          toast.error("Order is ready, but delivery dispatch failed.", {
+                            description: res.dispatch_error,
+                            duration: 10_000,
+                          });
+                        } else if (res.dispatched_count > 0) {
+                          toast.success(
+                            `Order is ready. Delivery request sent to ${res.dispatched_count} nearby partner(s).`,
+                          );
+                        } else {
+                          toast.warning(
+                            "Order is ready, but no delivery offer was created. Check partner availability.",
+                          );
+                        }
                       } catch (e: any) {
                         toast.error(e?.message ?? "Failed to mark order ready");
                       }

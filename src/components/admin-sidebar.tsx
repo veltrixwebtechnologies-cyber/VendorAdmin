@@ -18,6 +18,13 @@ import {
   Settings,
   Radio,
   Sparkles,
+  ShieldCheck,
+  ClipboardList,
+  Map,
+  MapPinned,
+  RotateCcw,
+  Scale,
+  MessageSquareWarning,
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,6 +38,7 @@ import {
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { adminPermissionForPath, useAdminAccess } from "@/lib/admin-permissions";
 
 const NAV = [
   {
@@ -42,6 +50,8 @@ const NAV = [
     items: [
       { title: "Users", url: "/admin/users", icon: Users },
       { title: "Vendors", url: "/admin/vendors", icon: Store },
+      { title: "Stores", url: "/admin/stores", icon: Store },
+      { title: "Store Map", url: "/admin/store-map", icon: MapPinned },
       { title: "Products", url: "/admin/products", icon: Package },
       { title: "Categories", url: "/admin/categories", icon: FolderTree },
       { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
@@ -53,6 +63,8 @@ const NAV = [
     group: "Finance",
     items: [
       { title: "Payments", url: "/admin/payments", icon: CreditCard },
+      { title: "Refunds", url: "/admin/refunds", icon: RotateCcw },
+      { title: "Reconciliation", url: "/admin/reconciliation", icon: Scale },
       { title: "Vendor Payouts", url: "/admin/payouts", icon: Wallet },
     ],
   },
@@ -71,9 +83,18 @@ const NAV = [
     group: "Operations",
     items: [
       { title: "Dispatch", url: "/admin/dispatch", icon: Radio },
+      { title: "Service Zones", url: "/admin/service-zones", icon: Map },
       { title: "Support Tickets", url: "/admin/tickets", icon: LifeBuoy },
+      { title: "Order Disputes", url: "/admin/disputes", icon: MessageSquareWarning },
       { title: "Notifications", url: "/admin/notifications", icon: Bell },
       { title: "Settings", url: "/admin/settings", icon: Settings },
+    ],
+  },
+  {
+    group: "Administration",
+    items: [
+      { title: "Admin Users", url: "/admin/admin-users", icon: ShieldCheck },
+      { title: "Audit Logs", url: "/admin/audit-logs", icon: ClipboardList },
     ],
   },
 ] as const;
@@ -82,6 +103,7 @@ export function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const access = useAdminAccess();
   const isActive = (url: string, exact?: boolean) =>
     exact ? path === url : path === url || path.startsWith(url + "/");
   return (
@@ -93,7 +115,7 @@ export function AdminSidebar() {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="truncate text-sm font-bold">Seller Hub</div>
+              <div className="truncate text-sm font-bold">LocalShore</div>
               <div className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
                 Admin Console
               </div>
@@ -102,28 +124,34 @@ export function AdminSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        {NAV.map((g) => (
-          <SidebarGroup key={g.group}>
-            {!collapsed && <SidebarGroupLabel>{g.group}</SidebarGroupLabel>}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {g.items.map((item) => {
-                  const active = isActive(item.url, (item as any).exact);
-                  return (
-                    <SidebarMenuItem key={item.url}>
-                      <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                        <Link to={item.url} className="flex items-center gap-2">
-                          <item.icon className="h-4 w-4 shrink-0" />
-                          {!collapsed && <span className="truncate">{item.title}</span>}
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        {NAV.map((g) => {
+          const visibleItems = g.items.filter((item) =>
+            access.hasPermission(adminPermissionForPath(item.url)),
+          );
+          if (visibleItems.length === 0) return null;
+          return (
+            <SidebarGroup key={g.group}>
+              {!collapsed && <SidebarGroupLabel>{g.group}</SidebarGroupLabel>}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visibleItems.map((item) => {
+                    const active = isActive(item.url, (item as any).exact);
+                    return (
+                      <SidebarMenuItem key={item.url}>
+                        <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
+                          <Link to={item.url} className="flex items-center gap-2">
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            {!collapsed && <span className="truncate">{item.title}</span>}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
     </Sidebar>
   );

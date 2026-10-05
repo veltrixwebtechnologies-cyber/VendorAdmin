@@ -30,6 +30,7 @@ import { listProducts, type ProductDto } from "@/lib/products.functions";
 import { useAuth } from "@/lib/auth";
 import { AnimatedNumber } from "@/components/motion/presets";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SellerDashboardOverview } from "@/components/seller-dashboard-overview";
 
 export const Route = createFileRoute("/seller/")({
   head: () => ({
@@ -77,18 +78,20 @@ function SellerDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:items-start sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold sm:text-2xl">
-            {seller.business.shopName || "Your store"}
-          </h1>
-          <p className="truncate text-sm text-muted-foreground">
-            Welcome back, {seller.account.fullName || seller.account.email || "seller"}.
-          </p>
+    <div className="mx-auto max-w-7xl space-y-6">
+      {seller.status !== "approved" && (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-bold sm:text-2xl">
+              {seller.business.shopName || "Your store"}
+            </h1>
+            <p className="truncate text-sm text-muted-foreground">
+              Welcome back, {seller.account.fullName || seller.account.email || "seller"}.
+            </p>
+          </div>
+          <StatusBadge status={seller.status} />
         </div>
-        <StatusBadge status={seller.status} />
-      </div>
+      )}
 
       {seller.status === "draft" && (
         <Card>
@@ -115,7 +118,7 @@ function SellerDashboard() {
       {seller.status === "rejected" && <RejectedBanner reason={seller.reviewNote} />}
       {seller.status === "more_info" && <MoreInfoBanner message={seller.reviewNote} />}
 
-      {seller.status === "approved" && <ApprovedStats />}
+      {seller.status === "approved" && <SellerDashboardOverview seller={seller} />}
       {seller.status === "approved" && <ApprovedChecklist seller={seller} />}
     </div>
   );

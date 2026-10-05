@@ -14,7 +14,7 @@ import {
   type Notification,
 } from "@/lib/db";
 
-export function NotificationsBell() {
+export function NotificationsBell({ homeTo = "/seller" }: { homeTo?: "/seller" | "/admin" }) {
   const q = useMyNotifications();
   const items = q.data ?? [];
   const unread = items.filter((n) => !n.readAt).length;
@@ -114,8 +114,8 @@ export function NotificationsBell() {
           )}
         </ScrollArea>
         <div className="border-t p-2 text-center">
-          <Link to="/seller" className="text-xs text-muted-foreground hover:text-foreground">
-            Go to dashboard
+          <Link to={homeTo} className="text-xs text-muted-foreground hover:text-foreground">
+            Go to {homeTo === "/admin" ? "admin" : "seller"} dashboard
           </Link>
         </div>
       </PopoverContent>

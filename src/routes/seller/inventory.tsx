@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Box, Loader2, Minus, Plus, Save, Sparkles, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  Box,
+  Loader2,
+  Minus,
+  Plus,
+  Save,
+  Search,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -18,7 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Switch } from "@/components/ui/switch";
 
 import { useAuth } from "@/lib/auth";
 import { listProducts, type ProductDto } from "@/lib/products.functions";
@@ -48,11 +57,26 @@ function InventoryPage() {
   const updateStock = useUpdateProductStock();
 
   const [drafts, setDrafts] = useState<Record<string, number>>({});
-  const [onlyLow, setOnlyLow] = useState(false);
+  const [stockFilter, setStockFilter] = useState<"all" | "in" | "low" | "out">("all");
+  const [search, setSearch] = useState("");
 
   const rows = useMemo(
-    () => (onlyLow ? products.filter((p) => p.stock <= p.lowStockAt) : products),
-    [products, onlyLow],
+    () =>
+      products.filter((product) => {
+        const term = search.trim().toLowerCase();
+        const matchesSearch =
+          !term ||
+          product.name.toLowerCase().includes(term) ||
+          product.sku.toLowerCase().includes(term) ||
+          product.category.toLowerCase().includes(term);
+        const matchesStock =
+          stockFilter === "all" ||
+          (stockFilter === "out" && product.stock === 0) ||
+          (stockFilter === "low" && product.stock > 0 && product.stock <= product.lowStockAt) ||
+          (stockFilter === "in" && product.stock > product.lowStockAt);
+        return matchesSearch && matchesStock;
+      }),
+    [products, search, stockFilter],
   );
   const summary = useMemo(() => {
     const totalUnits = products.reduce((s, p) => s + p.stock, 0);
@@ -178,11 +202,38 @@ function InventoryPage() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="space-y-3">
           <CardTitle>Stock levels</CardTitle>
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-            <Switch checked={onlyLow} onCheckedChange={setOnlyLow} /> Only show low-stock
-          </label>
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search product, SKU or category"
+                className="pl-9"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+              {(
+                [
+                  ["all", "All"],
+                  ["in", "In stock"],
+                  ["low", "Low stock"],
+                  ["out", "Out of stock"],
+                ] as const
+              ).map(([value, label]) => (
+                <Button
+                  key={value}
+                  size="sm"
+                  variant={stockFilter === value ? "secondary" : "ghost"}
+                  onClick={() => setStockFilter(value)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {q.isLoading ? (
@@ -191,7 +242,9 @@ function InventoryPage() {
             </div>
           ) : rows.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
-              {onlyLow ? "No low-stock items — great job!" : "No products yet."}
+              {products.length === 0
+                ? "No products yet. Add your first product to start selling on LocalShore."
+                : "No inventory items match these filters."}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -203,6 +256,7 @@ function InventoryPage() {
                     <TableHead className="w-[200px]">Stock</TableHead>
                     <TableHead className="w-[140px]">Low-stock at</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Last updated</TableHead>
                     <TableHead className="text-right">Save</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -220,7 +274,7 @@ function InventoryPage() {
                         </TableCell>
                         <TableCell className="font-mono text-xs">{p.sku}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
+                          <div className="flex min-w-[260px] flex-wrap items-center gap-1">
                             <Button
                               size="icon"
                               variant="outline"
@@ -249,6 +303,17 @@ function InventoryPage() {
                             >
                               <Plus className="h-3.5 w-3.5" />
                             </Button>
+                            {[5, 10].map((amount) => (
+                              <Button
+                                key={amount}
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-xs"
+                                onClick={() => bump(p.id, p.stock, amount)}
+                              >
+                                +{amount}
+                              </Button>
+                            ))}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -262,6 +327,11 @@ function InventoryPage() {
                             }}
                             className="h-8 w-24"
                           />
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                          {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(
+                            new Date(p.updatedAt),
+                          )}
                         </TableCell>
                         <TableCell>
                           {out ? (

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
+import { useAdminAccess, adminErrorMessage } from "@/lib/admin-permissions";
 
 export const Route = createFileRoute("/admin/orders")({
   head: () => ({ meta: [{ title: "Orders — Admin" }, { name: "robots", content: "noindex" }] }),
@@ -61,6 +62,8 @@ function useAllOrders() {
 }
 
 function AdminOrders() {
+  const access = useAdminAccess();
+  const canManageOrders = access.hasPermission("orders.manage");
   const q = useAllOrders();
   const qc = useQueryClient();
   const upd = useMutation({
@@ -73,6 +76,7 @@ function AdminOrders() {
       if (!data) throw new Error("Order status was not updated");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "orders"] }),
+    onError: (error) => toast.error(adminErrorMessage(error, "Order status could not be updated.")),
   });
   const [status, setStatus] = useState<
     "all" | "new" | "accepted" | "packed" | "shipped" | "delivered" | "cancelled" | "returned"
@@ -177,7 +181,10 @@ function AdminOrders() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {o.status === "new" && (
+                    {!canManageOrders && (
+                      <span className="text-xs text-muted-foreground">View only</span>
+                    )}
+                    {canManageOrders && o.status === "new" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -191,7 +198,7 @@ function AdminOrders() {
                         Accept
                       </Button>
                     )}
-                    {o.status === "accepted" && (
+                    {canManageOrders && o.status === "accepted" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -205,7 +212,7 @@ function AdminOrders() {
                         Pack
                       </Button>
                     )}
-                    {o.status === "packed" && (
+                    {canManageOrders && o.status === "packed" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -219,7 +226,7 @@ function AdminOrders() {
                         Ready
                       </Button>
                     )}
-                    {o.status === "out_for_delivery" && (
+                    {canManageOrders && o.status === "out_for_delivery" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -247,7 +254,7 @@ function AdminOrders() {
                         Cancel
                       </Button>
                     )}
-                    {o.status === "delivered" && (
+                    {canManageOrders && o.status === "delivered" && (
                       <Button
                         size="sm"
                         variant="outline"

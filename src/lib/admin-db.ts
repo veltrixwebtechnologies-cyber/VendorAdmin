@@ -1,6 +1,7 @@
 /* Admin-only data hooks for marketplace tables. */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdminAccess } from "@/lib/admin-permissions";
 
 /* ---------- Types ---------- */
 export interface Category {
@@ -635,15 +636,41 @@ export function useDeleteReview() {
 }
 
 /* ---------- SUPPORT TICKETS ---------- */
-export const useAdminTickets = () => useList<SupportTicket>("support_tickets");
+export const useAdminTickets = () =>
+  useQuery({
+    queryKey: ["protected-support-cases"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("get_protected_support_cases");
+      if (error) throw error;
+      return (data ?? []) as SupportTicket[];
+    },
+  });
 export function useUpdateTicket() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<SupportTicket> & { id: string }) => {
-      const { error } = await (supabase as any).from("support_tickets").update(patch).eq("id", id);
+      const stage = patch.support_stage;
+      const action =
+        stage === "RESOLVED" || stage === "resolved"
+          ? "resolve"
+          : stage === "ESCALATED"
+            ? "escalate"
+            : stage === "REOPENED"
+              ? "reopen"
+              : stage === "CANCELLED" || stage === "closed"
+                ? "cancel"
+                : stage === "WAITING_FOR_VENDOR"
+                  ? "wait_vendor"
+                  : null;
+      if (!action) throw new Error("Use a supported protected support-case action.");
+      const { error } = await (supabase as any).rpc("manage_protected_support_case", {
+        p_ticket_id: id,
+        p_action: action,
+        p_note: "Updated by Customer Care.",
+      });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["support_tickets"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["protected-support-cases"] }),
   });
 }
 
@@ -816,28 +843,64 @@ export function useSetUserBlocked() {
 
 /* ---------- Admin platform overview ---------- */
 export function useAdminOverview() {
+  const access = useAdminAccess();
+  const canViewCustomers = access.hasPermission("customers.view");
+  const canViewSellers = access.hasPermission("sellers.view");
+  const canViewProducts = access.hasPermission("products.view");
+  const canViewInventory = access.hasPermission("inventory.view");
+  const canViewOrders = access.hasPermission("orders.view");
   return useQuery({
-    queryKey: ["admin_overview"],
+    queryKey: [
+      "admin_overview",
+      access.data?.role,
+      canViewCustomers,
+      canViewSellers,
+      canViewProducts,
+      canViewInventory,
+      canViewOrders,
+    ],
+    enabled: Boolean(access.data),
     queryFn: async () => {
+      const noRows = { data: [], count: null, error: null };
       const [users, sellers, products, orders, todayOrders] = await Promise.all([
-        (supabase as any).from("profiles").select("id", { count: "exact", head: true }),
-        (supabase as any)
-          .from("sellers")
-          .select("id, status, created_at, reviewed_at, business_name, full_name, email"),
-        (supabase as any)
-          .from("products")
-          .select("id, status, stock, category, name, selling_price, created_at"),
-        (supabase as any)
-          .from("orders")
-          .select("id, total, status, created_at, buyer_name, seller_id"),
-        (supabase as any)
-          .from("orders")
-          .select("id", { count: "exact", head: true })
-          .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
+        canViewCustomers
+          ? (supabase as any).from("profiles").select("id", { count: "exact", head: true })
+          : Promise.resolve(noRows),
+        canViewSellers
+          ? (supabase as any)
+              .from("sellers")
+              .select("id, status, created_at, reviewed_at, business_name, full_name, email")
+          : Promise.resolve(noRows),
+        canViewProducts || canViewInventory
+          ? (supabase as any)
+              .from("products")
+              .select("id, status, stock, category, name, selling_price, created_at")
+          : Promise.resolve(noRows),
+        canViewOrders
+          ? (supabase as any)
+              .from("orders")
+              .select("id, total, status, created_at, buyer_name, seller_id")
+          : Promise.resolve(noRows),
+        canViewOrders
+          ? (supabase as any)
+              .from("orders")
+              .select("id", { count: "exact", head: true })
+              .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
+          : Promise.resolve(noRows),
       ]);
+      const failedQuery = [users, sellers, products, orders, todayOrders].find(
+        (result) => result.error,
+      );
+      if (failedQuery?.error) throw failedQuery.error;
       const rawSellers = (sellers.data ?? []) as Array<any>;
       return {
-        totalUsers: users.count ?? 0,
+        totalUsers: canViewCustomers ? (users.count ?? 0) : null,
+        available: {
+          customers: canViewCustomers,
+          sellers: canViewSellers,
+          products: canViewProducts || canViewInventory,
+          orders: canViewOrders,
+        },
         sellers: rawSellers.map((s) => ({
           id: s.id,
           status: s.status,
@@ -870,7 +933,7 @@ export function useAdminOverview() {
           buyer_name: string | null;
           seller_id: string;
         }>,
-        todayOrders: todayOrders.count ?? 0,
+        todayOrders: canViewOrders ? (todayOrders.count ?? 0) : null,
       };
     },
     staleTime: 60_000,

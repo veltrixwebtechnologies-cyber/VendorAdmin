@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -30,7 +30,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { getDataErrorMessage, useMySeller, useUpdateMySeller, type SellerStatus } from "@/lib/db";
+import {
+  getDataErrorMessage,
+  useConfirmSellerStoreLocation,
+  useMySeller,
+  useUpdateMySeller,
+  type Seller,
+  type SellerStatus,
+} from "@/lib/db";
+import { GoogleStoreLocationPicker } from "@/components/google-store-location-picker";
+import type { Coordinates } from "@/lib/coordinates";
+import { useSellerDefaultStore, useUpdateSellerStore } from "@/lib/stores";
+import { resolveDefaultStore } from "@/lib/store-domain";
 
 const PRESET_BANNERS = [
   {
@@ -270,44 +281,7 @@ function StoreSetupPage() {
 
       {/* Address & Contact Details Card */}
       <div className="grid gap-6 sm:grid-cols-2">
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 border-b border-border/60">
-            <CardTitle className="flex items-center gap-2 text-sm font-bold">
-              <MapPin className="h-4 w-4 text-primary" /> Store Location
-            </CardTitle>
-            <Link to="/register" search={{ step: 3 }}>
-              <Button size="sm" variant="ghost" className="h-7 text-xs px-2">
-                <Pencil className="h-3 w-3" /> Edit
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-2 text-xs">
-            <p className="font-semibold text-foreground text-sm">{seller.business.shopName}</p>
-            <p className="text-muted-foreground leading-relaxed">
-              {seller.address.shopAddress || "No address line"}
-            </p>
-            <p className="text-muted-foreground">
-              {[seller.address.city, seller.address.state, seller.address.pincode]
-                .filter(Boolean)
-                .join(", ")}
-            </p>
-            {seller.address.pickupSame === false && (
-              <div className="mt-3 pt-2 border-t border-border/60">
-                <p className="font-semibold text-foreground">Separate Pickup Address:</p>
-                <p className="text-muted-foreground">
-                  {[
-                    seller.address.pickupAddress,
-                    seller.address.pickupCity,
-                    seller.address.pickupState,
-                    seller.address.pickupPincode,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <StoreLocationSection seller={seller} />
 
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 border-b border-border/60">
@@ -340,6 +314,8 @@ function StoreSetupPage() {
           </CardContent>
         </Card>
       </div>
+
+      <DefaultStoreSettings seller={seller} />
 
       {/* Bank & Payout Details Card */}
       <Card>
@@ -379,6 +355,365 @@ function StoreSetupPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function DefaultStoreSettings({ seller }: { seller: Seller }) {
+  const query = useSellerDefaultStore(seller.id);
+  const save = useUpdateSellerStore();
+  const resolved = query.data?.resolution;
+  const store = resolved?.state === "resolved" ? resolved.store : null;
+  const [name, setName] = useState(seller.business.shopName);
+  const [description, setDescription] = useState(seller.business.description);
+  const [radius, setRadius] = useState("");
+  useEffect(() => {
+    if (!store) return;
+    setName(store.name ?? seller.business.shopName);
+    setDescription(store.description ?? seller.business.description);
+    setRadius(store.service_radius_km == null ? "" : String(store.service_radius_km));
+  }, [
+    store?.id,
+    store?.name,
+    store?.description,
+    store?.service_radius_km,
+    seller.business.shopName,
+    seller.business.description,
+  ]);
+
+  const saveStore = async () => {
+    if (!store) return;
+    const parsedRadius = radius.trim() === "" ? null : Number(radius);
+    if (parsedRadius !== null && (!Number.isFinite(parsedRadius) || parsedRadius < 0)) {
+      toast.error("Service radius must be a non-negative number.");
+      return;
+    }
+    try {
+      await save.mutateAsync({
+        id: store.id,
+        sellerId: seller.id,
+        name,
+        description,
+        serviceRadiusKm: parsedRadius,
+      });
+      toast.success("Default Store settings updated.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Store settings could not be saved.");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="border-b border-border/60 pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-bold">
+          <Store className="h-4 w-4 text-primary" />
+          Default Store settings
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-4">
+        {query.isLoading ? (
+          <div className="h-16 animate-pulse rounded-lg bg-muted" />
+        ) : query.isError ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <span>
+              Store records are unavailable. Your current seller-based Store Profile and location
+              controls remain active.
+            </span>
+            <Button size="sm" variant="outline" onClick={() => void query.refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : query.data?.unavailable || resolved?.state === "missing" ? (
+          <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            The Store table is not available in this environment yet. Existing seller profile,
+            operating hours, and delivery behavior are unchanged.
+          </div>
+        ) : resolved?.state !== "resolved" ? (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+            The seller’s default Store mapping is{" "}
+            {resolved?.state.replaceAll("-", " ") ?? "unavailable"}. No arbitrary Store was
+            selected. Contact LocalShore support.
+          </div>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground">
+              This keeps the existing one-store seller workflow simple while saving Store-owned
+              settings. The seller account remains the financial owner. During this staged
+              migration, checkout delivery eligibility still uses the existing delivery
+              configuration; this Store radius does not change customer coverage yet.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="default-store-name">Store name</Label>
+                <Input
+                  id="default-store-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={120}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="default-store-radius">Service radius (km)</Label>
+                <Input
+                  id="default-store-radius"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="Not configured"
+                  value={radius}
+                  onChange={(event) => setRadius(event.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="default-store-description">Store description</Label>
+                <Textarea
+                  id="default-store-description"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+              <span className="text-xs text-muted-foreground">
+                Location:{" "}
+                {store?.latitude == null || store?.longitude == null
+                  ? "Using the existing seller location path"
+                  : `${store.latitude.toFixed(5)}, ${store.longitude.toFixed(5)}`}
+              </span>
+              <Button
+                size="sm"
+                onClick={() => void saveStore()}
+                disabled={!store || save.isPending || !name.trim()}
+              >
+                {save.isPending ? "Saving…" : "Save Store settings"}
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StoreLocationSection({ seller }: { seller: Seller }) {
+  const confirmLocation = useConfirmSellerStoreLocation();
+  const [editing, setEditing] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [pin, setPin] = useState<Coordinates | null>(seller.address.shopCoordinates);
+  const [form, setForm] = useState({
+    address: seller.address.shopAddress,
+    city: seller.address.city,
+    state: seller.address.state,
+    pincode: seller.address.pincode,
+    landmark: seller.address.landmark,
+    placeId: seller.address.googlePlaceId ?? null,
+  });
+  const savedPin = seller.address.shopCoordinates;
+  const hasRequiredAddress =
+    form.address.trim().length >= 4 &&
+    form.city.trim().length >= 2 &&
+    form.state.trim().length >= 2 &&
+    /^\d{6}$/.test(form.pincode);
+
+  const startEditing = () => {
+    setPin(savedPin);
+    setForm({
+      address: seller.address.shopAddress,
+      city: seller.address.city,
+      state: seller.address.state,
+      pincode: seller.address.pincode,
+      landmark: seller.address.landmark,
+      placeId: seller.address.googlePlaceId ?? null,
+    });
+    setEditing(true);
+  };
+
+  const saveLocation = async () => {
+    if (!pin || !hasRequiredAddress || resolving || confirmLocation.isPending) return;
+    try {
+      await confirmLocation.mutateAsync({
+        addressLine1: form.address.trim(),
+        addressLine2: form.landmark.trim(),
+        city: form.city.trim(),
+        state: form.state.trim(),
+        pincode: form.pincode,
+        latitude: pin.lat,
+        longitude: pin.lng,
+        googlePlaceId: form.placeId,
+      });
+      toast.success("Store location updated successfully.");
+      setEditing(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update store location.");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 border-b border-border/60">
+        <CardTitle className="flex items-center gap-2 text-sm font-bold">
+          <MapPin className="h-4 w-4 text-primary" /> Store Location
+        </CardTitle>
+        {!editing ? (
+          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={startEditing}>
+            <Pencil className="h-3 w-3" /> {savedPin ? "Change location" : "Set location"}
+          </Button>
+        ) : null}
+      </CardHeader>
+      <CardContent className="space-y-4 pt-4">
+        {!editing ? (
+          <div className="space-y-2 text-xs">
+            <p className="text-sm font-semibold text-foreground">{seller.business.shopName}</p>
+            <p className="leading-relaxed text-muted-foreground">
+              {seller.address.shopAddress || "No address line"}
+            </p>
+            <p className="text-muted-foreground">
+              {[seller.address.city, seller.address.state, seller.address.pincode]
+                .filter(Boolean)
+                .join(", ") || "Address details missing"}
+            </p>
+            {savedPin ? (
+              <p className="font-mono text-[11px] text-muted-foreground">
+                Confirmed map pin: {savedPin.lat.toFixed(6)}, {savedPin.lng.toFixed(6)}
+              </p>
+            ) : (
+              <p className="text-amber-700">
+                Add a confirmed pin so customers can find your store nearby.
+              </p>
+            )}
+            {seller.address.pickupSame === false && (
+              <div className="mt-3 border-t border-border/60 pt-2">
+                <p className="font-semibold text-foreground">Separate Pickup Address:</p>
+                <p className="text-muted-foreground">
+                  {[
+                    seller.address.pickupAddress,
+                    seller.address.pickupCity,
+                    seller.address.pickupState,
+                    seller.address.pickupPincode,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <GoogleStoreLocationPicker
+              value={pin}
+              addressLabel={form.address}
+              onLocationChange={(update) => {
+                setPin(update.coordinates);
+                setResolving(update.pending);
+                if (update.pending) {
+                  setForm((current) => ({
+                    ...current,
+                    address: "",
+                    city: "",
+                    state: "",
+                    pincode: "",
+                    placeId: null,
+                  }));
+                } else if (update.address) {
+                  setForm((current) => ({
+                    ...current,
+                    address: update.address!.formattedAddress,
+                    city: update.address!.city,
+                    state: update.address!.state,
+                    pincode: update.address!.pincode.replace(/\D/g, "").slice(0, 6),
+                    placeId: update.address!.placeId,
+                  }));
+                }
+              }}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="store-address">Selected address</Label>
+                <Textarea
+                  id="store-address"
+                  rows={2}
+                  value={form.address}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      address: event.target.value,
+                      placeId: null,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="store-city">City</Label>
+                <Input
+                  id="store-city"
+                  value={form.city}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, city: event.target.value, placeId: null }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="store-state">State</Label>
+                <Input
+                  id="store-state"
+                  value={form.state}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, state: event.target.value, placeId: null }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="store-pincode">Pincode</Label>
+                <Input
+                  id="store-pincode"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={form.pincode}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      pincode: event.target.value.replace(/\D/g, "").slice(0, 6),
+                      placeId: null,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="store-landmark">Landmark (optional)</Label>
+                <Input
+                  id="store-landmark"
+                  value={form.landmark}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, landmark: event.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setEditing(false)}
+                disabled={confirmLocation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void saveLocation()}
+                disabled={!pin || !hasRequiredAddress || resolving || confirmLocation.isPending}
+              >
+                {confirmLocation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Confirm Store Location
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,14 +19,13 @@ import {
 import {
   useCategories,
   useUpsertCategory,
-  useDeleteCategory,
   useBrands,
   useUpsertBrand,
-  useDeleteBrand,
   type Category,
   type Brand,
 } from "@/lib/admin-db";
 import { toast } from "sonner";
+import { useAdminAccess } from "@/lib/admin-permissions";
 
 export const Route = createFileRoute("/admin/categories")({
   head: () => ({ meta: [{ title: "Categories — Admin" }, { name: "robots", content: "noindex" }] }),
@@ -42,12 +41,12 @@ function slugify(s: string) {
 }
 
 function CategoriesPage() {
+  const access = useAdminAccess();
+  const canManageCategories = access.hasPermission("categories.manage");
   const cats = useCategories();
   const brands = useBrands();
   const upsertCat = useUpsertCategory();
-  const delCat = useDeleteCategory();
   const upsertBrand = useUpsertBrand();
-  const delBrand = useDeleteBrand();
 
   const [editingCat, setEditingCat] = useState<Partial<Category> | null>(null);
   const [editingBrand, setEditingBrand] = useState<Partial<Brand> | null>(null);
@@ -62,21 +61,23 @@ function CategoriesPage() {
           <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Categories & Brands</h1>
           <p className="text-sm text-muted-foreground">Organize the storefront taxonomy.</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setEditingCat({ name: "", slug: "", is_active: true, sort_order: 0 })}
-            className="gap-1"
-          >
-            <Plus className="h-4 w-4" /> Category
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setEditingBrand({ name: "", slug: "", is_active: true })}
-            className="gap-1"
-          >
-            <Plus className="h-4 w-4" /> Brand
-          </Button>
-        </div>
+        {canManageCategories ? (
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setEditingCat({ name: "", slug: "", is_active: true, sort_order: 0 })}
+              className="gap-1"
+            >
+              <Plus className="h-4 w-4" /> Category
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setEditingBrand({ name: "", slug: "", is_active: true })}
+              className="gap-1"
+            >
+              <Plus className="h-4 w-4" /> Brand
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -103,29 +104,21 @@ function CategoriesPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setEditingCat({ ...c, parent_id: c.id })}
-                          title="Add subcategory"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => setEditingCat(c)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => {
-                            if (confirm("Delete category?"))
-                              delCat.mutate(c.id, { onSuccess: () => toast.success("Deleted") });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
+                      {canManageCategories ? (
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setEditingCat({ ...c, parent_id: c.id })}
+                            title="Add subcategory"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => setEditingCat(c)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
                     {children(c.id).length > 0 && (
                       <ul className="ml-6 border-l border-border pl-2 space-y-1">
@@ -140,24 +133,17 @@ function CategoriesPage() {
                                 /{sub.slug}
                               </span>
                             </div>
-                            <div className="flex gap-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => setEditingCat(sub)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => {
-                                  if (confirm("Delete?")) delCat.mutate(sub.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
+                            {canManageCategories ? (
+                              <div className="flex gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => setEditingCat(sub)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : null}
                           </li>
                         ))}
                       </ul>
@@ -191,21 +177,13 @@ function CategoriesPage() {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => setEditingBrand(b)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          if (confirm("Delete brand?"))
-                            delBrand.mutate(b.id, { onSuccess: () => toast.success("Deleted") });
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                    {canManageCategories ? (
+                      <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => setEditingBrand(b)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>

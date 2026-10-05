@@ -4,46 +4,52 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IndianRupee, Clock, CheckCircle2, RotateCcw } from "lucide-react";
+import { IndianRupee, Clock, CheckCircle2, CircleX } from "lucide-react";
+import { adminErrorMessage } from "@/lib/admin-permissions";
 
 export const Route = createFileRoute("/admin/payments")({
   head: () => ({ meta: [{ title: "Payments — Admin" }, { name: "robots", content: "noindex" }] }),
   component: PaymentsPage,
 });
 
-const fmt = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+const fmt = (n: number) =>
+  `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+type PaymentAttempt = {
+  id: string;
+  order_id: string | null;
+  provider: string;
+  provider_order_id: string;
+  provider_payment_id: string | null;
+  amount: number;
+  status: string;
+  created_at: string;
+};
 
 function PaymentsPage() {
   const q = useQuery({
-    queryKey: ["admin", "payments"],
+    queryKey: ["admin", "payment-attempts"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
-        .from("orders")
-        .select("id, buyer_name, total, status, created_at, seller_id")
-        .order("created_at", { ascending: false });
+        .from("payment_attempts")
+        .select(
+          "id, order_id, provider, provider_order_id, provider_payment_id, amount, status, created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(100);
       if (error) throw error;
-      return (data ?? []) as Array<{
-        id: string;
-        buyer_name: string | null;
-        total: number;
-        status: string;
-        created_at: string;
-        seller_id: string;
-      }>;
+      return (data ?? []) as PaymentAttempt[];
     },
   });
 
   const stats = useMemo(() => {
-    const list = q.data ?? [];
-    const done = list.filter((o) => o.status === "delivered");
-    const pending = list.filter((o) => ["new", "accepted", "packed", "shipped"].includes(o.status));
-    const refunds = list.filter((o) => ["cancelled", "returned"].includes(o.status));
-    const total = done.reduce((a, o) => a + Number(o.total || 0), 0);
+    const rows = q.data ?? [];
     return {
-      total,
-      pending: pending.reduce((a, o) => a + Number(o.total || 0), 0),
-      refunds: refunds.reduce((a, o) => a + Number(o.total || 0), 0),
-      rows: list.slice(0, 50),
+      captured: rows
+        .filter((p) => p.status === "captured")
+        .reduce((n, p) => n + Number(p.amount || 0), 0),
+      pending: rows.filter((p) => ["created", "pending", "authorized"].includes(p.status)).length,
+      failed: rows.filter((p) => p.status === "failed").length,
+      capturedCount: rows.filter((p) => p.status === "captured").length,
     };
   }, [q.data]);
 
@@ -52,56 +58,89 @@ function PaymentsPage() {
       <div>
         <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Payments</h1>
         <p className="text-sm text-muted-foreground">
-          Marketplace transactions across all vendors.
+          Gateway payment attempts. COD is recorded on orders and is not counted as a gateway
+          capture.
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 stagger">
-        <Kpi icon={IndianRupee} label="Total Revenue" value={fmt(stats.total)} />
-        <Kpi icon={Clock} label="Pending Payments" value={fmt(stats.pending)} tone="warn" />
-        <Kpi icon={CheckCircle2} label="Completed" value={fmt(stats.total)} tone="ok" />
-        <Kpi icon={RotateCcw} label="Refunds" value={fmt(stats.refunds)} tone="danger" />
+      {q.isError ? (
+        <Card>
+          <CardContent className="p-5 text-sm text-destructive">
+            {adminErrorMessage(q.error, "Payment attempts could not be loaded.")}
+          </CardContent>
+        </Card>
+      ) : null}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 stagger">
+        <Kpi
+          icon={IndianRupee}
+          label="Captured in loaded records"
+          value={fmt(stats.captured)}
+          tone="ok"
+        />
+        <Kpi icon={Clock} label="Open payment attempts" value={stats.pending} tone="warn" />
+        <Kpi icon={CircleX} label="Failed attempts" value={stats.failed} tone="danger" />
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Recent transactions</CardTitle>
+          <CardTitle className="text-base">Recent gateway attempts (latest 100)</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-border">
-            {stats.rows.length === 0 ? (
+            {q.isLoading ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                Loading payment attempts…
+              </div>
+            ) : !q.data?.length ? (
               <div className="grid place-items-center py-10 text-sm text-muted-foreground">
-                No transactions yet.
+                No gateway payment attempts found.
               </div>
             ) : (
-              stats.rows.map((t) => (
+              q.data.map((p) => (
                 <div
-                  key={t.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 px-4 py-3 items-center"
+                  key={p.id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3"
                 >
                   <div className="min-w-0">
                     <div className="truncate font-medium">
-                      {t.buyer_name || "Guest"} · #{t.id.slice(0, 8)}
+                      {p.provider.toUpperCase()} ·{" "}
+                      {p.order_id ? `Order #${p.order_id.slice(0, 8)}` : "Order not linked"}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(t.created_at).toLocaleString("en-IN")}
+                    <div className="truncate text-xs text-muted-foreground">
+                      {p.provider_payment_id || p.provider_order_id} ·{" "}
+                      {new Date(p.created_at).toLocaleString("en-IN")}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2">
                     <Badge variant="outline" className="capitalize">
-                      {t.status}
+                      {p.status}
                     </Badge>
-                    <span className="font-semibold">{fmt(t.total)}</span>
+                    <span className="font-semibold">{fmt(Number(p.amount))}</span>
                   </div>
                 </div>
               ))
             )}
           </div>
+          <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+            Captured totals reflect only the latest 100 visible payment attempts, not a full ledger
+            reconciliation. Use Reconciliation for consistency checks.
+          </p>
         </CardContent>
       </Card>
+      <span className="sr-only">{stats.capturedCount} captured attempts</span>
     </div>
   );
 }
 
-function Kpi({ icon: Icon, label, value, tone = "default" }: any) {
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  tone = "default",
+}: {
+  icon: typeof IndianRupee;
+  label: string;
+  value: string | number;
+  tone?: string;
+}) {
   const toneCls =
     tone === "warn"
       ? "bg-accent/20 text-accent-foreground"
@@ -111,7 +150,7 @@ function Kpi({ icon: Icon, label, value, tone = "default" }: any) {
           ? "bg-success/15 text-success"
           : "bg-primary/10 text-primary";
   return (
-    <Card className="hover-lift">
+    <Card>
       <CardContent className="flex items-start gap-3 p-4">
         <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${toneCls}`}>
           <Icon className="h-5 w-5" />

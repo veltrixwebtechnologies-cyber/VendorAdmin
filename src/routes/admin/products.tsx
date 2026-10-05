@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,18 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Search, XCircle, CheckCircle2, EyeOff, Trash2, Eye } from "lucide-react";
+import { Search, XCircle, CheckCircle2, EyeOff, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { useAdminAccess } from "@/lib/admin-permissions";
 
 export const Route = createFileRoute("/admin/products")({
   head: () => ({ meta: [{ title: "Products — Admin" }, { name: "robots", content: "noindex" }] }),
@@ -68,17 +59,28 @@ const QUICK_REASONS = [
   "Trademark / brand policy violation",
 ];
 
+const ADMIN_PRODUCT_PAGE_SIZE = 500;
+
 function useAllProducts() {
   return useQuery<Row[]>({
     queryKey: ["admin", "products"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("products")
-        .select(
-          "id, name, description, category, selling_price, mrp, stock, sku, status, rejection_reason, image_url, user_id, created_at",
-        )
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      const data: any[] = [];
+      let offset = 0;
+      while (true) {
+        const { data: page, error } = await (supabase as any)
+          .from("products")
+          .select(
+            "id, name, description, category, selling_price, mrp, stock, sku, status, rejection_reason, image_url, user_id, created_at",
+          )
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + ADMIN_PRODUCT_PAGE_SIZE - 1);
+        if (error) throw error;
+        data.push(...(page ?? []));
+        if (!page || page.length < ADMIN_PRODUCT_PAGE_SIZE) break;
+        offset += ADMIN_PRODUCT_PAGE_SIZE;
+      }
       const rows = (data ?? []).map((r: any) => ({
         ...r,
         original_price: Number(r.mrp ?? 0),
@@ -121,8 +123,26 @@ function useAllProducts() {
 }
 
 function AdminProducts() {
+  const access = useAdminAccess();
+  const canModerateProducts =
+    access.hasPermission("products.moderate") || access.hasPermission("products.manage");
   const q = useAllProducts();
   const qc = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-products-refresh")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => void qc.invalidateQueries({ queryKey: ["admin", "products"] }),
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [qc]);
   const upd = useMutation({
     mutationFn: async ({
       id,
@@ -135,26 +155,84 @@ function AdminProducts() {
     }) => {
       const patch: any = { status };
       if (status === "rejected") patch.rejection_reason = rejection_reason ?? null;
-      const { error } = await (supabase as any).from("products").update(patch).eq("id", id);
+      const { data, error } = await (supabase as any)
+        .from("products")
+        .update(patch)
+        .eq("id", id)
+        .select("id,status")
+        .single();
       if (error) throw error;
+      if (data.status !== status) {
+        throw new Error(`Product status was not changed (current status: ${data.status})`);
+      }
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "products"] }),
+    onError: (error: any) => toast.error(error?.message ?? "Product moderation failed"),
+  });
+  const bulkUpd = useMutation({
+    mutationFn: async ({
+      ids,
+      status,
+      rejectionReason,
+    }: {
+      ids: string[];
+      status: "approved" | "rejected";
+      rejectionReason?: string;
+    }) => {
+      let succeeded = 0;
+      let failed = 0;
+
+      // Bound concurrent requests and condition each write on the row still
+      // being pending, so stale lists cannot overwrite a newer admin decision.
+      for (let offset = 0; offset < ids.length; offset += 20) {
+        const batch = ids.slice(offset, offset + 20);
+        const results = await Promise.all(
+          batch.map(async (id) => {
+            const request = (supabase as any)
+              .from("products")
+              .update({
+                status,
+                ...(status === "rejected" ? { rejection_reason: rejectionReason } : {}),
+              })
+              .eq("id", id)
+              .eq("status", "pending")
+              .select("id,status")
+              .maybeSingle();
+            const { data, error } = await request;
+            if (error) return false;
+            return data?.status === status;
+          }),
+        );
+        succeeded += results.filter(Boolean).length;
+        failed += results.filter((result) => !result).length;
+      }
+
+      return { succeeded, failed, total: ids.length };
+    },
+    onSuccess: async ({ succeeded, failed, total }) => {
+      await qc.invalidateQueries({ queryKey: ["admin", "products"] });
+      if (failed) {
+        toast.error(
+          `${succeeded} of ${total} products updated; ${failed} failed or changed concurrently.`,
+        );
+      } else {
+        toast.success(`${succeeded} product${succeeded === 1 ? "" : "s"} updated.`);
+      }
+      setBulkAction(null);
+      setBulkReason("");
+    },
+    onError: (error: any) => toast.error(error?.message ?? "Bulk moderation failed"),
   });
 
-  const del = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("products").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "products"] }),
-  });
   const [filter, setFilter] = useState<"all" | "pending" | "active" | "rejected" | "out">("all");
   const [vendorFilter, setVendorFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [rejectTarget, setRejectTarget] = useState<Row | null>(null);
   const [viewTarget, setViewTarget] = useState<Row | null>(null);
   const [reason, setReason] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
+  const [bulkAction, setBulkAction] = useState<"approved" | "rejected" | null>(null);
+  const [bulkReason, setBulkReason] = useState("");
 
   const vendors = useMemo(() => {
     const byId = new Map<string, string>();
@@ -194,6 +272,25 @@ function AdminProducts() {
     }
     return r;
   }, [q.data, filter, search, vendorFilter]);
+
+  const pendingRows = useMemo(
+    () => rows.filter((product) => product.status?.toLowerCase() === "pending"),
+    [rows],
+  );
+
+  const confirmBulkModeration = () => {
+    if (!bulkAction || pendingRows.length === 0) return;
+    const rejectionReason = bulkReason.trim();
+    if (bulkAction === "rejected" && !rejectionReason) {
+      toast.error("Please provide a reason for rejecting these products.");
+      return;
+    }
+    bulkUpd.mutate({
+      ids: pendingRows.map((product) => product.id),
+      status: bulkAction,
+      rejectionReason: bulkAction === "rejected" ? rejectionReason : undefined,
+    });
+  };
 
   const openReject = (p: Row) => {
     setRejectTarget(p);
@@ -267,12 +364,52 @@ function AdminProducts() {
         {vendorFilter !== "all" ? " for the selected vendor" : " across all vendors"}.
       </p>
 
+      {canModerateProducts && pendingRows.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3">
+          <span className="mr-auto text-sm text-muted-foreground">
+            {pendingRows.length} pending product{pendingRows.length === 1 ? "" : "s"} match the
+            current filters.
+          </span>
+          <Button
+            size="sm"
+            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            onClick={() => setBulkAction("approved")}
+            disabled={bulkUpd.isPending || upd.isPending}
+          >
+            Approve all ({pendingRows.length})
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => {
+              setBulkReason("");
+              setBulkAction("rejected");
+            }}
+            disabled={bulkUpd.isPending || upd.isPending}
+          >
+            Reject all ({pendingRows.length})
+          </Button>
+        </div>
+      )}
+
       {q.isLoading ? (
         <div className="grid gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
           ))}
         </div>
+      ) : q.isError ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <p className="text-sm text-destructive">
+              Products could not be loaded:{" "}
+              {(q.error as any)?.message ?? "Check admin access or connection."}
+            </p>
+            <Button variant="outline" onClick={() => void q.refetch()} disabled={q.isFetching}>
+              {q.isFetching ? "Retrying…" : "Retry"}
+            </Button>
+          </CardContent>
+        </Card>
       ) : rows.length === 0 ? (
         <Card>
           <CardContent className="grid place-items-center py-16 text-sm text-muted-foreground">
@@ -337,11 +474,12 @@ function AdminProducts() {
                     <Button size="sm" variant="secondary" onClick={() => setViewTarget(p)}>
                       <Eye className="h-4 w-4" /> View
                     </Button>
-                    {p.status !== "approved" && (
+                    {canModerateProducts && p.status !== "approved" && (
                       <Button
                         size="sm"
                         variant="outline"
                         className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                        disabled={upd.isPending || bulkUpd.isPending}
                         onClick={() =>
                           upd.mutate(
                             { id: p.id, status: "approved" },
@@ -352,34 +490,34 @@ function AdminProducts() {
                         <CheckCircle2 className="h-4 w-4" /> Approve
                       </Button>
                     )}
-                    {p.status !== "rejected" && (
-                      <Button size="sm" variant="outline" onClick={() => openReject(p)}>
+                    {canModerateProducts && p.status !== "rejected" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openReject(p)}
+                        disabled={upd.isPending || bulkUpd.isPending}
+                      >
                         <XCircle className="h-4 w-4" /> Reject
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        upd.mutate(
-                          { id: p.id, status: p.status === "inactive" ? "active" : "inactive" },
-                          {
-                            onSuccess: () =>
-                              toast.success(p.status === "inactive" ? "Unhidden" : "Hidden"),
-                          },
-                        )
-                      }
-                    >
-                      <EyeOff className="h-4 w-4" /> {p.status === "inactive" ? "Unhide" : "Hide"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteTarget(p)}
-                    >
-                      <Trash2 className="h-4 w-4" /> Delete
-                    </Button>
+                    {canModerateProducts ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={upd.isPending || bulkUpd.isPending}
+                        onClick={() =>
+                          upd.mutate(
+                            { id: p.id, status: p.status === "inactive" ? "active" : "inactive" },
+                            {
+                              onSuccess: () =>
+                                toast.success(p.status === "inactive" ? "Unhidden" : "Hidden"),
+                            },
+                          )
+                        }
+                      >
+                        <EyeOff className="h-4 w-4" /> {p.status === "inactive" ? "Unhide" : "Hide"}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -479,6 +617,7 @@ function AdminProducts() {
                 {viewTarget.status !== "approved" && (
                   <Button
                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={upd.isPending || bulkUpd.isPending}
                     onClick={() => {
                       upd.mutate(
                         { id: viewTarget.id, status: "approved" },
@@ -497,6 +636,7 @@ function AdminProducts() {
                 {viewTarget.status !== "rejected" && (
                   <Button
                     variant="destructive"
+                    disabled={upd.isPending || bulkUpd.isPending}
                     onClick={() => {
                       const target = viewTarget;
                       setViewTarget(null);
@@ -606,7 +746,7 @@ function AdminProducts() {
             <Button
               variant="destructive"
               onClick={submitReject}
-              disabled={!reason.trim() || upd.isPending}
+              disabled={!reason.trim() || upd.isPending || bulkUpd.isPending}
             >
               {upd.isPending ? "Rejecting…" : "Reject & notify seller"}
             </Button>
@@ -614,40 +754,72 @@ function AdminProducts() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Alert */}
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => {
-          if (!o) setDeleteTarget(null);
+      {/* Confirm bulk action; applies only to currently filtered pending rows. */}
+      <Dialog
+        open={bulkAction !== null}
+        onOpenChange={(open) => {
+          if (!open && !bulkUpd.isPending) {
+            setBulkAction(null);
+            setBulkReason("");
+          }
         }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this product?</AlertDialogTitle>
-            <AlertDialogDescription>
-              "{deleteTarget?.name}" will be permanently removed from the marketplace. This cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {bulkAction === "approved"
+                ? "Approve all matching pending products?"
+                : "Reject all matching pending products?"}
+            </DialogTitle>
+            <DialogDescription>
+              This applies to {pendingRows.length} pending product
+              {pendingRows.length === 1 ? "" : "s"} matching the current filters. Products that are
+              no longer in Pending will be skipped.
+            </DialogDescription>
+          </DialogHeader>
+          {bulkAction === "rejected" && (
+            <div className="space-y-1.5">
+              <label htmlFor="bulk-rejection-reason" className="text-sm font-medium">
+                Rejection reason (required)
+              </label>
+              <Textarea
+                id="bulk-rejection-reason"
+                value={bulkReason}
+                onChange={(event) => setBulkReason(event.target.value)}
+                placeholder="Explain what needs to be corrected…"
+                rows={4}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
               onClick={() => {
-                if (!deleteTarget) return;
-                del.mutate(deleteTarget.id, {
-                  onSuccess: () => {
-                    toast.success("Deleted");
-                    setDeleteTarget(null);
-                  },
-                });
+                setBulkAction(null);
+                setBulkReason("");
               }}
+              disabled={bulkUpd.isPending}
             >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Cancel
+            </Button>
+            <Button
+              variant={bulkAction === "rejected" ? "destructive" : "default"}
+              onClick={confirmBulkModeration}
+              disabled={
+                bulkUpd.isPending ||
+                pendingRows.length === 0 ||
+                (bulkAction === "rejected" && !bulkReason.trim())
+              }
+            >
+              {bulkUpd.isPending
+                ? "Updating…"
+                : bulkAction === "approved"
+                  ? `Approve ${pendingRows.length} products`
+                  : `Reject ${pendingRows.length} products`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
