@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { CATEGORIES } from "@/lib/catalog-store";
+import { CATEGORIES } from "@/modules/seller/services/catalog-store";
 
 type Row = {
   name: string;

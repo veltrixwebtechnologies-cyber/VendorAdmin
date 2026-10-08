@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   Box,
@@ -13,6 +13,7 @@ import {
   PlayCircle,
   RefreshCw,
   ShoppingBag,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,7 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
-import { type Order, type Seller, useMyOrders } from "@/lib/db";
+import { type Order, type Seller } from "@/shared/core/seller";
+import { useMyOrders } from "@/modules/seller/services/orders";
 import { listProducts, type ProductDto } from "@/lib/products.functions";
 import {
   useActiveOverride,
@@ -30,6 +32,15 @@ import {
   useSetShopOverride,
   useShopStatus,
 } from "@/lib/shop-availability";
+import {
+  PIPELINE_STAGES,
+  type PipelineStageKey,
+  orderMatchesStage,
+  calculatePipelineCounts,
+  getPipelineEmptyState,
+  normalizePipelineStage,
+} from "@/lib/order-pipeline";
+import { OrderDetailSheet, getStatusMeta } from "@/components/order-detail-sheet";
 
 const ACTIVE_ORDER_STATUSES = new Set([
   "new",
@@ -52,32 +63,6 @@ const ACTIVE_ORDER_STATUSES = new Set([
   "at_customer",
   "shipped",
 ]);
-
-const PIPELINE = [
-  { label: "New", statuses: ["new"] },
-  { label: "Accepted", statuses: ["accepted", "vendor_accepted"] },
-  { label: "Preparing", statuses: ["preparing", "packed"] },
-  { label: "Ready", statuses: ["ready_for_pickup"] },
-  {
-    label: "Delivery",
-    statuses: [
-      "assigned",
-      "delivery_partner_assigned",
-      "going_to_vendor",
-      "arrived_at_vendor",
-      "rider_assigned",
-      "rider_accepted",
-      "rider_at_shop",
-      "picked_up",
-      "going_to_customer",
-      "arrived_at_customer",
-      "out_for_delivery",
-      "at_customer",
-      "shipped",
-    ],
-  },
-  { label: "Delivered", statuses: ["delivered"] },
-] as const;
 
 function startOfLocalDay(offsetDays = 0) {
   const date = new Date();
@@ -131,23 +116,53 @@ export function SellerDashboardOverview({ seller }: { seller: Seller }) {
   const averageOrderValue = todayOrders.length
     ? todayOrders.reduce((sum, order) => sum + order.total, 0) / todayOrders.length
     : 0;
-  const recentOrders = orders.slice(0, 6);
   const todayHour = hoursQ.data?.find((hour) => hour.dayOfWeek === new Date().getDay());
   const summaryLoading = ordersQ.isLoading || productsQ.isLoading;
   const summaryError = ordersQ.isError || productsQ.isError;
   const ordersUnavailable = ordersQ.isLoading || ordersQ.isError;
   const productsUnavailable = productsQ.isLoading || productsQ.isError;
 
-  const pipeline = useMemo(
-    () =>
-      PIPELINE.map((stage) => ({
-        ...stage,
-        count: orders.filter((order) =>
-          (stage.statuses as readonly string[]).includes(order.status),
-        ).length,
-      })),
-    [orders],
+  const [selectedStatus, setSelectedStatus] = useState<PipelineStageKey | null>(() => {
+    if (typeof window !== "undefined") {
+      const param = new URLSearchParams(window.location.search).get("status");
+      return normalizePipelineStage(param);
+    }
+    return null;
+  });
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
+  const openOrder = useMemo(
+    () => orders.find((o) => o.id === openOrderId) ?? null,
+    [orders, openOrderId],
   );
+
+  // Compute counts strictly from full orders array to ensure all 6 stage counts remain accurate when filtered
+  const pipelineCounts = useMemo(() => calculatePipelineCounts(orders), [orders]);
+
+  const activeStage = useMemo(
+    () => (selectedStatus ? PIPELINE_STAGES.find((s) => s.key === selectedStatus) : null),
+    [selectedStatus],
+  );
+
+  const filteredOrders = useMemo(() => {
+    if (!selectedStatus) return orders.slice(0, 8);
+    return orders.filter((order) => orderMatchesStage(order.status, selectedStatus));
+  }, [orders, selectedStatus]);
+
+  const handleStageClick = (stageKey: PipelineStageKey) => {
+    setSelectedStatus((prev) => {
+      const next = prev === stageKey ? null : stageKey;
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (next) {
+          url.searchParams.set("status", next);
+        } else {
+          url.searchParams.delete("status");
+        }
+        window.history.replaceState({}, "", url.toString());
+      }
+      return next;
+    });
+  };
 
   async function changeStoreStatus(action: "open" | "close" | "pause" | "resume") {
     try {
@@ -322,20 +337,68 @@ export function SellerDashboardOverview({ seller }: { seller: Seller }) {
       </div>
 
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Order pipeline</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
+          <div>
+            <CardTitle className="text-base">Order pipeline</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Click any stage to filter orders below.
+            </p>
+          </div>
+          {selectedStatus && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+              onClick={() => handleStageClick(selectedStatus)}
+            >
+              <RefreshCw className="h-3 w-3" />
+              Clear filter
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-          {pipeline.map((stage) => (
-            <Link
-              key={stage.label}
-              to="/seller/orders"
-              className="rounded-xl border p-3 transition-colors hover:border-primary/50 hover:bg-muted/40"
-            >
-              <div className="text-xs font-medium text-muted-foreground">{stage.label}</div>
-              <div className="mt-1 text-2xl font-bold">{ordersUnavailable ? "—" : stage.count}</div>
-            </Link>
-          ))}
+          {PIPELINE_STAGES.map((stage) => {
+            const isActive = selectedStatus === stage.key;
+            const count = ordersUnavailable ? "—" : pipelineCounts[stage.key];
+            return (
+              <button
+                key={stage.key}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => handleStageClick(stage.key)}
+                className={`group relative rounded-xl border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  isActive
+                    ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/30"
+                    : "border-border bg-card hover:border-primary/50 hover:bg-muted/40"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span
+                    className={`text-xs font-medium truncate ${
+                      isActive ? "text-primary font-bold" : "text-muted-foreground"
+                    }`}
+                  >
+                    {stage.label}
+                  </span>
+                  {isActive && (
+                    <Badge
+                      variant="default"
+                      className="text-[10px] h-4 px-1.5 py-0 bg-primary text-primary-foreground font-semibold"
+                    >
+                      Active
+                    </Badge>
+                  )}
+                </div>
+                <div
+                  className={`mt-1 text-2xl font-bold ${
+                    isActive ? "text-primary" : "text-foreground"
+                  }`}
+                >
+                  {count}
+                </div>
+              </button>
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -384,10 +447,37 @@ export function SellerDashboardOverview({ seller }: { seller: Seller }) {
 
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Recent orders</CardTitle>
-          <Link to="/seller/orders" className="text-sm font-medium text-primary hover:underline">
-            View all
-          </Link>
+          <div>
+            <CardTitle className="text-base">
+              {activeStage
+                ? `${activeStage.label} orders (${ordersUnavailable ? 0 : filteredOrders.length})`
+                : "Recent orders"}
+            </CardTitle>
+            {activeStage && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {activeStage.description}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {selectedStatus && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setSelectedStatus(null)}
+              >
+                Show all
+              </Button>
+            )}
+            <Link
+              to="/seller/orders"
+              search={selectedStatus ? { status: selectedStatus } : undefined}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {selectedStatus ? `View in Orders` : `View all`}
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           {ordersQ.isLoading ? (
@@ -400,21 +490,52 @@ export function SellerDashboardOverview({ seller }: { seller: Seller }) {
             <p className="py-8 text-center text-sm text-muted-foreground">
               Recent orders are unavailable. Use Retry above to load them again.
             </p>
-          ) : recentOrders.length === 0 ? (
-            <div className="py-10 text-center">
-              <ShoppingBag className="mx-auto h-8 w-8 text-muted-foreground/50" />
-              <p className="mt-3 font-medium">No orders yet</p>
-              <p className="text-sm text-muted-foreground">Customer orders will appear here.</p>
-            </div>
+          ) : filteredOrders.length === 0 ? (
+            selectedStatus && activeStage ? (
+              <div className="py-12 text-center">
+                <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-muted/60 text-muted-foreground">
+                  <ShoppingBag className="h-6 w-6" />
+                </div>
+                <p className="mt-3 font-semibold text-foreground">
+                  {getPipelineEmptyState(selectedStatus).title}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {getPipelineEmptyState(selectedStatus).description}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 text-xs"
+                  onClick={() => setSelectedStatus(null)}
+                >
+                  Show all orders
+                </Button>
+              </div>
+            ) : (
+              <div className="py-10 text-center">
+                <ShoppingBag className="mx-auto h-8 w-8 text-muted-foreground/50" />
+                <p className="mt-3 font-medium">No orders yet</p>
+                <p className="text-sm text-muted-foreground">Customer orders will appear here.</p>
+              </div>
+            )
           ) : (
             <div className="divide-y">
-              {recentOrders.map((order) => (
-                <RecentOrder key={order.id} order={order} />
+              {filteredOrders.map((order) => (
+                <RecentOrder
+                  key={order.id}
+                  order={order}
+                  onSelect={(o) => setOpenOrderId(o.id)}
+                />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <OrderDetailSheet
+        order={openOrder}
+        onClose={() => setOpenOrderId(null)}
+      />
     </div>
   );
 }
@@ -507,16 +628,31 @@ function QuickAction({
   );
 }
 
-function RecentOrder({ order }: { order: Order }) {
+function RecentOrder({
+  order,
+  onSelect,
+}: {
+  order: Order;
+  onSelect?: (order: Order) => void;
+}) {
   const items = order.items.reduce((sum, item) => sum + item.qty, 0);
+  const meta = getStatusMeta(order.status);
   return (
-    <Link
-      to="/seller/orders"
-      className="grid gap-2 py-3 text-sm transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center sm:px-2"
+    <button
+      type="button"
+      onClick={() => onSelect?.(order)}
+      className="w-full text-left grid gap-2 py-3 text-sm transition-colors hover:bg-muted/40 sm:grid-cols-[1.5fr_1fr_auto_auto] sm:items-center sm:px-2 rounded-lg group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       <div>
-        <p className="font-semibold">#{order.orderNumber}</p>
-        <p className="text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <p className="font-semibold font-mono text-foreground group-hover:text-primary transition-colors">
+            #{order.orderNumber}
+          </p>
+          <Badge className={`text-xs ${meta.className}`}>
+            {meta.label}
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5">
           {order.buyerName || "Customer"} · {items} item{items === 1 ? "" : "s"}
         </p>
       </div>
@@ -525,10 +661,12 @@ function RecentOrder({ order }: { order: Order }) {
           new Date(order.createdAt),
         )}
       </p>
-      <Badge variant="outline" className="w-fit capitalize">
-        {order.status.replaceAll("_", " ")}
-      </Badge>
-      <p className="font-semibold">₹{order.total.toLocaleString("en-IN")}</p>
-    </Link>
+      <span className="text-xs text-muted-foreground capitalize">
+        {order.paymentMode}
+      </span>
+      <p className="font-semibold text-right text-foreground">
+        ₹{order.total.toLocaleString("en-IN")}
+      </p>
+    </button>
   );
 }

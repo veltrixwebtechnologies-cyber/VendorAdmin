@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { MapPinned, Pencil, Plus, Search, Store as StoreIcon } from "lucide-react";
 import { toast } from "sonner";
-import { AdminServiceZonesMap } from "@/components/admin-stores-map";
+import { AdminServiceZonesMap } from "@/modules/admin/components/admin-stores-map";
 import { GoogleStoreLocationPicker } from "@/components/google-store-location-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,15 +20,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAdminAccess } from "@/lib/admin-permissions";
+import { useAdminAccess } from "@/shared/auth/admin-permissions";
 import { parseCoordinates, type Coordinates } from "@/lib/coordinates";
-import {
-  useAssignStoreZone,
-  useSaveServiceZone,
-  useServiceZones,
-  useStoreZoneAssignments,
-  type ServiceZone,
-} from "@/lib/stores";
+import { useAssignStoreZone } from "@/modules/admin/services/stores";
+import { useSaveServiceZone } from "@/modules/admin/services/stores";
+import { useServiceZones } from "@/modules/admin/services/stores";
+import { useStoreZoneAssignments } from "@/modules/admin/services/stores";
+import { type ServiceZone } from "@/shared/shops/store-contracts";
+import {} from "@/modules/admin/services/stores";
 import { validateServiceZone } from "@/lib/store-domain";
 
 export const Route = createFileRoute("/admin/service-zones")({

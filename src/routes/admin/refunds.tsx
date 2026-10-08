@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useAdminAccess, adminErrorMessage } from "@/lib/admin-permissions";
+import { useAdminAccess, adminErrorMessage } from "@/shared/auth/admin-permissions";
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 
 export const Route = createFileRoute("/admin/refunds")({

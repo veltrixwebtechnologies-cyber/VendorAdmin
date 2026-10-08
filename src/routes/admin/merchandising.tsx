@@ -26,7 +26,7 @@ import {
   useUnfeatureBrand,
   type Collection,
   type FlashSale,
-} from "@/lib/admin-db";
+} from "@/modules/admin/services/admin-db";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/merchandising")({

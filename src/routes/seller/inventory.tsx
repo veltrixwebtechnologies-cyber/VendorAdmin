@@ -31,7 +31,7 @@ import {
 
 import { useAuth } from "@/lib/auth";
 import { listProducts, type ProductDto } from "@/lib/products.functions";
-import { useUpdateProductStock } from "@/lib/db";
+import { useUpdateProductStock } from "@/modules/seller/services/inventory";
 
 export const Route = createFileRoute("/seller/inventory")({
   head: () => ({

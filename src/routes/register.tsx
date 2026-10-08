@@ -41,12 +41,14 @@ import {
   useSubmitMySeller,
   useUpdateMySeller,
   useConfirmSellerStoreLocation,
-  uploadSellerDoc,
+} from "@/modules/seller/services/profile";
+import { uploadSellerDoc } from "@/shared/storage/seller-documents";
+import {
   type Seller,
   type BusinessType,
   type SellerDocuments,
   type StoredFile,
-} from "@/lib/db";
+} from "@/shared/core/seller";
 
 const STEPS = [
   "Account",

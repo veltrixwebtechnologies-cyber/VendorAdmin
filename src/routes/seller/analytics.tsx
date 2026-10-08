@@ -22,7 +22,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
 import { listProducts, type ProductDto } from "@/lib/products.functions";
-import { useMyOrders } from "@/lib/db";
+import { useMyOrders } from "@/modules/seller/services/orders";
 
 export const Route = createFileRoute("/seller/analytics")({
   head: () => ({

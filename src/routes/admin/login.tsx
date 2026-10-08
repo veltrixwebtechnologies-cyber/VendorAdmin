@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
-import { useAdminAccess } from "@/lib/admin-permissions";
+import { useAdminAccess } from "@/shared/auth/admin-permissions";
 import { sendPasswordReset } from "@/lib/password-reset.functions";
 
 const searchSchema = z.object({

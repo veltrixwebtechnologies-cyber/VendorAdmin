@@ -13,8 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAdminAccess } from "@/lib/admin-permissions";
-import { useAdminStores } from "@/lib/stores";
+import { useAdminAccess } from "@/shared/auth/admin-permissions";
+import { useAdminStores } from "@/modules/admin/services/stores";
 
 export const Route = createFileRoute("/admin/stores")({
   head: () => ({ meta: [{ title: "Stores — Admin" }, { name: "robots", content: "noindex" }] }),

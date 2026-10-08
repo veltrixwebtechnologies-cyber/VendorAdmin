@@ -19,7 +19,7 @@ import {
   useLocalShoreOffers,
   useUpsertLocalShoreOffer,
   type LocalShoreOffer,
-} from "@/lib/admin-db";
+} from "@/modules/admin/services/admin-db";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/offers")({

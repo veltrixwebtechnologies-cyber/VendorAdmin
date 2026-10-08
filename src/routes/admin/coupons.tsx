@@ -21,7 +21,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useCoupons, useUpsertCoupon, useDeleteCoupon, type Coupon } from "@/lib/admin-db";
+import {
+  useCoupons,
+  useUpsertCoupon,
+  useDeleteCoupon,
+  type Coupon,
+} from "@/modules/admin/services/admin-db";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/coupons")({

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Wallet, Clock, CheckCircle2, Download } from "lucide-react";
-import { useAdminAccess, adminErrorMessage } from "@/lib/admin-permissions";
+import { useAdminAccess, adminErrorMessage } from "@/shared/auth/admin-permissions";
 
 export const Route = createFileRoute("/admin/payouts")({
   head: () => ({

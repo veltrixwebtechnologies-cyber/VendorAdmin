@@ -29,7 +29,7 @@ import {
   DEFAULT_APP_BANNER_CONFIG,
   type AppDownloadBannerConfig,
   type Banner,
-} from "@/lib/admin-db";
+} from "@/modules/admin/services/admin-db";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 

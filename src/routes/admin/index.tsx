@@ -24,9 +24,9 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { useAdminOverview } from "@/lib/admin-db";
+import { useAdminOverview } from "@/modules/admin/services/admin-db";
 import { AnimatedNumber, Reveal } from "@/components/motion/presets";
-import { useAdminAccess } from "@/lib/admin-permissions";
+import { useAdminAccess } from "@/shared/auth/admin-permissions";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: "Dashboard — Admin" }, { name: "robots", content: "noindex" }] }),

@@ -15,7 +15,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getDataErrorMessage, useMySeller, useDeleteMyAccount } from "@/lib/db";
+import { getDataErrorMessage } from "@/shared/services/data-mappers";
+import { useMySeller, useDeleteMyAccount } from "@/modules/seller/services/profile";
 
 export const Route = createFileRoute("/seller/profile")({
   head: () => ({

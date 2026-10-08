@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMarkAllNotificationsRead, useMarkNotificationRead, useMyNotifications } from "@/lib/db";
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useMyNotifications,
+} from "@/shared/notifications/seller-events";
 
 export const Route = createFileRoute("/seller/notifications")({
   head: () => ({ meta: [{ title: "Notifications — Seller Hub" }] }),

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useAllSellers, type Seller, type SellerStatus } from "@/lib/db";
+import { useAllSellers } from "@/modules/admin/services/sellers";
+import { type Seller, type SellerStatus } from "@/shared/core/seller";
 
 export const Route = createFileRoute("/admin/vendors")({
   head: () => ({ meta: [{ title: "Vendors — Admin" }, { name: "robots", content: "noindex" }] }),

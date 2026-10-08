@@ -22,7 +22,7 @@ import {
   useResolveDeliveryException,
   type DispatchAssignment,
   type TrackingEvent,
-} from "@/lib/admin-delivery";
+} from "@/modules/admin/services/admin-delivery";
 
 export const Route = createFileRoute("/admin/dispatch")({
   head: () => ({

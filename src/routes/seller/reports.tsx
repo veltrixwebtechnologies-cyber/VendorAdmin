@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useMySeller } from "@/lib/db";
+import { useMySeller } from "@/modules/seller/services/profile";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";

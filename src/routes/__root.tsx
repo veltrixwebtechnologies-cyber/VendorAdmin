@@ -14,7 +14,7 @@ import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from "moti
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { seedIfEmpty } from "@/lib/seller-store";
+import { seedIfEmpty } from "@/modules/seller/services/seller-store";
 import { pageVariants } from "@/components/motion/presets";
 
 function NotFoundComponent() {

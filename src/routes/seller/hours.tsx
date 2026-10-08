@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { useMySeller } from "@/lib/db";
+import { useMySeller } from "@/modules/seller/services/profile";
 import {
   DAYS,
   DAY_FULL,

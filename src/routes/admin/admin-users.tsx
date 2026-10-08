@@ -22,8 +22,12 @@ import {
   adminPermissionsForRole,
   type AdminRole,
   useAdminAccess,
-} from "@/lib/admin-permissions";
-import { useAdminAssignments, useFindAdminAccount, useSetAdminAccess } from "@/lib/admin-rbac";
+} from "@/shared/auth/admin-permissions";
+import {
+  useAdminAssignments,
+  useFindAdminAccount,
+  useSetAdminAccess,
+} from "@/shared/auth/admin-rbac";
 
 export const Route = createFileRoute("/admin/admin-users")({
   head: () => ({

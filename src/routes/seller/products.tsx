@@ -58,7 +58,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { CATEGORIES } from "@/lib/catalog-store";
+import { CATEGORIES } from "@/modules/seller/services/catalog-store";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {

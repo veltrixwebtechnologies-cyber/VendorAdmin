@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useBroadcasts, useSendBroadcast } from "@/lib/admin-db";
+import { useBroadcasts, useSendBroadcast } from "@/modules/admin/services/admin-db";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/notifications")({

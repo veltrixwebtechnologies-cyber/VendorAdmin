@@ -4,8 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
-import { useAdminReviews, useModerateReview } from "@/lib/admin-db";
-import { useAdminAccess } from "@/lib/admin-permissions";
+import { useAdminReviews, useModerateReview } from "@/modules/admin/services/admin-db";
+import { useAdminAccess } from "@/shared/auth/admin-permissions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/reviews")({

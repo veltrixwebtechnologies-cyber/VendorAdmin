@@ -15,11 +15,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { useAuth, signOut } from "@/lib/auth";
-import { useIsAdmin } from "@/lib/db";
+import { useIsAdmin } from "@/shared/auth/legacy-admin";
 import { useTheme } from "@/lib/theme";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { Card, CardContent } from "@/components/ui/card";
-import { adminPermissionForPath, useAdminAccess } from "@/lib/admin-permissions";
+import { adminPermissionForPath, useAdminAccess } from "@/shared/auth/admin-permissions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({

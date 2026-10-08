@@ -1,10 +1,9 @@
+import type { LocalShoreRole, RoleStatus } from "@/shared/core/roles";
+export type { LocalShoreRole, RoleStatus } from "@/shared/core/roles";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-
-export type LocalShoreRole = "customer" | "seller" | "delivery_partner" | "admin";
-export type RoleStatus = "pending" | "active" | "suspended" | "revoked";
 
 export function useRoles() {
   const { user } = useAuth();

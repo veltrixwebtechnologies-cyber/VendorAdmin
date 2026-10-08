@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { useMySeller } from "@/lib/db";
+import { useMySeller } from "@/modules/seller/services/profile";
 
 interface SellerReview {
   id: string;
