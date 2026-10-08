@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
-import { useAdminAccess, adminErrorMessage } from "@/lib/admin-permissions";
+import { useAdminAccess, adminErrorMessage } from "@/shared/auth/admin-permissions";
 
 export const Route = createFileRoute("/admin/orders")({
   head: () => ({ meta: [{ title: "Orders — Admin" }, { name: "robots", content: "noindex" }] }),

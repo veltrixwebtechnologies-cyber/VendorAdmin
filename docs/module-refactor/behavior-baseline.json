@@ -1,0 +1,786 @@
+[
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "isValidCoordinate",
+    "kind": "function",
+    "hash": "106701a869127e0b70fab7bb1255b9a31e069a6cb52985f41bebd661d3c22725"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "normalizeCoordinate",
+    "kind": "function",
+    "hash": "8d20592bca6b1e085b66c3636685d3a1b07c91d44826ac71641c3fc6e76beb59"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "getDataErrorMessage",
+    "kind": "function",
+    "hash": "7550ea48d9474d10b0c6b8d7a2f75daaf0642d5f494a9fed72ef6df557734bef"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "rowToSeller",
+    "kind": "function",
+    "hash": "136bc183666524c0649039493b3c4bea3824ff4c0a80ba5c5e1aa8b6586c94cd"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "sellerPatchToDb",
+    "kind": "function",
+    "hash": "4a3f05f38c61f26ee94667bf92b3106199f4a72386c0ef2b3f224529e912d9f6"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "rowToOrder",
+    "kind": "function",
+    "hash": "e978a6544728704eae64cbfdd95c25fd19cac6f664cb1cffbef65f143174530a"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useMySeller",
+    "kind": "function",
+    "hash": "35e223a928ea1ecdd5ba30369c91e4d3792eb0cb794dbbd027878729d86507e0"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useCreateDraftSeller",
+    "kind": "function",
+    "hash": "4db4379970bd818568fe8b3ef6be8be73c63e718be5c5f795ced862bff7feca5"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useUpdateMySeller",
+    "kind": "function",
+    "hash": "a3a7143fdc21c0d08501b88f1671cff47ca0db0a2ce0f4e93f3ad0cff2866881"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useConfirmSellerStoreLocation",
+    "kind": "function",
+    "hash": "659bb15c0fdb8c98d2745f9ee203c5a07c53d5e9c4801d0e9a0cd5f4b2c19580"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useSubmitMySeller",
+    "kind": "function",
+    "hash": "dd645efb03a58c79fa78af32036f3a239c132cd7beb2f28d4fc0faa795aca388"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useAllSellers",
+    "kind": "function",
+    "hash": "7bf872729205e1d022a3acf98a649ac39d9dd98a0b7896d0bfe8a7c16fa2188e"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useSellerById",
+    "kind": "function",
+    "hash": "e62b7b6764b4893c950d9cc0615c6f223c957b0f16477752cad2df2c1e9203fc"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useReviewSeller",
+    "kind": "function",
+    "hash": "e8965db794d38e747e203be05f9af24146343b835e798e8eccdfe6dd052eb71f"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useDeleteSeller",
+    "kind": "function",
+    "hash": "7c098d4974d520b5cad15aa879a0271338ce43260a398231ed634b14e9474068"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useDeleteMyAccount",
+    "kind": "function",
+    "hash": "f61335118143ab3be83123ddb0a5a6ae5707176d1dacef3be95ab23accea8de7"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useIsAdmin",
+    "kind": "function",
+    "hash": "d222aacda7f7bfdb9e16df596aaf204871e4320a4c8ac0da24980a21d8276494"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useHasAnyAdmin",
+    "kind": "function",
+    "hash": "09f36e2c4b6eb675d5c022b78f0be07a50ff4f17c97917cb85e5ba99b6d73724"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useClaimFirstAdmin",
+    "kind": "function",
+    "hash": "fa2c0b877dbe4b8da18f6a0f171774bcec965e838529a0554ee831000bc7f1c3"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useMyOrders",
+    "kind": "function",
+    "hash": "e646feb023ac0770fdaaa1f6e65715f24086624130c41274278946728c0e0710"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "playOrderNotificationSound",
+    "kind": "function",
+    "hash": "7340f884cb004d60bc241c93297bb69e4e7857db84931610983e967f8200290d"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "triggerDesktopOrderNotification",
+    "kind": "function",
+    "hash": "d3d7a3d0adb79d3f45a049620c97bfc2dbe3249d597a69f5f54c68168e6a3dc8"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useOrderNotificationListener",
+    "kind": "function",
+    "hash": "8c79bdc5530ea9bbf20f9b5b04964cc885d97d278ce4811399208212d50d97e7"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useAdvanceOrder",
+    "kind": "function",
+    "hash": "b2a280243ba7a840beb25cfec7125678ddc9d697d2cd1a388719cb6c07276fff"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useCancelOrder",
+    "kind": "function",
+    "hash": "7ebeb8d9eb5b0e9325e50be3881ce76d5b725fc4ef83fe20c1d0742c60a30431"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useVendorAcceptOrder",
+    "kind": "function",
+    "hash": "c4dcaddf97aad4f9ff5d4861403b8ffd3432855aeb433ed1b0c030971b593f50"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useVendorRejectOrder",
+    "kind": "function",
+    "hash": "cb49a11b7bbc6902762a732f056c62b11ca0eb66bbf5de384f6d4a9247ddd4f2"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useVendorMarkReady",
+    "kind": "function",
+    "hash": "99fa4908d7a09e17f271c0992b9cf19dea2b5c25254d04c91a0b09e3ba1f0511"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useVendorUpdateLiveLocation",
+    "kind": "function",
+    "hash": "2621b19f7f84853f7837c54742777762c92801623b8d8e357aceeff01efc845f"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useVendorStopLiveLocation",
+    "kind": "function",
+    "hash": "953a51c368d26c6c48cb54ff44b8f5fa387e7f7a1ce200b69fce5e91d1d06ed1"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useUpdateProductStock",
+    "kind": "function",
+    "hash": "39d85df7ffb55858564ba9cd7f5cf602306cb6c38cd0e9864acf5bc0655dd982"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "notificationChannelSequence",
+    "kind": "variable",
+    "hash": "28ffda438197439c97230de65a4385ab2db0aa1442d116720fdb6acd81b33185"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useMyNotifications",
+    "kind": "function",
+    "hash": "f469ad0872f19710a18b4bf1718144357d1c3964132495fb773808333b099d86"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useMarkNotificationRead",
+    "kind": "function",
+    "hash": "c6d392d64f176427910d59d66ae72a5b4918fe4468130ac1584e54223178372e"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useMarkAllNotificationsRead",
+    "kind": "function",
+    "hash": "c427467617bacc7ae2bbaa9d7046d41f59deb5d5148bc361ba30ba6e714194ae"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useMySettlements",
+    "kind": "function",
+    "hash": "30bf89143ec38e0a9a0ed3a8572b839cb3c1b6a2d99043a379fbd7097090849f"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "useMyFinancialAdjustments",
+    "kind": "function",
+    "hash": "e7cd7d7e7e83d947848e4d9435f1ac48fff61fc812d7cd37de9fb077ee745b1b"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "uploadSellerDoc",
+    "kind": "function",
+    "hash": "7029d9a43ebe70e428580688352fca4059a3d81fe767b3f0482f6a5d1c55d9ca"
+  },
+  {
+    "original": "src/lib/db.ts",
+    "targets": [
+      "src/shared/services/data-mappers.ts",
+      "src/modules/seller/services/profile.ts",
+      "src/modules/admin/services/sellers.ts",
+      "src/shared/auth/legacy-admin.ts",
+      "src/modules/seller/services/orders.ts",
+      "src/shared/notifications/seller-events.ts",
+      "src/modules/seller/services/inventory.ts",
+      "src/modules/seller/services/settlements.ts",
+      "src/shared/storage/seller-documents.ts"
+    ],
+    "name": "signedDocUrl",
+    "kind": "function",
+    "hash": "b48e1242aca8b3238ed09b028cc68cc136b7dc056a1ec9b12d4d0c1f7a787d71"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "isMissingStoreSchema",
+    "kind": "function",
+    "hash": "c4f84e85e1a988a334e71af31c94b4c3f22e88e4cc0256cea2f59d2ea468a7d8"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useAdminStores",
+    "kind": "function",
+    "hash": "3b595234f612612370042f17068ddafd914946958d559ff0e974af687cba4afc"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useAdminStore",
+    "kind": "function",
+    "hash": "8b489735c4061e0db8379673f7ee57cb337ce3c8a031ab43b99b593e0913b770"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useSellerDefaultStore",
+    "kind": "function",
+    "hash": "ac4986fe97052d18a83d28b56a4525793a659a293ef25e0c15ced17deada9f90"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useUpdateSellerStore",
+    "kind": "function",
+    "hash": "911e0d412bb6b5f419905ffcd7cbccf9085cbc2dc70408cfa791a542a4c7eafc"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useAdminUpdateStoreLocation",
+    "kind": "function",
+    "hash": "8b7a4daa571bb8a3bece0716ba0e1ec211e763a8de3f7f05b39365faabfd2ce4"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useAdminUpdateStore",
+    "kind": "function",
+    "hash": "dde687d6b359ec67dab3e30d020118ae6f95f2efd076facea0b17c89f47874da"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useServiceZones",
+    "kind": "function",
+    "hash": "89b0850651081ffc0d2c1a94697687aadf7a9077685edbabda80514ab07718e3"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useSaveServiceZone",
+    "kind": "function",
+    "hash": "1dfa7474130a60975614cf1da725e1c1dc66eeb9dd91adbb936b2e2561387a11"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useAssignStoreZone",
+    "kind": "function",
+    "hash": "ee5b4474026303aecf7780a60da3bcc87362e7a97c85309d5c419ed4805fc7f5"
+  },
+  {
+    "original": "src/lib/stores.ts",
+    "targets": [
+      "src/shared/shops/store-contracts.ts",
+      "src/modules/seller/services/stores.ts",
+      "src/modules/admin/services/stores.ts"
+    ],
+    "name": "useStoreZoneAssignments",
+    "kind": "function",
+    "hash": "3f1f25747ce44ac0ff907974748ccc2fff3b11b65d0fb4e527c2bca72e5606df"
+  }
+]

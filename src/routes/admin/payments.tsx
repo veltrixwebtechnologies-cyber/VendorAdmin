@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { IndianRupee, Clock, CheckCircle2, CircleX } from "lucide-react";
-import { adminErrorMessage } from "@/lib/admin-permissions";
+import { adminErrorMessage } from "@/shared/auth/admin-permissions";
 
 export const Route = createFileRoute("/admin/payments")({
   head: () => ({ meta: [{ title: "Payments — Admin" }, { name: "robots", content: "noindex" }] }),

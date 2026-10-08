@@ -16,9 +16,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useAdminUsers, useSetUserBlocked } from "@/lib/admin-db";
+import { useAdminUsers, useSetUserBlocked } from "@/modules/admin/services/admin-db";
 import { toast } from "sonner";
-import { useAdminAccess, adminErrorMessage } from "@/lib/admin-permissions";
+import { useAdminAccess, adminErrorMessage } from "@/shared/auth/admin-permissions";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({ meta: [{ title: "Users — Admin" }, { name: "robots", content: "noindex" }] }),

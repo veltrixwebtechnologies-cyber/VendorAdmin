@@ -11,8 +11,8 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AdminStoreLocationEditor } from "@/components/admin-store-location-editor";
-import { AdminStoresMap } from "@/components/admin-stores-map";
+import { AdminStoreLocationEditor } from "@/modules/admin/components/admin-store-location-editor";
+import { AdminStoresMap } from "@/modules/admin/components/admin-stores-map";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,8 +26,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useAdminAccess } from "@/lib/admin-permissions";
-import { useAdminStore, useAdminUpdateStore } from "@/lib/stores";
+import { useAdminAccess } from "@/shared/auth/admin-permissions";
+import { useAdminStore } from "@/modules/admin/services/stores";
+import { useAdminUpdateStore } from "@/modules/admin/services/stores";
 
 export const Route = createFileRoute("/admin/stores/$storeId")({
   head: () => ({

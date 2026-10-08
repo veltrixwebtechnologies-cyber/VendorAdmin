@@ -1,0 +1,18 @@
+{
+  "version": "0.1.0",
+  "files": {
+    "cart.ts": "7a1c38ffc7a27fd2629b939c9cd96898f83fc643005340d709bd853fbf8f3111",
+    "catalog.ts": "18a1177b8eeda6bd34edbad5c729494b047541efa1b3b5cd5e187896fceeb308",
+    "database.ts": "adb593999330868a07b10f2df9af051fa17118ccbdc328e37f6866bb51a84575",
+    "delivery.ts": "3bd62fba08b24dbb82b0db494d61d33a812e79e8485b07d440566a3842a493af",
+    "imported-shops.ts": "7118e31b74b511c0343e106787cf812281f656e4258931291f8926254597bf1b",
+    "notifications.ts": "e95f9371b9c3f268bd6d623ff82bebafc56889c48135a51d07d0590f4d6dd1cc",
+    "orders.ts": "55dd40e861165fc1f6f9d64b2e3a35482837ace5160d18e15c2b6b1c8a43ac1c",
+    "payments.ts": "6c2dc3dc2c6dfcf6acc87a2610d140f4a7509851c53e3ef087984661eab5cd6f",
+    "roles.ts": "60de2e363adfcf3b3c396e00d1917f33c125459ad50049cf3d9246a27fd53757",
+    "seller.ts": "54fc208969f030d6820855030577d0fb62883d0a03442d8cce7dc3e9346e9931",
+    "shopper-order.ts": "cb96794f79c22d8a68f8d8f56aef2ffe12fceef4f2fc039c538d44642d83212a",
+    "shops.ts": "a11ae578172320d2e04d65f6db606bc1a1884c115fb5c2d18212af0c1ccaa84b",
+    "ui.ts": "fe7a992420f0de62667022d0b16a59f70f4ae9f8aeaed3e00868c569c21a2db7"
+  }
+}

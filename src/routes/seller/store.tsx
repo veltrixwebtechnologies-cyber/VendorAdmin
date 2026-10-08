@@ -30,17 +30,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { getDataErrorMessage } from "@/shared/services/data-mappers";
 import {
-  getDataErrorMessage,
   useConfirmSellerStoreLocation,
   useMySeller,
   useUpdateMySeller,
-  type Seller,
-  type SellerStatus,
-} from "@/lib/db";
+} from "@/modules/seller/services/profile";
+import { type Seller, type SellerStatus } from "@/shared/core/seller";
 import { GoogleStoreLocationPicker } from "@/components/google-store-location-picker";
 import type { Coordinates } from "@/lib/coordinates";
-import { useSellerDefaultStore, useUpdateSellerStore } from "@/lib/stores";
+import { useSellerDefaultStore } from "@/modules/seller/services/stores";
+import { useUpdateSellerStore } from "@/modules/seller/services/stores";
 import { resolveDefaultStore } from "@/lib/store-domain";
 
 const PRESET_BANNERS = [

@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { useAdminOverview } from "@/lib/admin-db";
+import { useAdminOverview } from "@/modules/admin/services/admin-db";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/reports")({

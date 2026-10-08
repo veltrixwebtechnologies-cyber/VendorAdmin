@@ -34,7 +34,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { useAuth, signOut } from "@/lib/auth";
-import { useMySeller, useOrderNotificationListener } from "@/lib/db";
+import { useMySeller } from "@/modules/seller/services/profile";
+import { useOrderNotificationListener } from "@/modules/seller/services/orders";
 import { useRoles } from "@/lib/roles";
 
 export const Route = createFileRoute("/seller")({

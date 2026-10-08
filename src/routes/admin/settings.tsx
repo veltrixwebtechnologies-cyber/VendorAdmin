@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { usePlatformSettings, useUpdateSettings } from "@/lib/admin-db";
+import { usePlatformSettings, useUpdateSettings } from "@/modules/admin/services/admin-db";
 import { toast } from "sonner";
-import { useAdminAccess, adminErrorMessage } from "@/lib/admin-permissions";
+import { useAdminAccess, adminErrorMessage } from "@/shared/auth/admin-permissions";
 
 export const Route = createFileRoute("/admin/settings")({
   head: () => ({ meta: [{ title: "Settings — Admin" }, { name: "robots", content: "noindex" }] }),

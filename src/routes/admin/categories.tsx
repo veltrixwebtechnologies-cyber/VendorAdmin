@@ -23,9 +23,9 @@ import {
   useUpsertBrand,
   type Category,
   type Brand,
-} from "@/lib/admin-db";
+} from "@/modules/admin/services/admin-db";
 import { toast } from "sonner";
-import { useAdminAccess } from "@/lib/admin-permissions";
+import { useAdminAccess } from "@/shared/auth/admin-permissions";
 
 export const Route = createFileRoute("/admin/categories")({
   head: () => ({ meta: [{ title: "Categories — Admin" }, { name: "robots", content: "noindex" }] }),

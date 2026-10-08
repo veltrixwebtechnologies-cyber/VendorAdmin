@@ -38,7 +38,7 @@ import {
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { adminPermissionForPath, useAdminAccess } from "@/lib/admin-permissions";
+import { adminPermissionForPath, useAdminAccess } from "@/shared/auth/admin-permissions";
 
 const NAV = [
   {

@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AdminStoresMap } from "@/components/admin-stores-map";
+import { AdminStoresMap } from "@/modules/admin/components/admin-stores-map";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAdminAccess } from "@/lib/admin-permissions";
-import { useAdminStores } from "@/lib/stores";
+import { useAdminAccess } from "@/shared/auth/admin-permissions";
+import { useAdminStores } from "@/modules/admin/services/stores";
 
 export const Route = createFileRoute("/admin/store-map")({
   head: () => ({ meta: [{ title: "Store map — Admin" }, { name: "robots", content: "noindex" }] }),

@@ -22,12 +22,12 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 
+import { useMySeller } from "@/modules/seller/services/profile";
 import {
-  useMySeller,
   useMySettlements,
   useMyFinancialAdjustments,
   type CycleSummary,
-} from "@/lib/db";
+} from "@/modules/seller/services/settlements";
 
 export const Route = createFileRoute("/seller/settlements")({
   head: () => ({

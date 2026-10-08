@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCategories } from "@/lib/admin-db";
+import { useCategories } from "@/modules/admin/services/admin-db";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/filters")({

@@ -17,13 +17,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
-import {
-  getDataErrorMessage,
-  useMySeller,
-  useMyOrders,
-  type Seller,
-  type SellerStatus,
-} from "@/lib/db";
+import { getDataErrorMessage } from "@/shared/services/data-mappers";
+import { useMySeller } from "@/modules/seller/services/profile";
+import { useMyOrders } from "@/modules/seller/services/orders";
+import { type Seller, type SellerStatus } from "@/shared/core/seller";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listProducts, type ProductDto } from "@/lib/products.functions";

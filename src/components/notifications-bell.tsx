@@ -11,8 +11,8 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useMyNotifications,
-  type Notification,
-} from "@/lib/db";
+} from "@/shared/notifications/seller-events";
+import { type Notification } from "@/shared/core/seller";
 
 export function NotificationsBell({ homeTo = "/seller" }: { homeTo?: "/seller" | "/admin" }) {
   const q = useMyNotifications();

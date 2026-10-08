@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Search, XCircle, CheckCircle2, EyeOff, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { useAdminAccess } from "@/lib/admin-permissions";
+import { useAdminAccess } from "@/shared/auth/admin-permissions";
 
 export const Route = createFileRoute("/admin/products")({
   head: () => ({ meta: [{ title: "Products — Admin" }, { name: "robots", content: "noindex" }] }),

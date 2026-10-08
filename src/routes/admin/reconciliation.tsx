@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { classifyFinanceReconciliation } from "@/lib/finance-domain";
-import { adminErrorMessage, useAdminAccess } from "@/lib/admin-permissions";
+import { adminErrorMessage, useAdminAccess } from "@/shared/auth/admin-permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
